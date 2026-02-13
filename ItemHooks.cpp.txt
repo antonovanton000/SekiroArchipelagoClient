@@ -1,0 +1,793 @@
+﻿#include "pch.h"
+#include "ItemHooks.h"
+#include "Log.h"
+#include "SekiroGame.h"      // g_InOurGrant, g_MapItemMan_GrantItem, ItemBufferEntry, MapItemMan_GrantItem_t, MapItemMan_AwardItemLot_t, ItemEvent
+#include <Windows.h>
+#include "MinHook.h"
+#include "Overlay.h"
+#include "Utils.h"
+#include <mutex>
+#include <queue>
+#include "PipeConnection.h"
+
+// -----------------------------------------------------------------------------
+// Статические данные только для этого файла
+// -----------------------------------------------------------------------------
+
+// Оригинальный MapItemMan::GrantItem (через MinHook-трамплин)
+static MapItemMan_GrantItem_t g_GrantItem_Original = nullptr;
+MapItemMan_AwardItemLot_t g_AwardItemLot_Original = nullptr;
+ShopFunc_t g_ShopFunc_Original = nullptr;
+
+// Адрес целевой функции GrantItem (sekiro.exe + 0x91C970)
+static uintptr_t g_GrantItem_TargetAddr = 0;
+
+// Очередь событий (игровой поток -> CoreThread)
+static std::mutex            g_EventMutex;
+static std::queue<ItemEvent> g_EventQueue;
+
+// Оригинальный AwardItemLot
+extern PipeConnection g_Pipe;
+
+static uint32_t g_CurrentItemLotId = 0;
+static bool g_CurrentLotValid = false;
+
+using ItemUiHandler_t = void(__fastcall*)(void* thisPtr, void* ctx, void* eventStruct, void* a4);
+
+static ItemUiHandler_t g_ItemUiHandler_Original = nullptr;
+static uintptr_t       g_ItemUiHandler_Target = 0;
+
+
+static uint32_t g_LastLootGoodsId = 0;
+static uint32_t g_LastLootQty = 0;
+static void* g_LastLootCtx = nullptr;
+static bool g_ItemHintDumpDone = false;
+
+using ItemPopupPayloadFunc_t = void(__fastcall*)(void* manager, void* payload);
+
+static ItemPopupPayloadFunc_t g_ItemPopup_Original = nullptr;
+
+// Что мы знаем о последнем попапе
+static void* g_LastPopupManager = nullptr;
+static uint32_t g_LastPopupGoods = 0;
+static uint32_t g_LastPopupQty = 0;
+static bool     g_LastPopupValid = false;
+
+// Снапшот содержимого payload'а
+static uint8_t  g_LastPopupBuffer[0x200] = {};   // 512 байт на всякий случай
+static size_t   g_LastPopupSize = 0;
+
+// Флаг, чтобы хук на 4854C0 не пытался "захватить" наш же реплей
+static bool     g_IsReplayingPopup = false;
+static bool g_PopupManagerDumpDone = false;
+
+
+static bool g_BuildMessageDumpDone = false;
+
+static void* g_ItemQueueMgr = nullptr;
+static void* g_ItemListCtx = nullptr;
+static void* g_ItemNodeCtx = nullptr;
+
+static void* g_LastSlotPtr = nullptr;
+static void* g_LastInnerNext = nullptr;
+
+// -----------------------------------------------------------------------------
+// Вспомогательные функции
+// -----------------------------------------------------------------------------
+
+// Декодер encodedId -> goodsId
+static uint32_t DecodeGoodsId(uint32_t encoded)
+{
+	// EncodeGoodsId: (4u << 28) | (goodsId & 0x0FFFFFFF)
+	return (encoded & 0x0FFFFFFF);
+}
+
+void OnLootDetected(uint32_t lotIndex, uint32_t goodsId, uint32_t qty)
+{
+	char buf[256];
+	// минимальный JSON, без экранирования
+	sprintf_s(buf,
+		sizeof(buf),
+		"{ \"type\":\"item_picked\", \"lot_index\":%u, \"goods_id\":%u, \"quantity\":%u }",
+		lotIndex, goodsId, qty
+	);
+
+	g_Pipe.SendJson(std::string(buf));
+}
+
+struct CurrentPickupContext
+{
+	void* ctx = nullptr;  // g_LastLootCtx на момент события
+	uint32_t goodsId = 0;
+	uint32_t qty = 0;
+	uint32_t enc;
+	bool    active = false;
+};
+
+static CurrentPickupContext g_CurrentPickup = {};
+
+// -----------------------------------------------------------------------------
+// Хук MapItemMan::GrantItem
+// -----------------------------------------------------------------------------
+
+void __fastcall Hooked_MapItemMan_GrantItem(
+	uintptr_t      mapItemMan,
+	ItemBufferEntry* entry,
+	uint64_t       ctx,
+	uint64_t       a4)
+{
+	// Логируем только "чужие" выдачи (те, что делает сама игра)
+	uint32_t lotIndex = g_CurrentLotValid ? g_CurrentItemLotId : 0xFFFFFFFFu;
+	if (!g_InOurGrant && entry)
+	{
+		ItemEvent ev{};
+		ev.encodedId = entry->itemId;
+		ev.goodsId = DecodeGoodsId(entry->itemId);
+		ev.quantity = entry->quantity;
+		ev.ctx = ctx;
+		ev.a4 = a4;
+		// Если у тебя в ItemEvent есть поле lotId — сохраняй туда именно это
+		ev.lotId = lotIndex; // если нет — добавь в структуру
+		{
+			std::lock_guard<std::mutex> lock(g_EventMutex);
+			g_EventQueue.push(ev);
+		}
+
+
+		OnLootDetected(lotIndex, ev.goodsId, ev.quantity);
+
+		if (g_CurrentLotValid)
+		{
+			Logf("[ItemHooks] Loot: lotId=%u goods=%u qty=%u enc=0x%08X ctx=0x%llX a4=0x%llX",
+				lotIndex,
+				ev.goodsId,
+				ev.quantity,
+				ev.encodedId,
+				static_cast<unsigned long long>(ev.ctx),
+				static_cast<unsigned long long>(ev.a4));
+
+			Overlay_AddLog("[Loot] lot=%u goods=%u x%u",
+				lotIndex,
+				ev.goodsId,
+				ev.quantity);
+		}
+		else
+		{
+
+			// Примерно внутри Hooked_MapItemMan_GrantItem / AwardItemLot, там где ты уже считаешь goodsId/qty
+			g_LastLootGoodsId = ev.goodsId;
+			g_LastLootQty = ev.quantity;
+			g_LastLootCtx = reinterpret_cast<void*>(ctx);  // тот самый ctx=0x14F6B0 из лога
+
+			// Это как раз те самые "временные мешочки" / прямые дропы без ItemLot
+			Logf("[ItemHooks] Loot (NO LOT): goods=%u qty=%u enc=0x%08X ctx=0x%llX a4=0x%llX",
+				ev.goodsId,
+				ev.quantity,
+				ev.encodedId,
+				static_cast<unsigned long long>(ev.ctx),
+				static_cast<unsigned long long>(ev.a4));
+
+			g_CurrentPickup.active = true;
+			g_CurrentPickup.goodsId = ev.goodsId;
+			g_CurrentPickup.qty = ev.quantity;
+			g_CurrentPickup.enc = ev.encodedId;
+
+			Overlay_AddLog("[Loot] goods=%u x%u",
+				ev.goodsId,
+				ev.quantity);
+		}
+	}
+
+	// В любом случае — обязательно зовём оригинал
+	if (g_GrantItem_Original)
+	{
+		//return;
+		g_GrantItem_Original(mapItemMan, entry, ctx, a4);
+	}
+	else
+	{
+		Log("[ItemHooks] g_GrantItem_Original is null!");
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Хук AwardItemLot (верхнеуровневая функция выдачи лота)
+// -----------------------------------------------------------------------------
+
+void __fastcall Hooked_AwardItemLot(
+	uintptr_t mapItemMan,
+	int       lotId,
+	uint8_t   flag,
+	void* ctx)
+{	
+	g_CurrentItemLotId = static_cast<uint32_t>(lotId);
+	g_CurrentLotValid = true;
+
+	if (g_AwardItemLot_Original)
+	{
+		g_AwardItemLot_Original(mapItemMan, lotId, flag, ctx);
+	}
+	else
+	{
+		Log("[ItemHooks] g_AwardItemLot_Original is null!");
+	}
+
+	// После окончания выдачи лота — сбрасываем
+	g_CurrentLotValid = false;
+	g_CurrentItemLotId = 0;
+}
+
+// __fastcall: RCX = slot, EDX = newCount
+using SetItemCount_t = void(__fastcall*)(void* slot, uint32_t newCount);
+SetItemCount_t g_SetItemCount_Original = nullptr;
+
+void __fastcall SetItemCount_Hook(void* slot, uint32_t newCount)
+{
+	auto* base = reinterpret_cast<uint8_t*>(slot);
+
+	// читаем старые данные ДО того, как игра их перезапишет
+	uint32_t oldCount = *reinterpret_cast<uint32_t*>(base + 0x08);
+
+	uint32_t packedId = *reinterpret_cast<uint32_t*>(base + 0x00);
+	uint32_t goodsId = packedId & 0x0FFFFFFF;  // распаковка goodsId
+
+	// вызываем оригинал (он как раз сделает mov [rcx+08], edx; ret)
+	g_SetItemCount_Original(slot, newCount);
+
+	// считаем, что произошло
+	int delta = static_cast<int>(newCount) - static_cast<int>(oldCount);
+
+	if (delta > 0)
+	{
+		// вот ЭТО количество ты и хочешь — столько штук добавилось
+		Logf("[ItemChange] goodsId=%u +%d (old=%u new=%u)",
+			goodsId, delta, oldCount, newCount);
+
+		OnLootDetected(0, goodsId, delta);
+
+		Overlay_AddLog("[Shop] goods=%u x%u", goodsId, delta);
+	}
+	else
+	{
+		// тут расход/сброс/etc. — если надо, тоже можешь логировать
+		// Logf("[ItemChange] goodsId=%u delta=%d (old=%u new=%u)", goodsId, delta, oldCount, newCount);
+	}
+}
+
+__int64 __fastcall Hooked_ShopFunc(void* itemData, int count, void* a3, void* a4)
+{
+	uint32_t packed = 0;
+
+	__try
+	{
+		packed = *reinterpret_cast<uint32_t*>(itemData); // [a1] = 0x4???0C80 / 0x4???0BCC
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+		packed = 0;
+	}
+
+	uint32_t goodsId = packed & 0x0FFFFFFF; // 0x40000C80 → 0x0C80 = 3200
+
+	if (count > 0 && goodsId != 0)
+	{
+		Logf("[ShopBuy] goods=%u qty=%d (packed=0x%08X)", goodsId, count, packed);
+		OnLootDetected(0, goodsId, count);
+		Overlay_AddLog("[Shop] goods=%u x%u", goodsId, count);
+	}
+
+	return g_ShopFunc_Original(itemData, count, a3, a4);
+}
+
+static bool g_DebugEnqueueDone = false;
+void __fastcall Hooked_ItemUiHandler(void* thisPtr, void* ctx, void* eventStruct, void* a4)
+{
+	// retAddr даст нам точный call-site внутри 6AC050
+	void* retAddr = _ReturnAddress();
+
+	uint8_t* ev = reinterpret_cast<uint8_t*>(eventStruct);
+
+	uint64_t vtbl = 0;
+	uint32_t paramA = 0;
+	uint32_t paramB = 0;
+	uint32_t eventType = 0;
+	void* inner = nullptr;
+
+	if (ev)
+	{
+		// +0x00: vtable
+		vtbl = *reinterpret_cast<uint64_t*>(ev + 0x00);
+
+		// +0x20: 0x0FAA (совпадает с R8 из 6AC180, как ты писал)
+		paramA = *reinterpret_cast<uint32_t*>(ev + 0x20);
+		paramB = *reinterpret_cast<uint32_t*>(ev + 0x24);
+
+		// +0x28: тип события: 0x0C = pickup, 0x11 = idol и т.п.
+		eventType = *reinterpret_cast<uint32_t*>(ev + 0x28);
+
+		// +0x30: указатель на inner-структуру
+		inner = *reinterpret_cast<void**>(ev + 0x30);
+	}
+
+	// Базовый лог по каждому событию (или только по интересным типам)
+	if (eventStruct && eventType == 0x0C) // item pickup
+	{
+		Logf("[ItemUiHandler] this=%p ctx=%p ev=%p a4=%p ret=%p vtbl=%p type=0x%X paramA=0x%X paramB=0x%X inner=%p",
+			thisPtr, ctx, eventStruct, a4,
+			retAddr, (void*)vtbl, eventType, paramA, paramB, inner);
+	}
+
+	// --- СТАРЫЙ КОД С g_LastLootCtx и g_CurrentPickup ОСТАВЛЯЕМ ---
+	if (ev && (eventType == 0x0C))
+	{
+		intptr_t deltaEvLoot = 0;
+
+		if (g_LastLootCtx)
+		{
+			deltaEvLoot = reinterpret_cast<uint8_t*>(ev) - reinterpret_cast<uint8_t*>(g_LastLootCtx);
+		}
+
+		if (g_LastLootCtx && std::llabs(deltaEvLoot) == 0x50)
+		{
+			g_CurrentPickup.ctx = g_LastLootCtx;
+			g_CurrentPickup.goodsId = g_LastLootGoodsId;
+			g_CurrentPickup.qty = g_LastLootQty;
+			g_CurrentPickup.active = true;
+
+			Logf("[ItemHint] PickupEvent: ev=%p ctx=%p goods=%u qty=%u delta=%lld",
+				eventStruct,
+				g_LastLootCtx,
+				g_LastLootGoodsId,
+				g_LastLootQty,
+				static_cast<long long>(deltaEvLoot));
+		}
+		else
+		{
+			g_CurrentPickup.active = false;
+		}
+
+		// --- ОДНОРАЗОВЫЙ ГЛУБОКИЙ ДАМП (оставляем, можно чуть подкрутить) ---
+		if (!g_ItemHintDumpDone && g_LastLootCtx)
+		{
+			g_ItemHintDumpDone = true;
+
+			auto* evBytes = reinterpret_cast<uint8_t*>(eventStruct);
+			auto* ctxBytes = reinterpret_cast<uint8_t*>(g_LastLootCtx);
+			auto* thisBytes = reinterpret_cast<uint8_t*>(thisPtr);
+
+			Logf("[ItemHint]   DUMP: this=%p, ev=%p, ctx=%p, deltaEvLoot=%lld",
+				thisPtr,
+				eventStruct,
+				g_LastLootCtx,
+				static_cast<long long>(deltaEvLoot));
+
+			DumpQwords("this", thisPtr, 0x100);
+			DumpQwords("ev", eventStruct, 0x80);
+			DumpQwords("ctx", g_LastLootCtx, 0x80);
+			
+		}
+	}
+
+	// Обязательно зовём оригинал
+	if (g_ItemUiHandler_Original)
+	{
+		g_ItemUiHandler_Original(thisPtr, ctx, eventStruct, a4);
+	}
+
+	// После оригинала, чтобы не ломать внутренний порядок
+	if (!g_DebugEnqueueDone && g_CurrentPickup.active)
+	{
+		g_DebugEnqueueDone = true;
+		Logf("[ItemQueue] EnqueueDebugMessageClone: triggered from first PickupEvent");
+		EnqueueDebugMessageClone();
+	}
+}
+
+static size_t ITEMPOPUP_GOODS_OFFSET = 0x14;
+
+static size_t g_PopupEncOffset = SIZE_MAX;
+static bool   g_PopupEncOffsetKnown = false;
+
+static void DetectPopupEncOffset(void* payload, size_t size, uint32_t expectedEnc)
+{
+	if (!payload || size < sizeof(uint32_t))
+		return;
+
+	if (g_PopupEncOffsetKnown)
+		return;
+
+	uint8_t* base = static_cast<uint8_t*>(payload);
+
+	for (size_t off = 0; off + sizeof(uint32_t) <= size; off += sizeof(uint32_t))
+	{
+		uint32_t val = *reinterpret_cast<uint32_t*>(base + off);
+		if (val == expectedEnc)
+		{
+			g_PopupEncOffset = off;
+			g_PopupEncOffsetKnown = true;
+
+			Logf("[ItemPopup] Detected enc offset: 0x%zX (val=%08X)", off, val);
+			return;
+		}
+	}
+
+	Logf("[ItemPopup] WARN: enc (%08X) not found in payload snapshot", expectedEnc);
+}
+
+void __fastcall Hooked_ItemPopup(void* manager, void* payload)
+{
+	if (g_IsReplayingPopup)
+	{
+		if (g_ItemPopup_Original)
+			g_ItemPopup_Original(manager, payload);
+		return;
+	}
+
+	uint64_t vtbl = payload ? *reinterpret_cast<uint64_t*>(payload) : 0;
+
+	if (g_CurrentPickup.active && vtbl == 0x00000001429706F8ULL)
+	{
+		Logf("[ItemPopup] manager=%p payload=%p ret=%p",
+			manager, payload, _ReturnAddress());
+
+		// (если хочешь — snapshot, но он нам сейчас не нужен для патча)
+	}
+
+	if (g_ItemPopup_Original)
+		g_ItemPopup_Original(manager, payload);
+}
+
+
+using BuildMessage_t = void* (__fastcall*)(
+	void* listCtx,
+	void* nodeCtx,
+	void* innerNext,
+	void* slotPtr
+	);
+
+static BuildMessage_t g_BuildMessage_Orig = nullptr;
+
+void* __fastcall Hooked_BuildMessage(
+	void* listCtx,
+	void* nodeCtx,
+	void* innerNext,
+	void* slotPtr)
+{
+	// Пытаемся патчить только если у нас есть актуальный pickup
+	if (slotPtr && g_CurrentPickup.active)
+	{
+		// slotPtr указывает на структуру, где в самом начале лежит наш enc (uint32)
+		uint32_t* pEnc = reinterpret_cast<uint32_t*>(slotPtr);
+		uint32_t  origEnc = *pEnc;
+
+		// Подстрахуемся: патчим только ту ноду, где enc совпадает с тем,
+		// что мы записали в g_CurrentPickup.enc из ItemHooks
+		if (origEnc == g_CurrentPickup.enc)
+		{
+			// Формируем новый enc для goodsId = 3420
+			// Маска 0xFFF00000 оставляет старший кусок (тип/флаги),
+			// младшие 20 бит — это goodsId.
+			uint32_t newEnc = (origEnc & 0xFFF00000u) | 3420u;
+
+			Logf("[BuildMessage] Patch enc: slotPtr=%p %08X -> %08X (goodsId=3420)",
+				slotPtr, origEnc, newEnc);
+
+			*pEnc = newEnc;
+
+			// Срабатываем один раз на этот pickup
+			g_CurrentPickup.active = false;
+		}
+		else
+		{
+			// Временный лог, чтобы убедиться, что мы вообще заходим сюда
+			Logf("[BuildMessage] Skip enc: slotPtr=%p have=%08X want=%08X",
+				slotPtr, origEnc, g_CurrentPickup.enc);
+		}
+	}
+
+	// Обязательно вызываем оригинал
+	return g_BuildMessage_Orig(listCtx, nodeCtx, innerNext, slotPtr);
+}
+
+
+static void EnqueueDebugMessageClone()
+{
+	if (!g_ItemQueueMgr || !g_ItemListCtx || !g_ItemNodeCtx || !g_BuildMessage_Orig || !g_LastSlotPtr)
+	{
+		Logf("[ItemQueue] EnqueueDebugMessageClone: missing base pointers, skipping");
+		return;
+	}
+
+	auto* queueMgr = reinterpret_cast<uint8_t*>(g_ItemQueueMgr);
+	auto* nodeCtx = reinterpret_cast<uint8_t*>(g_ItemNodeCtx);
+	auto* listCtx = g_ItemListCtx;
+
+	// innerNext как игра его использовала последний раз
+	void* innerNext = g_LastInnerNext;
+	if (!innerNext)
+	{
+		// fallback — как в оригинале: innerNext = *(void**)(nodeCtx + 0x08)
+		innerNext = *reinterpret_cast<void**>(nodeCtx + 0x08);
+	}
+
+	// 1) Создаём новую ноду через оригинальный BuildMessage
+	void* newNode = g_BuildMessage_Orig(listCtx, nodeCtx, innerNext, g_LastSlotPtr);
+	if (!newNode)
+	{
+		Logf("[ItemQueue] EnqueueDebugMessageClone: BuildMessage returned nullptr");
+		return;
+	}
+
+	// 2) Увеличиваем счётчик длины (r15+0x30)
+	auto* lenPtr = reinterpret_cast<uint64_t*>(queueMgr + 0x30);
+	uint64_t oldLen = *lenPtr;
+	uint64_t newLen = oldLen + 1;
+	*lenPtr = newLen;
+
+	// 3) Связанный список: nodeCtx+8 и newNode+8
+	void** nodeCtxPlus8 = reinterpret_cast<void**>(nodeCtx + 0x08);
+	*nodeCtxPlus8 = newNode;  // [r14+8] = newNode
+
+	void** newNodePlus8 = reinterpret_cast<void**>(reinterpret_cast<uint8_t*>(newNode) + 0x08);
+	void* nextPtr = *newNodePlus8;       // rax = [rdx+8]
+	if (nextPtr)
+	{
+		void** nextAsPtr = reinterpret_cast<void**>(nextPtr);
+		*nextAsPtr = newNode;            // [next] = newNode
+	}
+
+	Logf("[ItemQueue] EnqueueDebugMessageClone: newNode=%p len %llu -> %llu",
+		newNode, (unsigned long long)oldLen, (unsigned long long)newLen);
+}
+
+
+bool HasCapturedItemPopup()
+{
+	return g_LastPopupValid && g_LastPopupManager != nullptr && g_LastPopupSize > 0;
+}
+void ReplayLastItemPopup()
+{
+	if (!g_ItemPopup_Original)
+	{
+		Log("[ItemPopup] ReplayLastItemPopup: no original function, cannot replay");
+		return;
+	}
+
+	if (!g_LastPopupValid || !g_LastPopupManager || g_LastPopupSize == 0)
+	{
+		Log("[ItemPopup] ReplayLastItemPopup: no captured snapshot to replay");
+		return;
+	}
+
+	// Для отладки: ещё раз глянем vtbl, но уже из нашего снапшота
+	uint64_t vtbl = *reinterpret_cast<uint64_t*>(g_LastPopupBuffer);
+
+	Logf("[ItemPopup] ReplayLastItemPopup: manager=%p snapshotSize=0x%zX goods=%u qty=%u vtbl=%p",
+		g_LastPopupManager,
+		g_LastPopupSize,
+		g_LastPopupGoods,
+		g_LastPopupQty,
+		(void*)vtbl);
+
+	// Вызываем 4854C0 с нашим снапшотом как payload
+	g_IsReplayingPopup = true;
+	g_ItemPopup_Original(g_LastPopupManager, g_LastPopupBuffer);
+	g_IsReplayingPopup = false;
+}
+
+
+
+// -----------------------------------------------------------------------------
+// API для CoreThread — чтение событий
+// -----------------------------------------------------------------------------
+
+bool ItemHooks_PopEvent(ItemEvent& outEvent)
+{
+	std::lock_guard<std::mutex> lock(g_EventMutex);
+	if (g_EventQueue.empty())
+		return false;
+
+	outEvent = g_EventQueue.front();
+	g_EventQueue.pop();
+	return true;
+}
+
+// -----------------------------------------------------------------------------
+// Инициализация MinHook и хуков
+// -----------------------------------------------------------------------------
+
+bool ItemHooks_Initialize()
+{
+	static bool s_AlreadyInitialized = false;
+	if (s_AlreadyInitialized)
+		return true;
+
+	Log("[ItemHooks] Initializing MinHook...");
+
+	HMODULE hMod = GetModuleHandleW(L"sekiro.exe");
+	if (!hMod)
+	{
+		Log("[ItemHooks] sekiro.exe module not found");
+		return false;
+	}
+
+	uintptr_t base = reinterpret_cast<uintptr_t>(hMod);
+
+	//if (MH_Initialize() != MH_OK)
+	//{
+	//	Log("[ItemHooks] MH_Initialize failed");
+	//	return false;
+	//}
+
+	// ---------- Hook на MapItemMan::GrantItem ----------
+	g_GrantItem_TargetAddr = base + 0x91C970; // твой оффсет
+
+	Logf("[ItemHooks] GrantItem target = 0x%llX",
+		static_cast<unsigned long long>(g_GrantItem_TargetAddr));
+
+	MH_STATUS status = MH_CreateHook(
+		reinterpret_cast<LPVOID>(g_GrantItem_TargetAddr),
+		reinterpret_cast<LPVOID>(&Hooked_MapItemMan_GrantItem),
+		reinterpret_cast<LPVOID*>(&g_GrantItem_Original));
+
+	if (status != MH_OK)
+	{
+		Logf("[ItemHooks] MH_CreateHook(GrantItem) failed: %d", (int)status);
+		return false;
+	}
+
+	status = MH_EnableHook(reinterpret_cast<LPVOID>(g_GrantItem_TargetAddr));
+	if (status != MH_OK)
+	{
+		Logf("[ItemHooks] MH_EnableHook(GrantItem) failed: %d", (int)status);
+		return false;
+	}
+
+	// После установки хука — использовать оригинал для нашей ручной выдачи
+	g_MapItemMan_GrantItem = g_GrantItem_Original;
+
+	// ---------- Hook на AwardItemLot ----------
+	// Остаёмся на старом, уже проверенном адресе, чтобы ничего не ломать.
+	uintptr_t awardLotTarget = base + 0x91D450;
+
+	if (MH_CreateHook(
+		reinterpret_cast<LPVOID>(awardLotTarget),
+		reinterpret_cast<LPVOID>(&Hooked_AwardItemLot),
+		reinterpret_cast<LPVOID*>(&g_AwardItemLot_Original)) != MH_OK)
+	{
+		Log("[ItemHooks] MH_CreateHook(AwardItemLot) failed");
+		return false;
+	}
+
+	if (MH_EnableHook(reinterpret_cast<LPVOID>(awardLotTarget)) != MH_OK)
+	{
+		Log("[ItemHooks] MH_EnableHook(AwardItemLot) failed");
+		return false;
+	}
+
+	// ---------- Hook на ShopItem ----------
+	uintptr_t shopFuncaddr = base + 0xD55DC0; // push rbp — реальный старт
+	
+	if (MH_CreateHook(
+		reinterpret_cast<LPVOID>(shopFuncaddr),
+		reinterpret_cast<LPVOID>(&Hooked_ShopFunc),
+		reinterpret_cast<LPVOID*>(&g_ShopFunc_Original)) != MH_OK)
+	{
+		Log("[ItemHooks] MH_CreateHook(ShopFunc) failed");
+		return false;
+	}
+
+	if(MH_EnableHook(reinterpret_cast<LPVOID>(shopFuncaddr)) != MH_OK)
+	{
+		Log("[ItemHooks] MH_EnableHook(ShopFunc) failed");
+		return false;
+	}
+
+	// ---------- Hook на Item UI Handler (6ABEF0) ----------
+
+	g_ItemUiHandler_Target = base + 0x6ABEF0; // твой оффсет 6ABEF0
+
+	Logf("[ItemHooks] ItemUiHandler target = 0x%llX",
+		static_cast<unsigned long long>(g_ItemUiHandler_Target));
+
+	if (MH_CreateHook(
+		reinterpret_cast<LPVOID>(g_ItemUiHandler_Target),
+		reinterpret_cast<LPVOID>(&Hooked_ItemUiHandler),
+		reinterpret_cast<LPVOID*>(&g_ItemUiHandler_Original)) != MH_OK)
+	{
+		Log("[ItemHooks] MH_CreateHook(ItemUiHandler) failed");
+		return false;
+	}
+
+	if (MH_EnableHook(reinterpret_cast<LPVOID>(g_ItemUiHandler_Target)) != MH_OK)
+	{
+		Log("[ItemHooks] MH_EnableHook(ItemUiHandler) failed");
+		return false;
+	}
+
+	uintptr_t popupTarget = base + 0x4854C0;
+
+	Logf("[ItemHooks] ItemPopup target = 0x%llX",
+		static_cast<unsigned long long>(popupTarget));
+
+	if (MH_CreateHook(
+		reinterpret_cast<LPVOID>(popupTarget),
+		reinterpret_cast<LPVOID>(&Hooked_ItemPopup),
+		reinterpret_cast<LPVOID*>(&g_ItemPopup_Original)) != MH_OK)
+	{
+		Log("[ItemHooks] MH_CreateHook(ItemPopup) failed");
+		return false;
+	}
+
+	if (MH_EnableHook(reinterpret_cast<LPVOID>(popupTarget)) != MH_OK)
+	{
+		Log("[ItemHooks] MH_EnableHook(ItemPopup) failed");
+		return false;
+	}
+
+	auto addr_BuildMessage = base + 0x6AB2F0;
+	if (MH_CreateHook(reinterpret_cast<LPVOID>(addr_BuildMessage),
+		&Hooked_BuildMessage,
+		reinterpret_cast<LPVOID*>(&g_BuildMessage_Orig)) != MH_OK)
+	{
+		Log("[ItemHooks] MH_CreateHook(Hooked_BuildMessage) failed");
+		return false;
+	}
+
+	if (MH_EnableHook(reinterpret_cast<LPVOID>(addr_BuildMessage)) != MH_OK)
+	{
+		Log("[ItemHooks] MH_EnableHook(Hooked_BuildMessage) failed");
+		return false;
+	}
+
+
+	// ---------- Hook на SetItemCount ----------
+	//uintptr_t addr = reinterpret_cast<uintptr_t>(GetModuleHandleW(L"sekiro.exe")) + 0xC3CF50;
+
+	//if (MH_CreateHook(
+	//	reinterpret_cast<LPVOID>(addr),
+	//	reinterpret_cast<LPVOID>(&SetItemCount_Hook),
+	//	reinterpret_cast<LPVOID*>(&g_SetItemCount_Original)
+	//) != MH_OK)
+	//{
+	//	Log("[ItemHooks] MH_CreateHook(SetItemCount) failed");
+	//	return false;
+	//}
+
+	//if (MH_EnableHook(reinterpret_cast<LPVOID>(addr)) != MH_OK)
+	//{
+	//	Log("[ItemHooks] MH_EnableHook(SetItemCount) failed");
+	//	return false;
+	//}
+
+	//uintptr_t shopAddr = base + 0xD55E47; // твой оффсет D55E47
+
+	//MH_CreateHook(
+	//	reinterpret_cast<LPVOID>(shopAddr),
+	//	reinterpret_cast<LPVOID>(&Hooked_ShopConfirm),
+	//	reinterpret_cast<LPVOID*>(&g_ShopConfirm_Original)
+	//);
+
+	//MH_EnableHook(reinterpret_cast<LPVOID>(shopAddr));
+
+
+	Logf("[ItemHooks] Hooks enabled. GrantItem=0x%llX AwardItemLot=0x%llX",
+		static_cast<unsigned long long>(g_GrantItem_TargetAddr),
+		static_cast<unsigned long long>(awardLotTarget));
+
+	Logf("[ItemHooks] GrantItem original = 0x%llX",
+		static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(g_GrantItem_Original)));
+
+	s_AlreadyInitialized = true;
+	return true;
+}
+
+// -----------------------------------------------------------------------------
+// Shutdown
+// -----------------------------------------------------------------------------
+
+void ItemHooks_Shutdown()
+{
+	MH_DisableHook(MH_ALL_HOOKS);
+	MH_Uninitialize();
+}

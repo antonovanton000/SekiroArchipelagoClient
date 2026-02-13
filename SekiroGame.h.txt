@@ -1,0 +1,14 @@
+// SekiroGame.h
+#pragma once
+#include <cstdint>
+#include "SekiroTypes.h"
+
+// Lifecycle
+bool SekiroGame_Initialize();
+void SekiroGame_Update();
+
+// Item granting
+void SekiroGame_GrantItem(const PendingApItem& item);
+
+// Low-level helpers (can stay public for now)
+bool IsWorldLoaded();
