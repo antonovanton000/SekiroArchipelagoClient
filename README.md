@@ -21,7 +21,7 @@ Run SekiroAPClient.exe.
 
 Special thanks to the following contributors and projects:
 
-The Enemy Randomizer code was originally written by ### thefifthmatt and serves as a foundation for parts of this project.
+The Enemy Randomizer code was originally written by thefifthmatt and serves as a foundation for parts of this project.
 
 The APworld integration was created by Yenix and other contributors from the AP After Dark server.
 
