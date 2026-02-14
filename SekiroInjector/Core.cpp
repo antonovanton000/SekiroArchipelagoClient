@@ -13,15 +13,7 @@
 
 static bool g_Running = true;
 static bool g_HooksInitialized = false;
-bool g_IsDebug = true;
-
-uint32_t g_ForeignPickupLots[kMaxForeignLots]{};
-int      g_ForeignPickupLotsCount = 0;
-bool     g_ForeignPickupLotsInitialized = false;
-
-uint32_t g_ForeignShopLots[kMaxForeignLots]{};
-int      g_ForeignShopLotsCount = 0;
-bool     g_ForeignShopLotsInitialized = false;
+bool g_IsDebug = false;
 
 PipeConnection g_Pipe;
 
@@ -127,33 +119,6 @@ static void HandlePipeMessage(const std::string& msg)
     }
 }
 
-void LoadForeignLotsFromFiles()
-{    
-    if (LoadIdListFromFile(
-        "randomizerAP\\randomizer\\foreign_pickup_lots.txt",
-        g_ForeignPickupLots,
-        kMaxForeignLots,
-        g_ForeignPickupLotsCount))
-    {
-        g_ForeignPickupLotsInitialized = true;
-        Logf("[ForeignIds] Pickup lots: %d", g_ForeignPickupLotsCount);
-    }
-
-    if (LoadIdListFromFile(
-        "randomizerAP\\randomizer\\foreign_shop_lineups.txt",
-        g_ForeignShopLots,
-        kMaxForeignLots,
-        g_ForeignShopLotsCount))
-    {
-        g_ForeignShopLotsInitialized = true;
-        Logf("[ForeignIds] Shop lots: %d", g_ForeignShopLotsCount);
-    }
-
-    Overlay_AddLog("[ForeignIds] pickup=%d shop=%d",
-        g_ForeignPickupLotsCount,
-        g_ForeignShopLotsCount);
-}
-
 DWORD WINAPI CoreThread(LPVOID)
 {
     Logf("[Core] Thread started");
@@ -179,12 +144,10 @@ DWORD WINAPI CoreThread(LPVOID)
         }
     }
 
-    LoadForeignLotsFromFiles();
-
     Logf("[Core] Initialization OK");
 
     // Init overlay as early as possible — ещё в меню игры.
-    Overlay_SetHeader("Sekiro Archipelago Client v1.0.0 (alpha)");
+    Overlay_SetHeader("Sekiro Archipelago Client (debug)");
     if (!Overlay_Init(nullptr))
     {
         Log("[Core] Overlay_Init failed, overlay disabled");

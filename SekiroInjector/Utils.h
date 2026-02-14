@@ -26,7 +26,4 @@ bool JsonFieldToUInt(const std::string& json, const char* name, uint32_t& outVal
 bool JsonFieldToInt(const std::string& json, const char* name, int& outVal);
 bool JsonFieldToString(const std::string& json, const char* field, std::string& out);
 bool JsonFieldToBool(const std::string& json, const char* name, bool& outVal);
-bool LoadIdListFromFile(const char* path, uint32_t* outArray, int maxCount, int& outCount);
-bool IsForeignPickupLot(uint32_t lotId);
-bool IsForeignShopLot(uint32_t lineupId);
 std::wstring FixHintTextFromCSharp(const std::wstring& raw);

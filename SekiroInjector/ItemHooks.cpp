@@ -19,11 +19,10 @@ ShopFunc_t g_ShopFunc_Original = nullptr;
 using BuildItemFromLot_t = void(__fastcall*)(void* outStruct, uint32_t lotId);
 static BuildItemFromLot_t g_BuildItemFromLot_Original = nullptr;
 
-
+static bool g_InterruptItemAcquiring = false;
 static uint32_t g_CurrentItemLotId = 0;
 static bool g_CurrentLotValid = false;
 
-static bool g_InterruptItemAcquiring = false;
 static bool g_PickupHandled = false;
 thread_local uint32_t g_LastRewardLotId = 0;
 
@@ -37,17 +36,16 @@ bool IsAllowedGoods(uint32_t goodsId)
 	return g_AllowedGoods.find(goodsId) != g_AllowedGoods.end();
 }
 
-void OnLootDetected(uint32_t lotIndex, uint32_t goodid, bool isFromShop, bool isForeign)
+void OnLootDetected(uint32_t lotIndex, uint32_t goodid, bool isFromShop)
 {
 	char buf[256];
 	sprintf_s(
 		buf,
 		sizeof(buf),
-		"{ \"type\":\"item_picked\", \"lot_index\":%u, \"goods_id\":%u, \"is_from_shop\":%s, \"is_foreign\":%s }",
+		"{ \"type\":\"item_picked\", \"lot_index\":%u, \"goods_id\":%u, \"is_from_shop\":%s }",
 		lotIndex,	
 		goodid,
-		isFromShop ? "true" : "false",
-		isForeign ? "true" : "false"
+		isFromShop ? "true" : "false"		
 	);
 
 	g_Pipe.SendJson(std::string(buf));
@@ -100,14 +98,13 @@ void __fastcall Hooked_PickupExec(
 			uint32_t goodsId = DecodeGoodsId(encodedId);
 			// little validation
 			if (quantity > 0 && lotId != 0 && lotId != 0xFFFFFFFF)
-			{
-				bool isForeign = IsForeignPickupLot(lotId);
-				g_InterruptItemAcquiring = isForeign;
+			{		
+				g_InterruptItemAcquiring = goodsId >= 6000000; // interrupt if goodsId is foreign (not in allowed list)
 				g_PickupHandled = true;
-				OnLootDetected(lotId, goodsId, false, isForeign);
+				OnLootDetected(lotId, goodsId, false);
 
-				Logf("[PickupExec] staged lot=%u goodId=%u foreign=%s", lotId, goodsId, isForeign ? "true" : "false");
-				Overlay_AddLog("[PickupExec] staged lot=%u goodId=%u foreign=%s", lotId, goodsId, isForeign ? "true" : "false");
+				Logf("[PickupExec] staged lot=%u goodId=%u", lotId, goodsId);
+				Overlay_AddLog("[PickupExec] staged lot=%u goodId=%u", lotId, goodsId);
 			}
 		}
 	}
@@ -139,15 +136,13 @@ void __fastcall Hooked_MapItemMan_GrantItem(
 	uint32_t qty = entry->quantity;
 	bool isAllowedKeyItem = IsAllowedGoods(goodsId);
 
-	if (g_LastRewardLotId != 0 && !isAllowedKeyItem && !g_PickupHandled)
+	if (g_LastRewardLotId != 0 && !g_PickupHandled)
 	{
-		bool isForeign = IsForeignPickupLot(g_LastRewardLotId);
-		g_InterruptItemAcquiring = isForeign;
+		g_InterruptItemAcquiring = goodsId >= 6000000; // interrupt if goodsId is foreign (not in allowed list)
+		OnLootDetected(g_LastRewardLotId, goodsId, false);
 
-		OnLootDetected(g_LastRewardLotId, goodsId, false, isForeign);
-
-		Logf("[Reward] staged lot=%u goodsId=%u foreign=%s", g_LastRewardLotId, goodsId, isForeign ? "true" : "false");
-		Overlay_AddLog("[Reward] staged lot=%u goodsId=%u foreign=%s", g_LastRewardLotId, goodsId, isForeign ? "true" : "false");
+		Logf("[Reward] staged lot=%u goodsId=%u", g_LastRewardLotId, goodsId);
+		Overlay_AddLog("[Reward] staged lot=%u goodsId=%u", g_LastRewardLotId, goodsId);
 
 		g_LastRewardLotId = 0;
 	}
@@ -173,14 +168,12 @@ __int64 __fastcall Hooked_ShopPurchaseEntry(void* shopEntry)
 
 	uint32_t goodsId = isGoods ? (packed & 0x0FFFFFFF) : 0;
 	uint32_t lineupId = *(uint32_t*)(base + 0x48);
+	
+	g_InterruptItemAcquiring = goodsId >= 6000000; // interrupt if goodsId is foreign (not in allowed list)
+	OnLootDetected(lineupId, goodsId, true);
 
-	bool isForeign = IsForeignShopLot(lineupId);
-	g_InterruptItemAcquiring = isForeign;
-
-	OnLootDetected(lineupId, goodsId, true, isForeign);
-
-	Logf("[Shop] staged lot=%u goodsId=%u foreign=%s", lineupId, goodsId, isForeign ? "true" : "false");
-	Overlay_AddLog("[Shop] staged lot=%u goodsId=%u foreign=%s", lineupId, goodsId, isForeign ? "true" : "false");
+	Logf("[Shop] staged lot=%u goodsId=%u", lineupId, goodsId);
+	Overlay_AddLog("[Shop] staged lot=%u goodsId=%u", lineupId, goodsId);
 
 	return g_ShopPurchaseEntry_Original(shopEntry);
 }
@@ -203,8 +196,8 @@ int __fastcall Hooked_CommitItem(
 	if (!g_InterruptItemAcquiring)
 		return g_CommitItem_Original(rcx, edx, goodsId, qty);
 	else
-	{
-		g_InterruptItemAcquiring = false;
+	{		
+		g_InterruptItemAcquiring = false; // reset flag after interrupting one commit
 		return 0;	
 	}
 }

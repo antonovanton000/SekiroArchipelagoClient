@@ -459,30 +459,3 @@ bool LoadIdListFromFile(
 
     return true;
 }
-
-
-bool IsForeignPickupLot(uint32_t lotId)
-{
-    if (!g_ForeignPickupLotsInitialized)
-        return false;
-
-    for (int i = 0; i < g_ForeignPickupLotsCount; ++i)
-    {
-        if (g_ForeignPickupLots[i] == lotId)
-            return true;
-    }
-    return false;
-}
-
-bool IsForeignShopLot(uint32_t lineupId)
-{
-    if (!g_ForeignShopLotsInitialized)
-        return false;
-
-    for (int i = 0; i < g_ForeignShopLotsCount; ++i)
-    {
-        if (g_ForeignShopLots[i] == lineupId)
-            return true;
-    }
-    return false;
-}
