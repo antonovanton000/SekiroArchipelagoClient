@@ -1,0 +1,174 @@
+﻿<UserControl x:Class="SekiroAPClient.Controls.SpinerControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:SekiroAPClient.Controls"
+             mc:Ignorable="d" 
+             x:Name="control"
+             Height="80"
+             Width="80"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <Storyboard x:Key="roateAnimation" RepeatBehavior="Forever" FillBehavior="HoldEnd">
+            <DoubleAnimation Storyboard.TargetName="el1" Storyboard.TargetProperty="RenderTransform.Children[1].Angle" From="0"  To="360" Duration="0:0:1.9" BeginTime="0:0:0">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="el2" Storyboard.TargetProperty="RenderTransform.Children[1].Angle" From="30" To="390" Duration="0:0:1.9" BeginTime="0:0:0">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="el3" Storyboard.TargetProperty="RenderTransform.Children[1].Angle" From="60" To="420" Duration="0:0:1.9" BeginTime="0:0:0">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="el4" Storyboard.TargetProperty="RenderTransform.Children[1].Angle" From="90" To="450" Duration="0:0:1.9" BeginTime="0:0:0">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="el5" Storyboard.TargetProperty="RenderTransform.Children[1].Angle" From="120" To="480" Duration="0:0:1.9" BeginTime="0:0:0">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="el6" Storyboard.TargetProperty="RenderTransform.Children[1].Angle" From="150" To="510" Duration="0:0:1.9" BeginTime="0:0:0">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="el7" Storyboard.TargetProperty="RenderTransform.Children[1].Angle" From="180" To="540" Duration="0:0:1.9" BeginTime="0:0:0">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="el8" Storyboard.TargetProperty="RenderTransform.Children[1].Angle" From="210" To="570" Duration="0:0:1.9" BeginTime="0:0:0">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="el9" Storyboard.TargetProperty="RenderTransform.Children[1].Angle" From="240" To="600" Duration="0:0:1.9" BeginTime="0:0:0">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="el10" Storyboard.TargetProperty="RenderTransform.Children[1].Angle" From="270" To="630" Duration="0:0:1.9" BeginTime="0:0:0">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="el11" Storyboard.TargetProperty="RenderTransform.Children[1].Angle" From="300" To="660" Duration="0:0:1.9" BeginTime="0:0:0">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="el12" Storyboard.TargetProperty="RenderTransform.Children[1].Angle" From="330" To="690" Duration="0:0:1.9" BeginTime="0:0:0">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+    </UserControl.Resources>
+    <Grid x:Name="mainGrid">
+        <Ellipse Fill="{Binding SpinerColor, ElementName=control}" Height="10" Width="10" RenderTransformOrigin="0.5,0.5" x:Name="el1">
+            <Ellipse.RenderTransform>
+                <TransformGroup>
+                    <TranslateTransform Y="-35"/>
+                    <RotateTransform />
+                </TransformGroup>
+            </Ellipse.RenderTransform>
+        </Ellipse>
+        <Ellipse Fill="{Binding SpinerColor, ElementName=control}" Height="10" Width="10" RenderTransformOrigin="0.5,0.5" x:Name="el2">
+            <Ellipse.RenderTransform>
+                <TransformGroup>
+                    <TranslateTransform Y="-35"/>
+                    <RotateTransform Angle="30"/>
+                </TransformGroup>
+            </Ellipse.RenderTransform>
+        </Ellipse>
+        <Ellipse Fill="{Binding SpinerColor, ElementName=control}" Height="10" Width="10" RenderTransformOrigin="0.5,0.5" x:Name="el3">
+            <Ellipse.RenderTransform>
+                <TransformGroup>
+                    <TranslateTransform Y="-35"/>
+                    <RotateTransform Angle="60"/>
+                </TransformGroup>
+            </Ellipse.RenderTransform>
+        </Ellipse>
+        <Ellipse Fill="{Binding SpinerColor, ElementName=control}" Height="10" Width="10" RenderTransformOrigin="0.5,0.5"  x:Name="el4">
+            <Ellipse.RenderTransform>
+                <TransformGroup>
+                    <TranslateTransform Y="-35"/>
+                    <RotateTransform Angle="90"/>
+                </TransformGroup>
+            </Ellipse.RenderTransform>
+        </Ellipse>
+        <Ellipse Fill="{Binding SpinerColor, ElementName=control}" Height="10" Width="10" RenderTransformOrigin="0.5,0.5"  x:Name="el5">
+            <Ellipse.RenderTransform>
+                <TransformGroup>
+                    <TranslateTransform Y="-35"/>
+                    <RotateTransform Angle="120"/>
+                </TransformGroup>
+            </Ellipse.RenderTransform>
+        </Ellipse>
+        <Ellipse Fill="{Binding SpinerColor, ElementName=control}" Height="10" Width="10" RenderTransformOrigin="0.5,0.5"  x:Name="el6">
+            <Ellipse.RenderTransform>
+                <TransformGroup>
+                    <TranslateTransform Y="-35"/>
+                    <RotateTransform Angle="150"/>
+                </TransformGroup>
+            </Ellipse.RenderTransform>
+        </Ellipse>
+        <Ellipse Fill="{Binding SpinerColor, ElementName=control}" Height="10" Width="10" RenderTransformOrigin="0.5,0.5"  x:Name="el7">
+            <Ellipse.RenderTransform>
+                <TransformGroup>
+                    <TranslateTransform Y="-35"/>
+                    <RotateTransform Angle="180"/>
+                </TransformGroup>
+            </Ellipse.RenderTransform>
+        </Ellipse>
+        <Ellipse Fill="{Binding SpinerColor, ElementName=control}" Height="10" Width="10" RenderTransformOrigin="0.5,0.5"  x:Name="el8">
+            <Ellipse.RenderTransform>
+                <TransformGroup>
+                    <TranslateTransform Y="-35"/>
+                    <RotateTransform Angle="210"/>
+                </TransformGroup>
+            </Ellipse.RenderTransform>
+        </Ellipse>
+        <Ellipse Fill="{Binding SpinerColor, ElementName=control}" Height="10" Width="10" RenderTransformOrigin="0.5,0.5"  x:Name="el9">
+            <Ellipse.RenderTransform>
+                <TransformGroup>
+                    <TranslateTransform Y="-35"/>
+                    <RotateTransform Angle="240"/>
+                </TransformGroup>
+            </Ellipse.RenderTransform>
+        </Ellipse>
+        <Ellipse Fill="{Binding SpinerColor, ElementName=control}" Height="10" Width="10" RenderTransformOrigin="0.5,0.5"  x:Name="el10">
+            <Ellipse.RenderTransform>
+                <TransformGroup>
+                    <TranslateTransform Y="-35"/>
+                    <RotateTransform Angle="270"/>
+                </TransformGroup>
+            </Ellipse.RenderTransform>
+        </Ellipse>
+        <Ellipse Fill="{Binding SpinerColor, ElementName=control}" Height="10" Width="10" RenderTransformOrigin="0.5,0.5"  x:Name="el11">
+            <Ellipse.RenderTransform>
+                <TransformGroup>
+                    <TranslateTransform Y="-35"/>
+                    <RotateTransform Angle="300"/>
+                </TransformGroup>
+            </Ellipse.RenderTransform>
+        </Ellipse>
+        <Ellipse Fill="{Binding SpinerColor, ElementName=control}" Height="10" Width="10" RenderTransformOrigin="0.5,0.5"  x:Name="el12">
+            <Ellipse.RenderTransform>
+                <TransformGroup>
+                    <TranslateTransform Y="-35"/>
+                    <RotateTransform Angle="330"/>
+                </TransformGroup>
+            </Ellipse.RenderTransform>
+        </Ellipse>
+    </Grid>
+</UserControl>

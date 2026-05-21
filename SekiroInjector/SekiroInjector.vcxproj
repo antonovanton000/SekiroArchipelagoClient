@@ -147,6 +147,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Core.h" />
+    <ClInclude Include="EndingDetector.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="InGameMessaging.h" />
     <ClInclude Include="ItemHooks.h" />
@@ -176,6 +177,7 @@
   <ItemGroup>
     <ClCompile Include="Core.cpp" />
     <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="EndingDetector.cpp" />
     <ClCompile Include="InGameMessaging.cpp" />
     <ClCompile Include="ItemHooks.cpp" />
     <ClCompile Include="libs\Imgui\backends\imgui_impl_dx11.cpp">
@@ -219,6 +221,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="dinput8.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="SekiroInjector.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

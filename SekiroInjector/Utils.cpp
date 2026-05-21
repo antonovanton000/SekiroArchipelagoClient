@@ -63,6 +63,30 @@ bool SafeReadInt(uintptr_t addr, int& out)
     }
 }
 
+bool SafeReadByte(uintptr_t addr, uint8_t& out)
+{
+    if (!addr) return false;
+
+    MEMORY_BASIC_INFORMATION mbi{};
+    if (!VirtualQuery((LPCVOID)addr, &mbi, sizeof(mbi))) return false;
+    if (mbi.State != MEM_COMMIT) return false;
+
+    const DWORD ok =
+        PAGE_READONLY | PAGE_READWRITE |
+        PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE;
+
+    if (!(mbi.Protect & ok)) return false;
+
+    __try {
+        out = *(uint8_t*)addr;
+        return true;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        out = 0;
+        return false;
+    }
+}
+
 bool SafeReadFloat(uintptr_t addr, float& out)
 {
     if (!addr)
@@ -90,6 +114,32 @@ bool SafeReadFloat(uintptr_t addr, float& out)
     __except (EXCEPTION_EXECUTE_HANDLER)
     {
         out = 0.0f;
+        return false;
+    }
+}
+
+bool SafeWriteByte(uintptr_t addr, uint8_t value)
+{
+    if (!addr)
+        return false;
+
+    DWORD oldProtect = 0;
+
+    __try
+    {
+        if (!VirtualProtect(reinterpret_cast<void*>(addr), sizeof(uint8_t),
+            PAGE_EXECUTE_READWRITE, &oldProtect))
+        {
+            return false;
+        }
+
+        *reinterpret_cast<uint8_t*>(addr) = value;
+
+        VirtualProtect(reinterpret_cast<void*>(addr), sizeof(uint8_t), oldProtect, &oldProtect);
+        return true;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
         return false;
     }
 }
@@ -373,7 +423,44 @@ std::wstring UnescapeBackslashNewlines(const std::wstring& input)
     return out;
 }
 
-// 2. Нормализуем реальные \r / \r\n в просто \n (на всякий случай)
+static inline int HexVal(wchar_t c)
+{
+    if (c >= L'0' && c <= L'9') return c - L'0';
+    if (c >= L'a' && c <= L'f') return 10 + (c - L'a');
+    if (c >= L'A' && c <= L'F') return 10 + (c - L'A');
+    return -1;
+}
+
+// "\u0027" -> L'\'', "\u00AB" -> «, и т.д.
+inline std::wstring UnescapeUnicodeUxxxx(const std::wstring& input)
+{
+    std::wstring out;
+    out.reserve(input.size());
+
+    for (size_t i = 0; i < input.size(); ++i)
+    {
+        if (input[i] == L'\\' && i + 5 < input.size() && input[i + 1] == L'u')
+        {
+            int h1 = HexVal(input[i + 2]);
+            int h2 = HexVal(input[i + 3]);
+            int h3 = HexVal(input[i + 4]);
+            int h4 = HexVal(input[i + 5]);
+
+            if (h1 >= 0 && h2 >= 0 && h3 >= 0 && h4 >= 0)
+            {
+                wchar_t ch = (wchar_t)((h1 << 12) | (h2 << 8) | (h3 << 4) | h4);
+                out.push_back(ch);
+                i += 5;
+                continue;
+            }
+        }
+
+        out.push_back(input[i]);
+    }
+
+    return out;
+}
+
 std::wstring NormalizeRealNewlines(const std::wstring& input)
 {
     std::wstring out;
@@ -400,7 +487,8 @@ std::wstring NormalizeRealNewlines(const std::wstring& input)
 // Финальный хелпер: строка "как из C#" -> с нормальными \n
 std::wstring FixHintTextFromCSharp(const std::wstring& raw)
 {
-    std::wstring step1 = UnescapeBackslashNewlines(raw);
+    std::wstring s = UnescapeUnicodeUxxxx(raw);
+    std::wstring step1 = UnescapeBackslashNewlines(s);
     std::wstring step2 = NormalizeRealNewlines(step1);
     return step2;
 }

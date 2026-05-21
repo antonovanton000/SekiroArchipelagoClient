@@ -5,8 +5,10 @@
 
 
 bool SafeReadPtr(uintptr_t addr, uintptr_t& out);
+bool SafeReadByte(uintptr_t addr, uint8_t& out);
 bool SafeReadInt(uintptr_t addr, int& out);
 bool SafeReadFloat(uintptr_t addr, float& out);
+bool SafeWriteByte(uintptr_t addr, uint8_t value);
 bool SafeWriteInt(uintptr_t addr, int value);
 
 enum class ItemCategory : uint32_t

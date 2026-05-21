@@ -8,24 +8,37 @@
 #include "Overlay.h"
 #include "PipeConnection.h"
 #include "Core.h"
+#include <vector>
 #include <mutex>
 #include <queue>
 
 extern PipeConnection g_Pipe;
-
 static MapItemMan_GrantItem_t g_GrantItem_Original = nullptr;
 ShopFunc_t g_ShopFunc_Original = nullptr;
 
 using BuildItemFromLot_t = void(__fastcall*)(void* outStruct, uint32_t lotId);
 static BuildItemFromLot_t g_BuildItemFromLot_Original = nullptr;
-
-static bool g_InterruptItemAcquiring = false;
-static uint32_t g_CurrentItemLotId = 0;
-static bool g_CurrentLotValid = false;
-
 static bool g_PickupHandled = false;
-thread_local uint32_t g_LastRewardLotId = 0;
+thread_local uint32_t g_LastTrackedRewardLotId = 0;
+thread_local uint32_t g_LastRewardParamReportedLotId = 0;
+thread_local uint32_t g_LastRewardParamReportedGoodsId = 0;
+struct RewardContext
+{
+	bool     active = false;
+	uint32_t lotId = 0;
+};
 
+thread_local RewardContext g_RewardCtx;
+
+using GetRewardStruct_t = void* (__fastcall*)(void* outStruct, uint32_t lotId);
+
+using RewardExec_t = void(__fastcall*)(uintptr_t ctx, uint32_t lotId, uint8_t flag1, uint8_t flag2);
+
+using RewardParamInit_t = void(__fastcall*)(void* rewardParam, int mode);
+
+static RewardExec_t       g_RewardExec_Original = nullptr;
+static RewardParamInit_t  g_RewardParamInit_Original = nullptr;
+static bool g_InterruptItemAcquiring = false;
 
 // -----------------------------------------------------------------------------
 // Helpers
@@ -36,6 +49,12 @@ bool IsAllowedGoods(uint32_t goodsId)
 	return g_AllowedGoods.find(goodsId) != g_AllowedGoods.end();
 }
 
+bool IsTrackedRewardLot(uint32_t lotId)
+{
+	return lotId == 51300  // DT: Hidden Tooth - complete Hanbei's quest
+		|| lotId == 52810; // MV: Treasure Carp Scale - Head Priest's house, enemy drop
+}
+
 void OnLootDetected(uint32_t lotIndex, uint32_t goodid, bool isFromShop)
 {
 	char buf[256];
@@ -43,22 +62,81 @@ void OnLootDetected(uint32_t lotIndex, uint32_t goodid, bool isFromShop)
 		buf,
 		sizeof(buf),
 		"{ \"type\":\"item_picked\", \"lot_index\":%u, \"goods_id\":%u, \"is_from_shop\":%s }",
-		lotIndex,	
+		lotIndex,
 		goodid,
-		isFromShop ? "true" : "false"		
+		isFromShop ? "true" : "false"
 	);
+	g_Pipe.SendJson(std::string(buf));	
+}
 
-	g_Pipe.SendJson(std::string(buf));
+void __fastcall Hooked_RewardExec(
+	uintptr_t ctx,
+	uint32_t  lotId,
+	uint8_t   flag1,
+	uint8_t   flag2)
+{
+	Logf("[RewardExec] called lot=%u", lotId);
+
+	g_RewardCtx.active = true;
+	g_RewardCtx.lotId = lotId;
+
+	g_RewardExec_Original(ctx, lotId, flag1, flag2);
+
+	g_RewardCtx.active = false;
+	g_RewardCtx.lotId = 0;
+}
+
+
+//////////////////////////////////////////////////////////
+// sekiro.exe+C3BA30
+//////////////////////////////////////////////////////////
+void __fastcall Hooked_RewardParamInit(void* rewardParam, int mode)
+{
+	g_RewardParamInit_Original(rewardParam, mode);
+
+	if (!g_RewardCtx.active)
+		return;
+
+	if (!IsWorldLoaded())
+		return;
+
+	if (!rewardParam)
+		return;
+
+	uint8_t* base = reinterpret_cast<uint8_t*>(rewardParam);
+	uint32_t encodedId = *(uint32_t*)(base + 0x38);
+	uint32_t quantity = *(uint32_t*)(base + 0x3C);
+
+	if (encodedId == 0 || quantity == 0)
+		return;
+
+	uint32_t goodsId = DecodeGoodsId(encodedId);
+	uint32_t lotId = g_RewardCtx.lotId;
+	bool isAllowedItem = IsAllowedGoods(goodsId);
+
+	if (isAllowedItem && !IsTrackedRewardLot(lotId))
+	{
+		Logf("[Reward] ignored lot=%u goods=%u qty=%u allowed=%s", lotId, goodsId, quantity, isAllowedItem ? "true" : "false");
+		return;
+	}
+
+	OnLootDetected(lotId, goodsId, false);
+	g_LastRewardParamReportedLotId = lotId;
+	g_LastRewardParamReportedGoodsId = goodsId;
+	Logf("[Reward] staged tracked lot=%u goods=%u qty=%u allowed=%s", lotId, goodsId, quantity, isAllowedItem ? "true" : "false");
+	Overlay_AddLog("[Reward] staged lot=%u goods=%u", lotId, goodsId);
 }
 
 void __fastcall Hooked_BuildItemFromLot(void* outStruct, uint32_t lotId)
 {
-	// save lotid
-	g_LastRewardLotId = lotId;
+	g_LastTrackedRewardLotId = IsTrackedRewardLot(lotId) ? lotId : 0;
+	if (g_LastTrackedRewardLotId != 0)
+		Logf("[BuildItemFromLot] tracked reward lot=%u", g_LastTrackedRewardLotId);
+
 	g_BuildItemFromLot_Original(outStruct, lotId);
 }
 
-// Тип целевой функции (91FCF0)
+//////////////////////////////////////////////////////////
 using PickupExec_t = void(__fastcall*)(
 	uintptr_t mapItemMan,
 	uint32_t  a2,
@@ -66,7 +144,7 @@ using PickupExec_t = void(__fastcall*)(
 	uint8_t   a4
 	);
 
-// Тип внутренней функции 920330, которая возвращает pickupStruct
+// 920330 pickupStruct
 using GetPickupStruct_t = uintptr_t(__fastcall*)(
 	uintptr_t mapItemMan,
 	uint32_t  a2,
@@ -79,39 +157,68 @@ static PickupExec_t g_PickupExec_Original = nullptr;
 // Funciton 920330
 static GetPickupStruct_t g_GetPickupStruct = nullptr;
 
+struct PickupRead
+{
+	bool valid = false;
+	uint32_t packed = 0;
+	uint32_t quantity = 0;
+	uint32_t lotId = 0;
+	uint32_t goodsId = 0;
+	bool isAllowedItem = false;
+};
+
+static PickupRead ReadPickup(uintptr_t mapItemMan, uint32_t a2, uint8_t flag)
+{
+	PickupRead read;
+	if (!g_GetPickupStruct)
+		return read;
+
+	uintptr_t pickupStruct = g_GetPickupStruct(mapItemMan, a2, flag);
+	if (!pickupStruct)
+		return read;
+
+	read.packed = *(uint32_t*)(pickupStruct + 0x58);
+	read.quantity = *(uint32_t*)(pickupStruct + 0x5C);
+	read.lotId = *(uint32_t*)(pickupStruct + 0xD4);
+	read.goodsId = DecodeGoodsId(read.packed);
+	read.isAllowedItem = IsAllowedGoods(read.goodsId);
+	read.valid = read.quantity > 0 && read.lotId != 0 && read.lotId != 0xFFFFFFFF;
+	return read;
+}
+
 void __fastcall Hooked_PickupExec(
 	uintptr_t mapItemMan,
 	uint32_t  a2,
 	uint8_t   flag,
 	uint8_t   a4)
 {
-	// get pickup struct
-	if (g_GetPickupStruct)
-	{
-		uintptr_t pickupStruct = g_GetPickupStruct(mapItemMan, a2, flag);
-
-		if (pickupStruct)
-		{
-			uint32_t encodedId = *(uint32_t*)(pickupStruct + 0x58);
-			uint32_t quantity = *(uint32_t*)(pickupStruct + 0x5C);
-			uint32_t lotId = *(uint32_t*)(pickupStruct + 0xD4);
-			uint32_t goodsId = DecodeGoodsId(encodedId);
-			// little validation
-			if (quantity > 0 && lotId != 0 && lotId != 0xFFFFFFFF)
-			{		
-				g_InterruptItemAcquiring = goodsId >= 6000000; // interrupt if goodsId is foreign (not in allowed list)
-				g_PickupHandled = true;
-				OnLootDetected(lotId, goodsId, false);
-
-				Logf("[PickupExec] staged lot=%u goodId=%u", lotId, goodsId);
-				Overlay_AddLog("[PickupExec] staged lot=%u goodId=%u", lotId, goodsId);
-			}
-		}
-	}
-
+	PickupRead before = ReadPickup(mapItemMan, a2, flag);
 	g_PickupExec_Original(mapItemMan, a2, flag, a4);
-}
+	PickupRead after = ReadPickup(mapItemMan, a2, flag);
 
+	Logf(
+		"[PickupExec] probe a2=%u flag=%u before(valid=%d lot=%u good=%u qty=%u allowed=%d) after(valid=%d lot=%u good=%u qty=%u allowed=%d)",
+		a2,
+		flag,
+		before.valid ? 1 : 0,
+		before.lotId,
+		before.goodsId,
+		before.quantity,
+		before.isAllowedItem ? 1 : 0,
+		after.valid ? 1 : 0,
+		after.lotId,
+		after.goodsId,
+		after.quantity,
+		after.isAllowedItem ? 1 : 0);
+
+	PickupRead picked = after.valid ? after : before;
+	if (picked.valid && !picked.isAllowedItem)
+	{
+		OnLootDetected(picked.lotId, picked.goodsId, false);
+		Logf("[PickupExec] staged lot=%u goodId=%u", picked.lotId, picked.goodsId);
+		Overlay_AddLog("[PickupExec] staged lot=%u goodId=%u", picked.lotId, picked.goodsId);
+	}
+}
 
 void __fastcall Hooked_MapItemMan_GrantItem(
 	uintptr_t mapItemMan,
@@ -119,6 +226,12 @@ void __fastcall Hooked_MapItemMan_GrantItem(
 	uint64_t ctx,
 	uint64_t a4)
 {
+	if (!entry)
+	{
+		g_GrantItem_Original(mapItemMan, entry, ctx, a4);
+		return;
+	}
+
 	uint32_t raw = entry->itemId;
 	if ((raw & 0xF0000000) != 0x40000000)
 	{
@@ -126,31 +239,27 @@ void __fastcall Hooked_MapItemMan_GrantItem(
 		return;
 	}
 
-	if (g_InOurGrant || !entry)
+	if (!g_InOurGrant && !g_PickupHandled && IsTrackedRewardLot(g_LastTrackedRewardLotId))
 	{
-		g_GrantItem_Original(mapItemMan, entry, ctx, a4);
-		return;
+		uint32_t goodsId = DecodeGoodsId(entry->itemId);
+		if (g_LastRewardParamReportedLotId == g_LastTrackedRewardLotId && g_LastRewardParamReportedGoodsId == goodsId)
+		{
+			Logf("[GrantItemReward] skipped duplicate lot=%u goods=%u qty=%u", g_LastTrackedRewardLotId, goodsId, entry->quantity);
+			g_LastRewardParamReportedLotId = 0;
+			g_LastRewardParamReportedGoodsId = 0;
+		}
+		else
+		{
+			OnLootDetected(g_LastTrackedRewardLotId, goodsId, false);
+			Logf("[GrantItemReward] staged tracked lot=%u goods=%u qty=%u", g_LastTrackedRewardLotId, goodsId, entry->quantity);
+			Overlay_AddLog("[Reward] staged lot=%u goods=%u", g_LastTrackedRewardLotId, goodsId);
+		}
 	}
 
-	uint32_t goodsId = DecodeGoodsId(entry->itemId);
-	uint32_t qty = entry->quantity;
-	bool isAllowedKeyItem = IsAllowedGoods(goodsId);
-
-	if (g_LastRewardLotId != 0 && !g_PickupHandled)
-	{
-		g_InterruptItemAcquiring = goodsId >= 6000000; // interrupt if goodsId is foreign (not in allowed list)
-		OnLootDetected(g_LastRewardLotId, goodsId, false);
-
-		Logf("[Reward] staged lot=%u goodsId=%u", g_LastRewardLotId, goodsId);
-		Overlay_AddLog("[Reward] staged lot=%u goodsId=%u", g_LastRewardLotId, goodsId);
-
-		g_LastRewardLotId = 0;
-	}
+	g_LastTrackedRewardLotId = 0;
 	g_PickupHandled = false;
 	g_GrantItem_Original(mapItemMan, entry, ctx, a4);
 }
-
-
 
 using ShopPurchaseEntry_t = __int64(__fastcall*)(void* shopRuntime);
 
@@ -160,23 +269,25 @@ static ShopPurchaseEntry_t g_ShopPurchaseEntry_Original = nullptr;
 __int64 __fastcall Hooked_ShopPurchaseEntry(void* shopEntry)
 {
 	uint8_t* base = (uint8_t*)shopEntry;
-
 	uint32_t purchaseCount = *(uint32_t*)(base + 0x00);
 	uint32_t packed = *(uint32_t*)(base + 0x40);
-
 	bool isGoods = (packed & 0xF0000000u) == 0x40000000u;
-
 	uint32_t goodsId = isGoods ? (packed & 0x0FFFFFFF) : 0;
 	uint32_t lineupId = *(uint32_t*)(base + 0x48);
-	
-	g_InterruptItemAcquiring = goodsId >= 6000000; // interrupt if goodsId is foreign (not in allowed list)
-	OnLootDetected(lineupId, goodsId, true);
-
-	Logf("[Shop] staged lot=%u goodsId=%u", lineupId, goodsId);
-	Overlay_AddLog("[Shop] staged lot=%u goodsId=%u", lineupId, goodsId);
+	if (isGoods)
+	{
+		OnLootDetected(lineupId, goodsId, true);
+		Logf("[Shop] staged lot=%u goodsId=%u", lineupId, goodsId);
+		Overlay_AddLog("[Shop] staged lot=%u goodsId=%u", lineupId, goodsId);
+	}
 
 	return g_ShopPurchaseEntry_Original(shopEntry);
 }
+
+
+
+
+
 
 using CommitItem_t = int(__fastcall*)(
 	void* rcx,
@@ -192,47 +303,40 @@ int __fastcall Hooked_CommitItem(
 	int   edx,
 	int   goodsId,
 	int   qty)
-{	
-	if (!g_InterruptItemAcquiring)
-		return g_CommitItem_Original(rcx, edx, goodsId, qty);
-	else
-	{		
-		g_InterruptItemAcquiring = false; // reset flag after interrupting one commit
-		return 0;	
-	}
+{
+	if (edx == 0x40000000 && goodsId >= 6000000)
+		return g_CommitItem_Original(rcx, edx, goodsId, 0);
+
+	return g_CommitItem_Original(rcx, edx, goodsId, qty);	
 }
 
-// -----------------------------------------------------------------------------
-// SetItemCount (might be helpfull direct change count in inventory)
-// -----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+//SetItemCount (might be helpfull direct change count in inventory)
+//-----------------------------------------------------------------------------
 
 // __fastcall: RCX = slot, EDX = newCount
 //using SetItemCount_t = void(__fastcall*)(void* slot, uint32_t newCount);
-//static SetItemCount_t g_SetItemCount_Original = nullptr;
+//SetItemCount_t g_SetItemCount_Original = nullptr;
 //
 //void __fastcall SetItemCount_Hook(void* slot, uint32_t newCount)
 //{
 //	auto* base = reinterpret_cast<uint8_t*>(slot);
+//	uint32_t packedId = *reinterpret_cast<uint32_t*>(base + 0x04);
+//	uint32_t goodsId = packedId & 0x0FFFFFFF;
+//	uint32_t category = packedId & 0xF0000000u;
+//	
+//	if (category == 0x40000000u && goodsId >= 6000000)
+//		newCount = 0;
 //
-//	// reading old count and goodsId directly from slot struct
-//	uint32_t oldCount = *reinterpret_cast<uint32_t*>(base + 0x08);
-//	uint32_t packedId = *reinterpret_cast<uint32_t*>(base + 0x00);
-//	uint32_t goodsId = packedId & 0x0FFFFFFF;  // unpack goodsId
-//
-//	// calling original ( mov [rcx+08], edx; ret)
+//	//Logf("[ItemHooks] SetItemCount packed=0x%08X cat=0x%X goodsId=%u", packedId, category >> 28, goodsId);
 //	g_SetItemCount_Original(slot, newCount);
-//
-//	int delta = static_cast<int>(newCount) - static_cast<int>(oldCount);
-//
-//	if (delta > 0)
-//	{
-//		Logf("[ItemChange] goodsId=%u +%d (old=%u new=%u)",
-//			goodsId, delta, oldCount, newCount);
-//
-//		OnLootDetected(0, goodsId, delta, false);
-//		Overlay_AddLog("[Shop] goods=%u x%u", goodsId, delta);
-//	}
 //}
+
+
+
+
 
 // -----------------------------------------------------------------------------
 // MinHook initialization
@@ -254,19 +358,29 @@ bool ItemHooks_Initialize()
 	}
 
 	uintptr_t base = reinterpret_cast<uintptr_t>(hMod);
+	MH_STATUS status = MH_OK;
 
 	uintptr_t buildItemAddr = base + 0x913DF0;
-
-	MH_STATUS status = MH_CreateHook(
+	status = MH_CreateHook(
 		reinterpret_cast<void*>(buildItemAddr),
 		&Hooked_BuildItemFromLot,
 		reinterpret_cast<void**>(&g_BuildItemFromLot_Original));
 
-	MH_EnableHook(reinterpret_cast<void*>(buildItemAddr));
+	if (status != MH_OK)
+	{
+		Logf("[ItemHooks] MH_CreateHook(BuildItemFromLot) failed: %d", (int)status);
+		return false;
+	}
 
-	Logf("[ItemHooks] BuildItemFromLot hook = 0x%llX",
+	status = MH_EnableHook(reinterpret_cast<void*>(buildItemAddr));
+	if (status != MH_OK)
+	{
+		Logf("[ItemHooks] MH_EnableHook(BuildItemFromLot) failed: %d", (int)status);
+		return false;
+	}
+
+	Logf("[ItemHooks] BuildItemFromLot hook enabled. target=0x%llX",
 		static_cast<unsigned long long>(buildItemAddr));
-
 
 	uintptr_t getPickupAddr = base + 0x920330;
 	g_GetPickupStruct = reinterpret_cast<GetPickupStruct_t>(getPickupAddr);
@@ -300,6 +414,77 @@ bool ItemHooks_Initialize()
 		static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(g_PickupExec_Original)));
 
 
+	uintptr_t rewardExecTarget = base + 0x918810;
+
+	Logf("[ItemHooks] RewardExec target = 0x%llX",
+		static_cast<unsigned long long>(rewardExecTarget));
+
+	status = MH_CreateHook(
+		reinterpret_cast<LPVOID>(rewardExecTarget),
+		reinterpret_cast<LPVOID>(&Hooked_RewardExec),
+		reinterpret_cast<LPVOID*>(&g_RewardExec_Original)
+	);
+
+	if (status != MH_OK)
+	{
+		Logf("[ItemHooks] MH_CreateHook(RewardExec) failed: %d", (int)status);
+		return false;
+	}
+
+	status = MH_EnableHook(reinterpret_cast<LPVOID>(rewardExecTarget));
+	if (status != MH_OK)
+	{
+		Logf("[ItemHooks] MH_EnableHook(RewardExec) failed: %d", (int)status);
+		return false;
+	}
+
+	Logf("[ItemHooks] RewardExec hook enabled. target=0x%llX orig=0x%llX",
+		static_cast<unsigned long long>(rewardExecTarget),
+		static_cast<unsigned long long>(
+			reinterpret_cast<uintptr_t>(g_RewardExec_Original)));
+
+
+	uintptr_t rewardParamTarget = base + 0xC3BA30;
+	Logf("[ItemHooks] RewardParamInit target = 0x%llX",
+		(unsigned long long)rewardParamTarget);
+
+	status = MH_CreateHook(
+		reinterpret_cast<LPVOID>(rewardParamTarget),
+		reinterpret_cast<LPVOID>(&Hooked_RewardParamInit),
+		reinterpret_cast<LPVOID*>(&g_RewardParamInit_Original)
+	);
+	if (status != MH_OK)
+	{
+		Logf("[ItemHooks] MH_CreateHook(RewardParamInit) failed: %d", (int)status);
+		return false;
+	}
+
+	status = MH_EnableHook(reinterpret_cast<LPVOID>(rewardParamTarget));
+	if (status != MH_OK)
+	{
+		Logf("[ItemHooks] MH_EnableHook(RewardParamInit) failed: %d", (int)status);
+		return false;
+	}
+
+	uintptr_t shopEntryTarget = base + 0xDD3FA0;
+
+	Logf("[ItemHooks] ShopPurchaseEntry target = 0x%llX",
+		static_cast<unsigned long long>(shopEntryTarget));
+
+	if (MH_CreateHook(
+		reinterpret_cast<LPVOID>(shopEntryTarget),
+		reinterpret_cast<LPVOID>(&Hooked_ShopPurchaseEntry),
+		reinterpret_cast<LPVOID*>(&g_ShopPurchaseEntry_Original)) != MH_OK)
+	{
+		Log("[ItemHooks] MH_CreateHook(ShopPurchaseEntry) failed");
+		return false;
+	}
+
+	if (MH_EnableHook(reinterpret_cast<LPVOID>(shopEntryTarget)) != MH_OK)
+	{
+		Log("[ItemHooks] MH_EnableHook(ShopPurchaseEntry) failed");
+		return false;
+	}
 
 	uintptr_t grantItemAddr = base + 0x91C970;
 
@@ -324,6 +509,10 @@ bool ItemHooks_Initialize()
 		return false;
 	}
 
+	Logf("[ItemHooks] GrantItem hook enabled. target=0x%llX orig=0x%llX",
+		static_cast<unsigned long long>(grantItemAddr),
+		static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(g_GrantItem_Original)));
+
 	uintptr_t commitItemAddr = base + 0x79BF90;
 
 	Logf("[ItemHooks] CommitItemAddr = 0x%llX",
@@ -344,29 +533,27 @@ bool ItemHooks_Initialize()
 		return false;
 	}
 
-	uintptr_t shopEntryTarget = base + 0xDD3FA0;
+	
 
-	Logf("[ItemHooks] ShopPurchaseEntry target = 0x%llX",
-		static_cast<unsigned long long>(shopEntryTarget));
+	//uintptr_t setItemCountAddr = base + 0xC3CF50;
 
-	if (MH_CreateHook(
-		reinterpret_cast<LPVOID>(shopEntryTarget),
-		reinterpret_cast<LPVOID>(&Hooked_ShopPurchaseEntry),
-		reinterpret_cast<LPVOID*>(&g_ShopPurchaseEntry_Original)) != MH_OK)
-	{
-		Log("[ItemHooks] MH_CreateHook(ShopPurchaseEntry) failed");
-		return false;
-	}
+	//status = MH_CreateHook(
+	//	reinterpret_cast<LPVOID>(setItemCountAddr),
+	//	reinterpret_cast<LPVOID>(&SetItemCount_Hook),
+	//	reinterpret_cast<LPVOID*>(&g_SetItemCount_Original)
+	//);
+	//if (status != MH_OK)
+	//{
+	//	Logf("[ItemHooks] MH_CreateHook(SetItemCount_Hook) failed: %d", (int)status);
+	//	return false;
+	//}
 
-	if (MH_EnableHook(reinterpret_cast<LPVOID>(shopEntryTarget)) != MH_OK)
-	{
-		Log("[ItemHooks] MH_EnableHook(ShopPurchaseEntry) failed");
-		return false;
-	}
-
-	Logf("[ItemHooks] GrantItem original = 0x%llX",
-		static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(g_GrantItem_Original)));
-
+	//status = MH_EnableHook(reinterpret_cast<LPVOID>(setItemCountAddr));
+	//if (status != MH_OK)
+	//{
+	//	Logf("[ItemHooks] MH_EnableHook(SetItemCount_Hook) failed: %d", (int)status);
+	//	return false;
+	//}	
 	s_AlreadyInitialized = true;
 	return true;
 }

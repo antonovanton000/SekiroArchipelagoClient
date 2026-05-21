@@ -13,7 +13,8 @@
 
 static bool g_Running = true;
 static bool g_HooksInitialized = false;
-bool g_IsDebug = false;
+bool g_IsDebug = true;
+bool g_IsFullDeathDetection = true;
 
 PipeConnection g_Pipe;
 
@@ -30,6 +31,18 @@ static void HandlePipeMessage(const std::string& msg)
         }
         g_IsDebug = newDebug;
     }
+    if (JsonIsType(msg, "full_death_detection"))
+    {
+        bool newDeathDetection;
+        if (!JsonFieldToBool(msg, "value", newDeathDetection))
+        {
+            Logf("[Pipe] full_death_detection: missing or invalid value");
+            return;
+        }
+        g_IsFullDeathDetection = newDeathDetection;
+        Logf("[Pipe] full_death_detection: %s", g_IsFullDeathDetection ? "true" : "false");
+        Overlay_AddLog("[Pipe] full_death_detection: %s", g_IsFullDeathDetection ? "true" : "false");
+    }
 
     if (JsonIsType(msg, "kill_player"))
     {
@@ -37,7 +50,94 @@ static void HandlePipeMessage(const std::string& msg)
         Logf("[Pipe] Kill Player");
         Overlay_AddLog("[Pipe] Kill Player");
     }
+
+    if (JsonIsType(msg, "set_enemy_ai_disabled"))
+    {
+        bool disabled;
+        if (!JsonFieldToBool(msg, "value", disabled))
+        {
+            Log("[Pipe] set_enemy_ai_disabled: missing or invalid value");
+            return;
+        }
+
+        bool ok = SekiroGame_SetEnemyAiDisabled(disabled);
+        Logf("[Pipe] set_enemy_ai_disabled: %s (%s)",
+            disabled ? "true" : "false",
+            ok ? "ok" : "failed");
+        Overlay_AddLog("[Pipe] Enemy AI disabled: %s", disabled ? "true" : "false");
+    }
+
+    if (JsonIsType(msg, "set_one_hit_kill"))
+    {
+        bool enabled;
+        if (!JsonFieldToBool(msg, "value", enabled))
+        {
+            Log("[Pipe] set_one_hit_kill: missing or invalid value");
+            return;
+        }
+
+        bool ok = SekiroGame_SetOneHitKillEnabled(enabled);
+        Logf("[Pipe] set_one_hit_kill: %s (%s)",
+            enabled ? "true" : "false",
+            ok ? "ok" : "failed");
+        Overlay_AddLog("[Pipe] One Hit Kill: %s", enabled ? "true" : "false");
+    }
     
+    if (JsonIsType(msg, "set_event_flag"))
+    {     
+        uint32_t eventId = 0;
+        uint32_t value = 0;
+
+        // event_id is required
+        if (!JsonFieldToUInt(msg, "event_id", eventId))
+        {
+            Log("[Pipe] set_event_flag: missing or invalid event_id");
+            return;
+        }
+
+        // value is required
+        if (!JsonFieldToUInt(msg, "value", value))
+        {
+            Log("[Pipe] set_event_flag: missing or invalid value");
+            return;
+        }
+        Logf("[Pipe] set_event_flag: event_flag_id: %u, value: %u", eventId, value);
+
+		SetEventFlagSafe(eventId, value == 1);
+    }
+
+    if (JsonIsType(msg, "get_event_flag"))
+    {
+        uint32_t eventId = 0;
+        uint32_t requestId = 0;
+
+        if (!JsonFieldToUInt(msg, "event_id", eventId))
+        {
+            Log("[Pipe] get_event_flag: missing or invalid event_id");
+            return;
+        }
+
+        if (!JsonFieldToUInt(msg, "request_id", requestId))
+        {
+            Log("[Pipe] get_event_flag: missing or invalid request_id");
+            return;
+        }
+
+        bool value = false;
+        bool ok = GetEventFlagSafe(eventId, value);
+        Logf("[Pipe] get_event_flag: event_flag_id: %u, request_id: %u, ok: %s, value: %u",
+            eventId, requestId, ok ? "true" : "false", value ? 1 : 0);
+
+        char response[192];
+        sprintf_s(response,
+            "{ \"type\":\"event_flag_response\", \"request_id\":%u, \"event_id\":%u, \"ok\":%s, \"is_set\":%s }",
+            requestId,
+            eventId,
+            ok ? "true" : "false",
+            value ? "true" : "false");
+        g_Pipe.SendJson(std::string(response));
+    }
+
     // --- handle grant_item messages ---   
     if (JsonIsType(msg, "grant_item"))
     {

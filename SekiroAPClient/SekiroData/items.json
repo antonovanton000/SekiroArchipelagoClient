@@ -1,0 +1,1165 @@
+[
+  {
+    "code": 1000,
+    "name": "Spirit Emblem",
+    "type": "emblem"
+  },
+  {
+    "code": 1001,
+    "name": "Red Spirit Emblem",
+    "type": "???"
+  },
+  {
+    "code": 1100,
+    "name": "Regenerative Power",
+    "type": "regen"
+  },
+  {
+    "code": 1101,
+    "name": "Regenerative Power Fragment",
+    "type": "regen"
+  },
+  {
+    "code": 1110,
+    "name": "Temporary Regenerative Power",
+    "type": "regen"
+  },
+  {
+    "code": 1200,
+    "name": "Skill Point",
+    "type": "???"
+  },
+  {
+    "code": 2000,
+    "name": "Resurrection",
+    "type": "regen"
+  },
+  {
+    "code": 2100,
+    "name": "Bloodsmoke Ninjutsu",
+    "type": "ninjitsu"
+  },
+  {
+    "code": 2110,
+    "name": "Puppeteer Ninjutsu",
+    "type": "ninjitsu"
+  },
+  {
+    "code": 2120,
+    "name": "Bestowal Ninjutsu",
+    "type": "ninjitsu"
+  },
+  {
+    "code": 2300,
+    "name": "Kusabimaru",
+    "type": "keyItem"
+  },
+  {
+    "code": 2310,
+    "name": "Shinobi Prosthetic",
+    "type": "keyItem"
+  },
+  {
+    "code": 2390,
+    "name": "Night Eye",
+    "type": "???"
+  },
+  {
+    "code": 2400,
+    "name": "Mortal Blade",
+    "type": "keyItem"
+  },
+  {
+    "code": 2420,
+    "name": "Mibu Breathing Technique",
+    "type": "skill"
+  },
+  {
+    "code": 2450,
+    "name": "Anti-air Deathblow Text",
+    "type": "skill"
+  },
+  {
+    "code": 2460,
+    "name": "Dragon Flash",
+    "type": "skill"
+  },
+  {
+    "code": 2461,
+    "name": "Floating Passage Text",
+    "type": "skill"
+  },
+  {
+    "code": 2462,
+    "name": "One Mind",
+    "type": "skill"
+  },
+  {
+    "code": 2470,
+    "name": "Shinobi Medicine Rank 1",
+    "type": "skill"
+  },
+  {
+    "code": 2471,
+    "name": "Shinobi Medicine Rank 2",
+    "type": "skill"
+  },
+  {
+    "code": 2472,
+    "name": "Shinobi Medicine Rank 3",
+    "type": "skill"
+  },
+  {
+    "code": 2475,
+    "name": "A Beast's Karma",
+    "type": "skill"
+  },
+  {
+    "code": 2480,
+    "name": "Breath of Life: Shadow",
+    "type": "skill"
+  },
+  {
+    "code": 2481,
+    "name": "Breath of Nature: Shadow",
+    "type": "skill"
+  },
+  {
+    "code": 2490,
+    "name": "Sakura Dance",
+    "type": "skill"
+  },
+  {
+    "code": 2500,
+    "name": "Lotus of the Palace",
+    "type": "keyItem"
+  },
+  {
+    "code": 2501,
+    "name": "Shelter Stone",
+    "type": "keyItem"
+  },
+  {
+    "code": 2502,
+    "name": "Aromatic Branch",
+    "type": "keyItem"
+  },
+  {
+    "code": 2503,
+    "name": "Aromatic Flower",
+    "type": "keyItem"
+  },
+  {
+    "code": 2910,
+    "name": "Mechanical Barrel",
+    "type": "keyItem"
+  },
+  {
+    "code": 2920,
+    "name": "Shinobi Esoteric Text",
+    "type": "skillsText"
+  },
+  {
+    "code": 2921,
+    "name": "Prosthetic Esoteric Text",
+    "type": "skillsText"
+  },
+  {
+    "code": 2922,
+    "name": "Ashina Esoteric Text",
+    "type": "skillsText"
+  },
+  {
+    "code": 2923,
+    "name": "Senpou Esoteric Text",
+    "type": "skillsText"
+  },
+  {
+    "code": 2924,
+    "name": "Mushin Esoteric Text",
+    "type": "skillsText"
+  },
+  {
+    "code": 2930,
+    "name": "Recovery Charm",
+    "type": "???"
+  },
+  {
+    "code": 3000,
+    "name": "Healing Gourd",
+    "type": "???"
+  },
+  {
+    "code": 3001,
+    "name": "Healing Gourd (2)",
+    "type": "???"
+  },
+  {
+    "code": 3020,
+    "name": "Pellet",
+    "type": "consumables"
+  },
+  {
+    "code": 3040,
+    "name": "Divine Grass",
+    "type": "consumables"
+  },
+  {
+    "code": 3050,
+    "name": "Red Lump",
+    "type": "consumables"
+  },
+  {
+    "code": 3051,
+    "name": "Red Lump (2)",
+    "type": "consumables"
+  },
+  {
+    "code": 3052,
+    "name": "Red Lump (3)",
+    "type": "consumables"
+  },
+  {
+    "code": 3053,
+    "name": "Academics' Red Lump",
+    "type": "consumables"
+  },
+  {
+    "code": 3060,
+    "name": "Sweet Rice Ball",
+    "type": "consumables"
+  },
+  {
+    "code": 3061,
+    "name": "Sweet Rice Ball (2)",
+    "type": "consumables"
+  },
+  {
+    "code": 3070,
+    "name": "Persimmon",
+    "type": "consumables"
+  },
+  {
+    "code": 3071,
+    "name": "Taro Persimmon",
+    "type": "consumables"
+  },
+  {
+    "code": 3080,
+    "name": "Rice",
+    "type": "consumables"
+  },
+  {
+    "code": 3081,
+    "name": "Fine Snow",
+    "type": "consumables"
+  },
+  {
+    "code": 3200,
+    "name": "Antidote Powder",
+    "type": "consumables"
+  },
+  {
+    "code": 3210,
+    "name": "Dousing Powder",
+    "type": "consumables"
+  },
+  {
+    "code": 3211,
+    "name": "Ministry Dousing Powder",
+    "type": "consumables"
+  },
+  {
+    "code": 3220,
+    "name": "Pacifying Agent",
+    "type": "consumables"
+  },
+  {
+    "code": 3230,
+    "name": "Eel Liver",
+    "type": "consumables"
+  },
+  {
+    "code": 3250,
+    "name": "Contact Medicine",
+    "type": "consumables"
+  },
+  {
+    "code": 3290,
+    "name": "Bite Down",
+    "type": "consumables"
+  },
+  {
+    "code": 3291,
+    "name": "Hidden Tooth",
+    "type": "consumables"
+  },
+  {
+    "code": 3292,
+    "name": "Bite Down (2)",
+    "type": "consumables"
+  },
+  {
+    "code": 3300,
+    "name": "Green Mossy Gourd",
+    "type": "usable item"
+  },
+  {
+    "code": 3301,
+    "name": "Green Mossy Gourd (2)",
+    "type": "usable item"
+  },
+  {
+    "code": 3310,
+    "name": "Withered Red Gourd",
+    "type": "usable item"
+  },
+  {
+    "code": 3311,
+    "name": "Withered Red Gourd (2)",
+    "type": "usable item"
+  },
+  {
+    "code": 3320,
+    "name": "Mottled Purple Gourd",
+    "type": "usable item"
+  },
+  {
+    "code": 3321,
+    "name": "Mottled Purple Gourd (2)",
+    "type": "usable item"
+  },
+  {
+    "code": 3350,
+    "name": "Ako's Spiritfall",
+    "type": "consumables"
+  },
+  {
+    "code": 3360,
+    "name": "Yashariku's Spiritfall",
+    "type": "consumables"
+  },
+  {
+    "code": 3370,
+    "name": "Ungo's Spiritfall",
+    "type": "consumables"
+  },
+  {
+    "code": 3380,
+    "name": "Gokan's Spiritfall",
+    "type": "consumables"
+  },
+  {
+    "code": 3390,
+    "name": "Gachiin's Spiritfall",
+    "type": "consumables"
+  },
+  {
+    "code": 3400,
+    "name": "Ako's Sugar",
+    "type": "consumables"
+  },
+  {
+    "code": 3410,
+    "name": "Yashariku's Sugar",
+    "type": "consumables"
+  },
+  {
+    "code": 3420,
+    "name": "Ungo's Sugar",
+    "type": "consumables"
+  },
+  {
+    "code": 3430,
+    "name": "Gokan's Sugar",
+    "type": "consumables"
+  },
+  {
+    "code": 3440,
+    "name": "Gachiin's Sugar",
+    "type": "consumables"
+  },
+  {
+    "code": 3450,
+    "name": "Divine Confetti",
+    "type": "consumables"
+  },
+  {
+    "code": 3500,
+    "name": "Ceramic Shard",
+    "type": "consumables"
+  },
+  {
+    "code": 3510,
+    "name": "Fistful of Ash",
+    "type": "consumables"
+  },
+  {
+    "code": 3520,
+    "name": "Oil",
+    "type": "consumables"
+  },
+  {
+    "code": 3530,
+    "name": "Snap Seed",
+    "type": "consumables"
+  },
+  {
+    "code": 3580,
+    "name": "Five-color Rice",
+    "type": "consumables"
+  },
+  {
+    "code": 3581,
+    "name": "Five-color Rice (2)",
+    "type": "consumables"
+  },
+  {
+    "code": 3600,
+    "name": "Mibu Balloon of Wealth",
+    "type": "consumables"
+  },
+  {
+    "code": 3610,
+    "name": "Mibu Balloon of Soul",
+    "type": "consumables"
+  },
+  {
+    "code": 3620,
+    "name": "Mibu Possession Balloon",
+    "type": "consumables"
+  },
+  {
+    "code": 3630,
+    "name": "Mibu Balloon of Spirit",
+    "type": "consumables"
+  },
+  {
+    "code": 3640,
+    "name": "Mibu Pilgrimage Balloon",
+    "type": "consumables"
+  },
+  {
+    "code": 3700,
+    "name": "Light Coin Purse",
+    "type": "money"
+  },
+  {
+    "code": 3704,
+    "name": "Heavy Coin Purse",
+    "type": "money"
+  },
+  {
+    "code": 3708,
+    "name": "Bulging Coin Purse",
+    "type": "money"
+  },
+  {
+    "code": 3720,
+    "name": "Bundled Jizo Statue",
+    "type": "consumables"
+  },
+  {
+    "code": 3721,
+    "name": "Jinza's Jizo Statue",
+    "type": "consumables"
+  },
+  {
+    "code": 3730,
+    "name": "Bell Demon",
+    "type": "???"
+  },
+  {
+    "code": 3800,
+    "name": "Ceremonial Tanto",
+    "type": "usable item"
+  },
+  {
+    "code": 3801,
+    "name": "Ceremonial Tanto (2)",
+    "type": "consumables"
+  },
+  {
+    "code": 3900,
+    "name": "Nightjar Monocular",
+    "type": "???"
+  },
+  {
+    "code": 3980,
+    "name": "Homeward Idol",
+    "type": "???"
+  },
+  {
+    "code": 3990,
+    "name": "Illusive Hall Bell",
+    "type": "???"
+  },
+  {
+    "code": 4000,
+    "name": "Prayer Bead",
+    "type": "bead"
+  },
+  {
+    "code": 4100,
+    "name": "First Prayer Necklace",
+    "type": "necklace"
+  },
+  {
+    "code": 4101,
+    "name": "Second Prayer Necklace",
+    "type": "necklace"
+  },
+  {
+    "code": 4102,
+    "name": "Third Prayer Necklace",
+    "type": "necklace"
+  },
+  {
+    "code": 4103,
+    "name": "Fourth Prayer Necklace",
+    "type": "necklace"
+  },
+  {
+    "code": 4104,
+    "name": "Fifth Prayer Necklace",
+    "type": "necklace"
+  },
+  {
+    "code": 4105,
+    "name": "Sixth Prayer Necklace",
+    "type": "necklace"
+  },
+  {
+    "code": 4106,
+    "name": "Seventh Prayer Necklace",
+    "type": "necklace"
+  },
+  {
+    "code": 4107,
+    "name": "Eighth Prayer Necklace",
+    "type": "necklace"
+  },
+  {
+    "code": 4108,
+    "name": "Ninth Prayer Necklace",
+    "type": "necklace"
+  },
+  {
+    "code": 4109,
+    "name": "Final Prayer Necklace",
+    "type": "necklace"
+  },
+  {
+    "code": 4400,
+    "name": "Gourd Seed",
+    "type": "seed"
+  },
+  {
+    "code": 5200,
+    "name": "Memory: Gyoubu Oniwa",
+    "type": "memory"
+  },
+  {
+    "code": 5201,
+    "name": "Memory: Lady Butterfly",
+    "type": "memory"
+  },
+  {
+    "code": 5202,
+    "name": "Memory: Genichiro",
+    "type": "memory"
+  },
+  {
+    "code": 5203,
+    "name": "Memory: Screen Monkeys",
+    "type": "memory"
+  },
+  {
+    "code": 5204,
+    "name": "Memory: Guardian Ape",
+    "type": "memory"
+  },
+  {
+    "code": 5205,
+    "name": "Memory: Corrupted Monk",
+    "type": "memory"
+  },
+  {
+    "code": 5206,
+    "name": "Memory: Great Shinobi",
+    "type": "memory"
+  },
+  {
+    "code": 5207,
+    "name": "Memory: Foster Father",
+    "type": "memory"
+  },
+  {
+    "code": 5208,
+    "name": "Memory: True Monk",
+    "type": "memory"
+  },
+  {
+    "code": 5209,
+    "name": "Memory: Divine Dragon",
+    "type": "memory"
+  },
+  {
+    "code": 5210,
+    "name": "Memory: Hatred Demon",
+    "type": "memory"
+  },
+  {
+    "code": 5211,
+    "name": "Memory: Saint Isshin",
+    "type": "memory"
+  },
+  {
+    "code": 5212,
+    "name": "Memory: Isshin Ashina",
+    "type": "memory"
+  },
+  {
+    "code": 5213,
+    "name": "Memory: Headless Ape",
+    "type": "memory"
+  },
+  {
+    "code": 5220,
+    "name": "Memory: Inner Genichiro",
+    "type": "memory"
+  },
+  {
+    "code": 5221,
+    "name": "Memory: Inner Father",
+    "type": "memory"
+  },
+  {
+    "code": 5222,
+    "name": "Memory: Inner Isshin",
+    "type": "memory"
+  },
+  {
+    "code": 5500,
+    "name": "Mask Fragment: Right",
+    "type": "mask"
+  },
+  {
+    "code": 5501,
+    "name": "Mask Fragment: Left",
+    "type": "mask"
+  },
+  {
+    "code": 5502,
+    "name": "Mask Fragment: Dragon",
+    "type": "mask"
+  },
+  {
+    "code": 5510,
+    "name": "Dancing Dragon Mask",
+    "type": "mask"
+  },
+  {
+    "code": 5600,
+    "name": "Dragon's Blood Droplet",
+    "type": "consumables"
+  },
+  {
+    "code": 6000,
+    "name": "Scrap Iron",
+    "type": "material"
+  },
+  {
+    "code": 6010,
+    "name": "Scrap Magnetite",
+    "type": "material"
+  },
+  {
+    "code": 6020,
+    "name": "Adamantite Scrap",
+    "type": "material"
+  },
+  {
+    "code": 6100,
+    "name": "Black Gunpowder",
+    "type": "material"
+  },
+  {
+    "code": 6200,
+    "name": "Yellow Gunpowder",
+    "type": "material"
+  },
+  {
+    "code": 6210,
+    "name": "Fulminated Mercury",
+    "type": "material"
+  },
+
+  {
+    "code": 6300,
+    "name": "Lump of Fat Wax",
+    "type": "material"
+  },
+  {
+    "code": 6310,
+    "name": "Lump of Grave Wax",
+    "type": "material"
+  },
+  {
+    "code": 6400,
+    "name": "Lapis Lazuli",
+    "type": "material"
+  },
+  {
+    "code": 9000,
+    "name": "Divine Dragon's Tears",
+    "type": "keyItem"
+  },
+  {
+    "code": 9003,
+    "name": "Kuro's Charm",
+    "type": "???"
+  },
+  {
+    "code": 9009,
+    "name": "Sakura Droplet",
+    "type": "keyItem"
+  },
+  {
+    "code": 9010,
+    "name": "Young Lord's Bell Charm",
+    "type": "keyItem"
+  },
+  {
+    "code": 9011,
+    "name": "Father's Bell Charm",
+    "type": "keyItem"
+  },
+  {
+    "code": 9020,
+    "name": "Ornamental Letter",
+    "type": "questItem"
+  },
+  {
+    "code": 9052,
+    "name": "Red Carp Eyes",
+    "type": "questItem"
+  },
+  {
+    "code": 9060,
+    "name": "Dragon's Tally Board",
+    "type": "questItem"
+  },
+  {
+    "code": 9061,
+    "name": "Promissory Note",
+    "type": "questItem"
+  },
+  {
+    "code": 9070,
+    "name": "Water of the Palace",
+    "type": "questItem"
+  },
+  {
+    "code": 9071,
+    "name": "Great White Whisker",
+    "type": "questItem"
+  },
+  {
+    "code": 9080,
+    "name": "Red and White Pinwheel",
+    "type": "questItem"
+  },
+  {
+    "code": 9081,
+    "name": "White Pinwheel",
+    "type": "questItem"
+  },
+  {
+    "code": 9090,
+    "name": "Rice for Kuro",
+    "type": "questItem"
+  },
+  {
+    "code": 9091,
+    "name": "Frozen Tears",
+    "type": "questItem"
+  },
+
+  {
+    "code": 9100,
+    "name": "Ashina Sake",
+    "type": "questItem"
+  },
+  {
+    "code": 9101,
+    "name": "Unrefined Sake",
+    "type": "questItem"
+  },
+  {
+    "code": 9102,
+    "name": "Monkey Booze",
+    "type": "questItem"
+  },
+  {
+    "code": 9103,
+    "name": "Dragonspring Sake",
+    "type": "questItem"
+  },
+  {
+    "code": 9104,
+    "name": "Ashina Sake (2)",
+    "type": "questItem"
+  },
+  {
+    "code": 9105,
+    "name": "Unrefined Sake (2)",
+    "type": "questItem"
+  },
+
+  {
+    "code": 9180,
+    "name": "Precious Bait",
+    "type": "questItem"
+  },
+  {
+    "code": 9181,
+    "name": "Truly Precious Bait",
+    "type": "questItem"
+  },
+  {
+    "code": 9182,
+    "name": "Truly Precious Bait (2)",
+    "type": "questItem"
+  },
+  {
+    "code": 9192,
+    "name": "Fresh Serpent Viscera",
+    "type": "questItem"
+  },
+  {
+    "code": 9193,
+    "name": "Dried Serpent Viscera",
+    "type": "questItem"
+  },
+  {
+    "code": 9200,
+    "name": "Herb Catalogue Scrap",
+    "type": "questItem"
+  },
+  {
+    "code": 9205,
+    "name": "Dosaku's Note",
+    "type": "notes"
+  },
+  {
+    "code": 9206,
+    "name": "Rat Description",
+    "type": "notes"
+  },
+  {
+    "code": 9207,
+    "name": "Surgeon's Bloody Letter",
+    "type": "notes"
+  },
+  {
+    "code": 9208,
+    "name": "Surgeon's Stained Letter",
+    "type": "notes"
+  },
+  {
+    "code": 9209,
+    "name": "Holy Chapter: Dragon's Return",
+    "type": "notes"
+  },
+  {
+    "code": 9210,
+    "name": "Immortal Severance Text",
+    "type": "notes"
+  },
+  {
+    "code": 9211,
+    "name": "Immortal Severance Scrap",
+    "type": "notes"
+  },
+  {
+    "code": 9212,
+    "name": "Fragrant Flower Note",
+    "type": "notes"
+  },
+  {
+    "code": 9213,
+    "name": "Okami's Ancient Text",
+    "type": "notes"
+  },
+  {
+    "code": 9214,
+    "name": "Page's Diary",
+    "type": "notes"
+  },
+  {
+    "code": 9215,
+    "name": "Holy Chapter: Infested",
+    "type": "notes"
+  },
+  {
+    "code": 9216,
+    "name": "Tomoe's Note",
+    "type": "notes"
+  },
+  {
+    "code": 9217,
+    "name": "Flame Barrel Memo",
+    "type": "notes"
+  },
+  {
+    "code": 9218,
+    "name": "Nightjar Beacon Memo",
+    "type": "notes"
+  },
+  {
+    "code": 9219,
+    "name": "Isshin's Letter",
+    "type": "notes"
+  },
+  {
+    "code": 9220,
+    "name": "Rotting Prisoner's Note",
+    "type": "notes"
+  },
+  {
+    "code": 9221,
+    "name": "Sabimaru Memo",
+    "type": "notes"
+  },
+  {
+    "code": 9222,
+    "name": "Sabimaru Memo (2)",
+    "type": "notes"
+  },
+  {
+    "code": 9223,
+    "name": "Valley Apparitions Memo",
+    "type": "notes"
+  },
+  {
+    "code": 9224,
+    "name": "Valley Apparitions Memo (2)",
+    "type": "notes"
+  },
+  {
+    "code": 9225,
+    "name": "Three-story Pagoda Memo",
+    "type": "notes"
+  },
+  {
+    "code": 9226,
+    "name": "Three-story Pagoda Memo (2)",
+    "type": "notes"
+  },
+  {
+    "code": 9227,
+    "name": "Black Scroll",
+    "type": "notes"
+  },
+  {
+    "code": 9228,
+    "name": "Holy Chapter: Infested (2)",
+    "type": "notes"
+  },
+
+  {
+    "code": 9402,
+    "name": "Gatehouse Key",
+    "type": "keyItem"
+  },
+  {
+    "code": 9403,
+    "name": "Hidden Temple Key",
+    "type": "keyItem"
+  },
+  {
+    "code": 9404,
+    "name": "Secret Passage Key",
+    "type": "keyItem"
+  },
+  {
+    "code": 9405,
+    "name": "Gun Fort Shrine Key",
+    "type": "keyItem"
+  },
+  {
+    "code": 9700,
+    "name": "Shuriken Wheel",
+    "type": "prosthesis"
+  },
+  {
+    "code": 9701,
+    "name": "Phantom Kunai",
+    "type": "prosthesis"
+  },
+  {
+    "code": 9710,
+    "name": "Robert's Firecrackers",
+    "type": "prosthesis"
+  },
+  {
+    "code": 9720,
+    "name": "Flame Barrel",
+    "type": "prosthesis"
+  },
+  {
+    "code": 9721,
+    "name": "Pine Resin Ember",
+    "type": "material"
+  },
+  {
+    "code": 9730,
+    "name": "Shinobi Axe of the Monkey",
+    "type": "prosthesis"
+  },
+  {
+    "code": 9740,
+    "name": "Mist Raven's Feathers",
+    "type": "prosthesis"
+  },
+  {
+    "code": 9750,
+    "name": "Sabimaru",
+    "type": "prosthesis"
+  },
+  {
+    "code": 9760,
+    "name": "Iron Fortress",
+    "type": "prosthesis"
+  },
+  {
+    "code": 9770,
+    "name": "Large Fan",
+    "type": "prosthesis"
+  },
+  {
+    "code": 9780,
+    "name": "Gyoubu's Broken Horn",
+    "type": "prosthesis"
+  },
+  {
+    "code": 9790,
+    "name": "Slender Finger",
+    "type": "prosthesis"
+  },
+  {
+    "code": 9791,
+    "name": "Malcontent's Ring",
+    "type": "material"
+  },
+  {
+    "code": 10000,
+    "name": "questItem"
+  },
+  {
+    "code": 131000,
+    "name": "Protagonist body with sword",
+    "type": "???"
+  },
+  {
+    "code": 102000,
+    "name": "Protagonist body with prothesis",
+    "type": "???"
+  },
+  {
+    "code": 5300,
+    "name": "Remnant: Gyoubu",
+    "type": "remnant"
+  },
+  {
+    "code": 5301,
+    "name": "Remnant: Lady Butterfly",
+    "type": "remnant"
+  },
+  {
+    "code": 5302,
+    "name": "Remnant: Genichiro",
+    "type": "remnant"
+  },
+  {
+    "code": 5303,
+    "name": "Remnant: Screen Monkeys",
+    "type": "remnant"
+  },
+  {
+    "code": 5304,
+    "name": "Remnant: Guardian Ape",
+    "type": "remnant"
+  },
+  {
+    "code": 5305,
+    "name": "Remnant: Corrupted Monk",
+    "type": "remnant"
+  },
+  {
+    "code": 5306,
+    "name": "Remnant: Great Shinobi",
+    "type": "remnant"
+  },
+  {
+    "code": 5307,
+    "name": "Remnant: Foster Father",
+    "type": "remnant"
+  },
+  {
+    "code": 5308,
+    "name": "Remnant: True Monk",
+    "type": "remnant"
+  },
+  {
+    "code": 5309,
+    "name": "Remnant: Divine Dragon",
+    "type": "remnant"
+  },
+  {
+    "code": 5310,
+    "name": "Remnant: Hatred Demon",
+    "type": "remnant"
+  },
+  {
+    "code": 5311,
+    "name": "Remnant: Saint Isshin",
+    "type": "remnant"
+  },
+  {
+    "code": 5312,
+    "name": "Remnant: Isshin Ashina",
+    "type": "remnant"
+  },
+  {
+    "code": 5313,
+    "name": "Remnant: Headless Ape",
+    "type": "remnant"
+  },
+  {
+    "code": 5320,
+    "name": "Remnant: Inner Genichiro",
+    "type": "remnant"
+  },
+  {
+    "code": 5321,
+    "name": "Remnant: Inner Father",
+    "type": "remnant"
+  },
+  {
+    "code": 5322,
+    "name": "Remnant: Inner Isshin",
+    "type": "remnant"
+  },
+  {
+    "code": 5100,
+    "name": "Test Memory 5100",
+    "type": "test"
+  },
+  {
+    "code": 5400,
+    "name": "Test Memory 5400",
+    "type": "test"
+  }
+]

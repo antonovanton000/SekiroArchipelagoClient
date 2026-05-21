@@ -1,0 +1,21 @@
+﻿<Application x:Class="SekiroAPClient.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:SekiroAPClient"
+             xmlns:c="clr-namespace:SekiroAPClient.Classes"             
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Styles/Styles.xaml"/>
+                <ResourceDictionary Source="Styles/TabControlStyles.xaml"/>
+                <ResourceDictionary Source="Styles/LightTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+            <c:NotBoolToVisibility x:Key="NotBoolToVisibilityConverter"/>
+            <c:NullToBool x:Key="NullToBool"/>
+            <c:NotNullToBool x:Key="NotNullToBool"/>
+            <c:NotConverter x:Key="NotConverter"/>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

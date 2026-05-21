@@ -1,0 +1,381 @@
+﻿<UserControl x:Class="InjustUILibrary.Controls.ThemeSwitch"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:InjustUILibrary.Controls"
+             mc:Ignorable="d" 
+             x:Name="control"
+             d:DesignHeight="50" d:DesignWidth="250">
+    <UserControl.Resources>
+        <Storyboard x:Key="toNight">
+            <ColorAnimationUsingKeyFrames Storyboard.TargetName="switchBox" Storyboard.TargetProperty="(Border.Background).(GradientBrush.GradientStops)[0].(GradientStop.Color)">
+                <EasingColorKeyFrame KeyTime="00:00:00" Value="#FF699DFF"/>
+                <EasingColorKeyFrame KeyTime="00:00:00.5000000" Value="#FF040507"/>
+            </ColorAnimationUsingKeyFrames>
+            <ColorAnimationUsingKeyFrames Storyboard.TargetName="switchBox" Storyboard.TargetProperty="(Border.Background).(GradientBrush.GradientStops)[4].(GradientStop.Color)">
+                <EasingColorKeyFrame KeyTime="00:00:00" Value="#FF699DFF"/>
+                <EasingColorKeyFrame KeyTime="00:00:00.5000000" Value="#FF040507"/>
+            </ColorAnimationUsingKeyFrames>
+            <ColorAnimationUsingKeyFrames Storyboard.TargetName="switchBox" Storyboard.TargetProperty="(Border.Background).(GradientBrush.GradientStops)[1].(GradientStop.Color)">
+                <EasingColorKeyFrame KeyTime="00:00:00" Value="#FF87B0FF"/>
+                <EasingColorKeyFrame KeyTime="00:00:00.5000000" Value="#FF121624"/>
+            </ColorAnimationUsingKeyFrames>
+            <ColorAnimationUsingKeyFrames Storyboard.TargetName="switchBox" Storyboard.TargetProperty="(Border.Background).(GradientBrush.GradientStops)[3].(GradientStop.Color)">
+                <EasingColorKeyFrame KeyTime="00:00:00" Value="#FF87B0FF"/>
+                <EasingColorKeyFrame KeyTime="00:00:00.5000000" Value="#FF121624"/>
+            </ColorAnimationUsingKeyFrames>
+            <ColorAnimationUsingKeyFrames Storyboard.TargetName="switchBox" Storyboard.TargetProperty="(Border.Background).(GradientBrush.GradientStops)[2].(GradientStop.Color)">
+                <EasingColorKeyFrame KeyTime="00:00:00" Value="#FF88B1FF"/>
+                <EasingColorKeyFrame KeyTime="00:00:00.5000000" Value="#FF131826"/>
+            </ColorAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="daystar1" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <CubicEase EasingMode="EaseOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="daystar1" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="-20">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <CubicEase EasingMode="EaseOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="daystar2" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="-20">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <CubicEase EasingMode="EaseOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="daystar2" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <CubicEase EasingMode="EaseOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="sun" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="15">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <CircleEase EasingMode="EaseInOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="sun" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <CircleEase EasingMode="EaseInOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="moon" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="-13"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="0">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <CubicEase EasingMode="EaseIn"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="moon" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="1">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <CubicEase EasingMode="EaseIn"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star1" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="15"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.6000000" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star1" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.6000000" Value="1"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star2" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="15"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.6000000" Value="-6"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.7000000" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star2" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.6000000" Value="1"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star3" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="15"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.6000000" Value="-4"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.7000000" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star3" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.6000000" Value="1"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star4" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.5000000" Value="-5"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.6000000" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star4" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.5000000" Value="1"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star5" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="18"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.5000000" Value="-3"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.6000000" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star5" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.5000000" Value="1"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Clouds" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.Y)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="10"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Clouds" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+        </Storyboard>
+        <Storyboard x:Key="toDay">
+            <ColorAnimationUsingKeyFrames Storyboard.TargetName="switchBox" Storyboard.TargetProperty="(Border.Background).(GradientBrush.GradientStops)[0].(GradientStop.Color)">
+                <EasingColorKeyFrame KeyTime="00:00:00.5000000" Value="#FF699DFF"/>
+            </ColorAnimationUsingKeyFrames>
+            <ColorAnimationUsingKeyFrames Storyboard.TargetName="switchBox" Storyboard.TargetProperty="(Border.Background).(GradientBrush.GradientStops)[4].(GradientStop.Color)">
+                <EasingColorKeyFrame KeyTime="00:00:00.5000000" Value="#FF699DFF"/>
+            </ColorAnimationUsingKeyFrames>
+            <ColorAnimationUsingKeyFrames Storyboard.TargetName="switchBox" Storyboard.TargetProperty="(Border.Background).(GradientBrush.GradientStops)[1].(GradientStop.Color)">
+                <EasingColorKeyFrame KeyTime="00:00:00.5000000" Value="#FF87B0FF"/>
+            </ColorAnimationUsingKeyFrames>
+            <ColorAnimationUsingKeyFrames Storyboard.TargetName="switchBox" Storyboard.TargetProperty="(Border.Background).(GradientBrush.GradientStops)[3].(GradientStop.Color)">
+                <EasingColorKeyFrame KeyTime="00:00:00.5000000" Value="#FF87B0FF"/>
+            </ColorAnimationUsingKeyFrames>
+            <ColorAnimationUsingKeyFrames Storyboard.TargetName="switchBox" Storyboard.TargetProperty="(Border.Background).(GradientBrush.GradientStops)[2].(GradientStop.Color)">
+                <EasingColorKeyFrame KeyTime="00:00:00.5000000" Value="#FF88B1FF"/>
+            </ColorAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star1" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star1" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="15"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star2" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star2" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="10"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star3" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star3" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="8"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star4" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star4" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="15"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star5" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="star5" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="15"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="moon" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="moon" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="-13"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="sun" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="13"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="sun" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="1"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="daystar1" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="-5"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="3"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.5000000" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="daystar1" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="1"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="daystar2" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="-10"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="5"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.5000000" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="daystar2" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="1"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Clouds" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.Y)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="10"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Clouds" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="1"/>
+            </DoubleAnimationUsingKeyFrames>
+        </Storyboard>
+    </UserControl.Resources>
+    <Grid>
+        <StackPanel Orientation="Horizontal">
+            <local:ClippedBorder ClipToBounds="True" x:Name="switchBox" Height="28" Width="53" CornerRadius="15" MouseDown="switchBox_MouseDown"
+                                  BorderThickness="0" BorderBrush="{DynamicResource BorderColorBrush}">
+                <local:ClippedBorder.Background>
+                    <LinearGradientBrush StartPoint="0.5 0" EndPoint="0.5 1">
+                        <GradientStop Color="#699dff" Offset="0"/>
+                        <GradientStop Color="#87b0ff" Offset="0.25"/>
+                        <GradientStop Color="#88b1ff" Offset="0.5"/>
+                        <GradientStop Color="#87b0ff" Offset="0.75"/>
+                        <GradientStop Color="#699dff" Offset="1"/>
+                    </LinearGradientBrush>
+                    <!--<LinearGradientBrush StartPoint="0.5 0" EndPoint="0.5 1">
+                        <GradientStop Color="#040507" Offset="0"/>
+                        <GradientStop Color="#121624" Offset="0.25"/>
+                        <GradientStop Color="#131826" Offset="0.5"/>
+                        <GradientStop Color="#121624" Offset="0.75"/>
+                        <GradientStop Color="#040507" Offset="1"/>
+                    </LinearGradientBrush>-->
+                </local:ClippedBorder.Background>
+                <Grid>
+                    <local:ClippedBorder ClipToBounds="True" Height="28" Width="53" CornerRadius="15" x:Name="Clouds" Opacity="1" RenderTransformOrigin="0.5,0.5">
+                        <local:ClippedBorder.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform/>
+                                <SkewTransform/>
+                                <RotateTransform/>
+                                <TranslateTransform/>
+                            </TransformGroup>
+                        </local:ClippedBorder.RenderTransform>
+                        <Grid>
+                            <Ellipse Width="18" Height="18" Fill="#aecae2" Margin="42,11,-7,-1"/>
+                            <Ellipse Width="18" Height="18" Fill="#aecae2" Margin="28,17,7,-7"/>
+                            <Ellipse Fill="#aecae2" Margin="17,20,21,-7"/>
+                            <Ellipse Fill="#aecae2" Margin="9,24,34,-6"/>
+
+                            <Ellipse Width="18" Height="18" Fill="#ecf8fd" Margin="44,14,-9,-4"/>
+                            <Ellipse Width="18" Height="18" Fill="#ecf8fd" Margin="28,20,7,-10"/>
+                            <Ellipse Fill="#ecf8fd" Margin="17,23,21,-10"/>
+                            <Ellipse Fill="#ecf8fd" Margin="9,26,33,-9"/>
+                        </Grid>
+                    </local:ClippedBorder>
+                    <Border x:Name="sun" Height="18" Width="18" CornerRadius="13" HorizontalAlignment="Left" Margin="4,0,0,0" Background="#f5e429" Opacity="1">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#FFFFFF" BlurRadius="10" Direction="-1"  Opacity="0.2"/>
+                        </Border.Effect>
+                        <Border.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform/>
+                                <SkewTransform/>
+                                <RotateTransform/>
+                                <TranslateTransform/>
+                            </TransformGroup>
+                        </Border.RenderTransform>
+                    </Border>
+                    <Ellipse x:Name="daystar1" Width="3" Height="3" Fill="#DDFEFEFE" Margin="5,0,0,0" RenderTransformOrigin="0.5,0.5" Opacity="1">
+                        <Ellipse.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform/>
+                                <SkewTransform/>
+                                <RotateTransform/>
+                                <TranslateTransform/>
+                            </TransformGroup>
+                        </Ellipse.RenderTransform>
+                    </Ellipse>
+                    <Ellipse x:Name="daystar2" Width="6" Height="6" Fill="#BBFEFEFE" Margin="20,0,0,10" RenderTransformOrigin="0.5,0.5" Opacity="1">
+                        <Ellipse.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform/>
+                                <SkewTransform/>
+                                <RotateTransform/>
+                                <TranslateTransform/>
+                            </TransformGroup>
+                        </Ellipse.RenderTransform>
+                    </Ellipse>
+
+                    <Ellipse x:Name="star1" Width="2" Height="2" Fill="#DDFEFEFE" Margin="-35,7,0,0" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                        <Ellipse.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform/>
+                                <SkewTransform/>
+                                <RotateTransform/>
+                                <TranslateTransform/>
+                            </TransformGroup>
+                        </Ellipse.RenderTransform>
+                    </Ellipse>
+                    <Ellipse x:Name="star2" Width="1" Height="1" Fill="#DDFEFEFE" Margin="-12,-6,0,0" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                        <Ellipse.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform/>
+                                <SkewTransform/>
+                                <RotateTransform/>
+                                <TranslateTransform/>
+                            </TransformGroup>
+                        </Ellipse.RenderTransform>
+                    </Ellipse>
+                    <Ellipse x:Name="star3" Width="2" Height="2" Fill="#AAFEFEFE" Margin="1,-13,0,0" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                        <Ellipse.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform/>
+                                <SkewTransform/>
+                                <RotateTransform/>
+                                <TranslateTransform/>
+                            </TransformGroup>
+                        </Ellipse.RenderTransform>
+                    </Ellipse>
+                    <Path x:Name="star4" Data="M 127,37 L 104,105 L 34,105 L 91,150 L 69,218 L 127,176 L 187,218 L 164,150 L 223,105 L 151,105 L 127,37" Fill="#FEFEFE" 
+                              StrokeLineJoin="Bevel" Stretch="Uniform" Height="6" Width="6" Margin="-28,-8,0,0" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                        <Path.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform/>
+                                <SkewTransform/>
+                                <RotateTransform/>
+                                <TranslateTransform/>
+                            </TransformGroup>
+                        </Path.RenderTransform>
+                    </Path>
+                    <Path x:Name="star5" Data="M 127,37 L 104,105 L 34,105 L 91,150 L 69,218 L 127,176 L 187,218 L 164,150 L 223,105 L 151,105 L 127,37" Fill="#FEFEFE" 
+                              StrokeLineJoin="Bevel" Stretch="Uniform" Height="4" Width="4" Margin="-8,8,0,0" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                        <Path.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform/>
+                                <SkewTransform/>
+                                <RotateTransform/>
+                                <TranslateTransform/>
+                            </TransformGroup>
+                        </Path.RenderTransform>
+                    </Path>
+                    <Path x:Name="moon" Data="F1 M24,24z M0,0z M12,2L11.54,2A1,1,0,0,0,11.1,3.86A5.94,5.94,0,0,1,14,9A6,6,0,0,1,3.93,13.4A1,1,0,0,0,2.28,14.4A10,10,0,1,0,12,2z"                              
+                              Fill="#FEFEFE" HorizontalAlignment="Right" Width="19" Height="19" Stretch="Uniform" Margin="3,0" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                        <Path.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform/>
+                                <SkewTransform/>
+                                <RotateTransform/>
+                                <TranslateTransform/>
+                            </TransformGroup>
+                        </Path.RenderTransform>
+                    </Path>
+                </Grid>
+            </local:ClippedBorder>
+            <!--<Border Background="{StaticResource BorderColorBrush}" Height="28" Width="65" CornerRadius="14">
+                <Border Background="{StaticResource AccentColorBrush}"  Height="22" Width="22" CornerRadius="13" HorizontalAlignment="Left" Margin="4,0,0,0"/>
+            </Border>-->
+            <TextBlock Text="{Binding Text, ElementName=control}" VerticalAlignment="Center" 
+                       Style="{StaticResource FlatTextBlockStyle}" Margin="15,0,0,0" FontSize="17">
+                <TextBlock.Foreground>
+                    <SolidColorBrush x:Name="TextBrush" Color="#65686b"/>
+                </TextBlock.Foreground>
+            </TextBlock>
+        </StackPanel>
+    </Grid>
+</UserControl>

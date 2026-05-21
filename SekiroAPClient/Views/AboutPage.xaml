@@ -1,0 +1,48 @@
+﻿<Page x:Class="SekiroAPClient.Views.AboutPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"       
+      xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
+      xmlns:vm="clr-namespace:SekiroAPClient.ViewModels"
+      xmlns:v="clr-namespace:InjustUILibrary.Validation"
+      xmlns:icnt="clr-namespace:InjustUILibrary.Controls"
+      xmlns:local="clr-namespace:SekiroAPClient.Views"
+      mc:Ignorable="d" 
+      d:DesignHeight="500" d:DesignWidth="900"      
+      x:Name="page"      
+      Title="AboutPage">
+    <Grid >
+        <Grid.Background>
+            <ImageBrush ImageSource="{DynamicResource GrassBackgroundImage}"
+                TileMode="Tile"
+                Viewport="0,0,512,512"
+                ViewportUnits="Absolute"
+                Stretch="Fill"
+                AlignmentX="Left"
+                AlignmentY="Top" />
+        </Grid.Background>
+        <TextBlock Style="{StaticResource FlatTextBlockStyle}" HorizontalAlignment="Right" Margin="0,34,40,0">
+            <Run Text="AppVersion:"/>
+            <Run x:Name="runVersion" Text="" FontWeight="Bold"/>
+        </TextBlock>
+        <StackPanel x:Name="content" Margin="20,20,20,0" >
+            <TextBlock Style="{StaticResource HeaderTextBlockBlockStyle}" FontSize="20" TextWrapping="Wrap" LineHeight="40"  MaxWidth="750">
+                <Run Text="About" FontSize="30"/>
+                <LineBreak/>
+                <LineBreak/>
+                This Sekiro: Shadows Die Twice Archipelago Client was created by <Run Text=" DirefulLemur0 " Background="{StaticResource BlueAlpha80}"/> for all players and fans of Sekiro who enjoy new challenges, randomizers, and shared multiworld experiences.
+                <LineBreak/>
+                This project is built on top of the original Sekiro Randomizer created by <Run Text=" thefifthmatt " Background="{StaticResource BlueAlpha80}"/> — huge thanks for laying the foundation that made this possible.
+                <LineBreak/>
+                <Run Text=" Special thanks " Background="{StaticResource BlueAlpha80}"/> go to every member of the <Run Text=" Archipelago community " Background="{StaticResource BlueAlpha80}"/> who contributed ideas, feedback, tools, and inspiration. 
+                This client exists thanks to the <Run Text=" collective effort " Background="{StaticResource BlueAlpha80}"/>, passion, and creativity of the community.                
+                <LineBreak/>
+                <Run Text=" Special appreciation " Background="{StaticResource BlueAlpha80}"/> goes to <Run Text=" Yenix " Background="{StaticResource BlueAlpha80}"/> for creating the Sekiro <Run Text=" apworld " Background="{StaticResource BlueAlpha80}"/>.
+                <LineBreak/>                
+                Thank you for playing, experimenting, and pushing Sekiro beyond its original boundaries.
+            </TextBlock>
+
+        </StackPanel>
+    </Grid>
+</Page>
