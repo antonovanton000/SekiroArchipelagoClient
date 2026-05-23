@@ -234,6 +234,29 @@ public partial class RandomizerHelper : ObservableObject
                         .Where(k => k.Type == LocationKey.LocationType.SHOP)
                         .ToList();
 
+                    if (apLotIds != null && apLotIds.Count > 0)
+                    {
+                        var scopedKeys = data.Locations.TryGetValue(itemLoc.LocScope, out var scopeSlots)
+                            ? scopeSlots
+                            : new List<SlotKey>();
+
+                        lotKeys = scopedKeys
+                            .SelectMany(slot => data.Location(slot).Keys)
+                            .Where(k => k.Type == LocationKey.LocationType.LOT && apLotIds.Contains(k.ID))
+                            .GroupBy(k => (k.Type, k.ID, k.BaseID))
+                            .Select(g => g.First())
+                            .ToList();
+
+                        shopKeys = scopedKeys
+                            .SelectMany(slot => data.Location(slot).Keys)
+                            .Where(k => k.Type == LocationKey.LocationType.SHOP && apLotIds.Contains(k.ID))
+                            .GroupBy(k => (k.Type, k.ID, k.BaseID))
+                            .Select(g => g.First())
+                            .ToList();
+                    }
+
+                    int sharedShopEventFlag = GetSharedShopEventFlag(game, shopKeys);
+
                     // If the location has neither LOT nor SHOP keys, skip it
                     if (lotKeys.Count == 0 && shopKeys.Count == 0)
                     {
@@ -300,7 +323,9 @@ public partial class RandomizerHelper : ObservableObject
                     {
                         int lotId = lk.ID;
                         int vanillaLotEventFlag = GetLotEventFlag(game, lotId, lk.BaseID, -1);
-                        int lotEventFlag = GetForcedLotEventFlag(lotId, vanillaLotEventFlag, info.LocationId, expectedGoodId);
+                        int lotEventFlag = sharedShopEventFlag > 0
+                            ? sharedShopEventFlag
+                            : GetForcedLotEventFlag(lotId, vanillaLotEventFlag, info.LocationId, expectedGoodId);
 
                         var targetLotSlotKey = FindSlotKeyByLotId(data, itemLoc.LocScope, lotId);
                         if (targetLotSlotKey == null)
@@ -342,7 +367,7 @@ public partial class RandomizerHelper : ObservableObject
                     foreach (var shopKey in shopKeys)
                     {
                         int shopId = shopKey.ID;
-                        int shopEventFlag = GetShopEventFlag(game, shopId);
+                        int shopEventFlag = sharedShopEventFlag > 0 ? sharedShopEventFlag : GetShopEventFlag(game, shopId);
 
                         var targetShopSlotKey = FindSlotKeyByShopId(data, itemLoc.LocScope, shopId);
                         if (targetShopSlotKey == null)
@@ -352,6 +377,7 @@ public partial class RandomizerHelper : ObservableObject
                         }
 
                         forcedShopQuantities[shopId] = quantity;
+                        forcedShopEventFlags[shopId] = shopEventFlag;
 
                         // Register shop entry for audit / runtime tracking
                         apLotMap.Add(new ApLotEntry
@@ -646,6 +672,33 @@ public partial class RandomizerHelper : ObservableObject
         return -1;
     }
 
+    int GetSharedShopEventFlag(GameData game, IReadOnlyCollection<LocationKey> shopKeys)
+    {
+        if (shopKeys.Count == 0)
+            return -1;
+
+        foreach (var shopKey in shopKeys.Where(k => !IsOfferingBoxShop(k.ID)))
+        {
+            int flag = GetShopEventFlag(game, shopKey.ID);
+            if (flag > 0)
+                return flag;
+        }
+
+        foreach (var shopKey in shopKeys)
+        {
+            int flag = GetShopEventFlag(game, shopKey.ID);
+            if (flag > 0)
+                return flag;
+        }
+
+        return -1;
+    }
+
+    static bool IsOfferingBoxShop(int shopId)
+    {
+        return shopId / 100 == 11005;
+    }
+
     static int GetArchipelagoLotEventFlag(long archipelagoLocationId)
     {
         return checked(79_100_000 + (int)archipelagoLocationId);
@@ -653,24 +706,8 @@ public partial class RandomizerHelper : ObservableObject
 
     static int GetForcedLotEventFlag(int lotId, int vanillaEventFlag, long archipelagoLocationId, int goodId)
     {
-        const int mechanicalBarrelGoodId = 2910;
-        const int mechanicalBarrelEventFlag = 6740;
-
-        // Sculptor's Shinobi Esoteric Text dialogue checks this exact flag
-        // before it can continue, so this scripted lot must keep vanilla behavior.
-        if (lotId == 61000)
-            return 6705;
-
-        // Mechanical Barrel unlocks prosthetic upgrades, so this flag should move
-        // with the item. Do not leave 6740 on Gyoubu if Barrel was moved away.
-        if (goodId == mechanicalBarrelGoodId)
-            return mechanicalBarrelEventFlag;
-
-        if (vanillaEventFlag == mechanicalBarrelEventFlag)
-            return GetArchipelagoLotEventFlag(archipelagoLocationId);
-
         if (IsSekiroPermanentItemFlag(vanillaEventFlag))
-            return vanillaEventFlag;
+            return GetArchipelagoLotEventFlag(archipelagoLocationId);
 
         return IsSekiroMapTreasureFlag(vanillaEventFlag)
             ? vanillaEventFlag

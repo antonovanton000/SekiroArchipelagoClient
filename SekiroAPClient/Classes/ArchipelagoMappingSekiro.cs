@@ -219,6 +219,8 @@ public static class ArchipelagoMappingSekiro
                 }
             }
 
+            ApplyLocationSpecificLotExpansion(loc.LocationName, ids);
+
             result.LocationToLotIds[loc.LocationId] = ids;
 
             // Select the SlotKey that contains at least one of these IDs
@@ -256,6 +258,22 @@ public static class ArchipelagoMappingSekiro
 
         Console.WriteLine($"[AP-MAP] exact={exactKeyCount}, override={overrideKeyCount}, fallback={fallbackKeyCount}, fuzzyFallback={fuzzyFallbackKeyCount}, noKey={missingKeyCount}, noAnnotation={missingSlotCount}, mapped={result.LocationToSlot.Count}/{locations.Count}");
         return result;
+    }
+
+    private static void ApplyLocationSpecificLotExpansion(string locationName, HashSet<int> ids)
+    {
+        string normalized = NormalizeText(locationName);
+
+        // The annotation key 07,0:50006320:: contains both vanilla Holy Chapter:
+        // Infested sources. The AP location represents the check, so patch both
+        // the Green Robed Infested NPC reward and the underwater pond treasure.
+        if (normalized.Contains("holy chapter infested")
+            && normalized.Contains("underwater")
+            && normalized.Contains("carp pond"))
+        {
+            ids.Add(63200);
+            ids.Add(2000820);
+        }
     }
 
     private sealed record ParsedLocation(string Prefix, string ItemName, string Detail, string Original);
@@ -636,14 +654,10 @@ public static class ArchipelagoMappingSekiro
         if (dash < 0) return set;
 
         var tail = debugLine[(dash + 3)..];
-        
-        var bracket = tail.IndexOf('[', StringComparison.Ordinal);
-        if (bracket >= 0)
-            tail = tail[..bracket];
 
-        foreach (var part in tail.Split(','))
+        foreach (Match match in Regex.Matches(tail, @"(?:^|,\s*)(-?\d+)\["))
         {
-            if (int.TryParse(part.Trim(), out var id))
+            if (int.TryParse(match.Groups[1].Value, out var id))
                 set.Add(id);
         }
 

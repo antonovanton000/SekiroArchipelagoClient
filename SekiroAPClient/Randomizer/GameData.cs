@@ -90,6 +90,7 @@ namespace RandomizerCommon
         public Dictionary<string, FMG> ItemFMGs = new Dictionary<string, FMG>();
         public Dictionary<string, Dictionary<string, FMG>> OtherItemFMGs = new Dictionary<string, Dictionary<string, FMG>>();
         public Dictionary<string, FMG> MenuFMGs = new Dictionary<string, FMG>();
+        public Dictionary<string, Dictionary<string, FMG>> OtherMenuFMGs = new Dictionary<string, Dictionary<string, FMG>>();
         public Dictionary<string, Dictionary<string, ESD>> Talk = new Dictionary<string, Dictionary<string, ESD>>();
 
         // Names
@@ -356,6 +357,10 @@ namespace RandomizerCommon
             {
                 WriteModDependentBnd(outPath, $@"{Dir}\Base\msg\{entry.Key}\item.msgbnd.dcx", $@"msg\{entry.Key}\item.msgbnd.dcx", entry.Value);
             }
+            foreach (KeyValuePair<string, Dictionary<string, FMG>> entry in OtherMenuFMGs)
+            {
+                WriteModDependentBnd(outPath, $@"{Dir}\Base\msg\{entry.Key}\menu.msgbnd.dcx", $@"msg\{entry.Key}\menu.msgbnd.dcx", entry.Value);
+            }
             MergeMods(outPath);
             Console.WriteLine("Success!");
         }
@@ -559,6 +564,8 @@ namespace RandomizerCommon
                     if (lang == "engus") continue;
                     OtherItemFMGs[lang] = Editor.LoadBnd($@"{Dir}\Base\msg\{lang}\item.msgbnd.dcx", (data, path) => FMG.Read(data));
                     OtherItemFMGs[lang] = MaybeOverrideFromModDir(OtherItemFMGs[lang], $@"msg\{lang}\item.msgbnd.dcx", path => Editor.LoadBnd(path, (data, path2) => FMG.Read(data)));
+                    OtherMenuFMGs[lang] = Editor.LoadBnd($@"{Dir}\Base\msg\{lang}\menu.msgbnd.dcx", (data, path) => FMG.Read(data));
+                    OtherMenuFMGs[lang] = MaybeOverrideFromModDir(OtherMenuFMGs[lang], $@"msg\{lang}\menu.msgbnd.dcx", path => Editor.LoadBnd(path, (data, path2) => FMG.Read(data)));
                 }
             }
         }

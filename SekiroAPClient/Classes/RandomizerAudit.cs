@@ -322,6 +322,7 @@ public class RandomizerAudit
         int mismatch = 0;
         int nonPrivate = 0;
         int duplicate = 0;
+        int semanticLeak = 0;
 
         foreach (var row in rows.OrderBy(r => r.LocationId).ThenBy(r => r.TargetId))
         {
@@ -343,6 +344,16 @@ public class RandomizerAudit
                 nonPrivate++;
                 sw.WriteLine($"[EVENTFLAG][NOT-AP-PRIVATE] apLoc={row.LocationId} target={row.TargetId} shop={row.IsShop} good={row.GoodId} expectedPrivate={row.ExpectedPrivateFlag} actualFlag={row.ActualFlag}");
             }
+
+            if (!row.IsShop)
+            {
+                int expectedGoodForSemanticFlag = PermanentGoodToFlagCollection.GetExpectedItemForPermanentFlag(row.ActualFlag);
+                if (expectedGoodForSemanticFlag > 0 && expectedGoodForSemanticFlag != row.GoodId)
+                {
+                    semanticLeak++;
+                    sw.WriteLine($"[EVENTFLAG][SEMANTIC-FLAG-LEAK] apLoc={row.LocationId} target={row.TargetId} good={row.GoodId} actualFlag={row.ActualFlag} expectedGoodForFlag={expectedGoodForSemanticFlag}");
+                }
+            }
         }
 
         var duplicateGroups = rows
@@ -363,7 +374,7 @@ public class RandomizerAudit
         }
 
         sw.WriteLine();
-        sw.WriteLine($"[EVENTFLAG] Total={rows.Count} Missing={missing} StateMismatch={mismatch} NotPrivate={nonPrivate} DuplicateFlags={duplicate}");
+        sw.WriteLine($"[EVENTFLAG] Total={rows.Count} Missing={missing} StateMismatch={mismatch} NotPrivate={nonPrivate} DuplicateFlags={duplicate} SemanticLeaks={semanticLeak}");
         sw.WriteLine("------ END EVENT FLAGS ------");
     }
 

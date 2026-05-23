@@ -78,7 +78,7 @@ namespace InjustUILibrary.Controls
                 placeholderBrush.BeginAnimation(SolidColorBrush.ColorProperty, null);
             }
 
-            plc.SetResourceReference(TextBlock.ForegroundProperty, IsReadOnly ? "AccentBrushDisabled" : (IsPlaceholderUp ? "InputFieldLabelBrush" : "PrimaryTextDarkerBrush"));
+            SetPlaceholderForeground();
             plc.Opacity = IsPlaceholderUp ? 1 : 0.4;
             tbx.SetResourceReference(TextBox.ForegroundProperty, "PrimaryTextDarkerBrush");
             tbx.SetResourceReference(TextBox.CaretBrushProperty, "PrimaryTextDarkerBrush");
@@ -87,6 +87,18 @@ namespace InjustUILibrary.Controls
             psw_tbl.SetResourceReference(TextBlock.ForegroundProperty, "PrimaryTextDarkerBrush");
             cmpBorder.SetResourceReference(Border.BackgroundProperty, "BackgroundBrush");
             cmpBorder.SetResourceReference(Border.BorderBrushProperty, IsError ? "Danger" : "BorderColorBrush");
+        }
+
+        private void SetPlaceholderForeground()
+        {
+            var colorKey = IsReadOnly
+                ? "AccentDisabledColor"
+                : IsPlaceholderUp
+                    ? "InputFieldLabelColor"
+                    : "PrimaryTextDarkerColor";
+
+            if (TryFindResource(colorKey) is Color color)
+                plc.Foreground = new SolidColorBrush(color);
         }
 
         public string BindPropertyName { get; set; }

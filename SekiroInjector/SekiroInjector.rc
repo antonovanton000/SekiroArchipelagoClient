@@ -1,8 +1,12 @@
-#include <winver.h>
+// SekiroInjector resource script.
 
-VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,6,0
- PRODUCTVERSION 1,0,6,0
+#pragma code_page(1252)
+
+LANGUAGE 0x09, 0x01 // LANG_ENGLISH, SUBLANG_ENGLISH_US
+
+1 VERSIONINFO
+ FILEVERSION 1,0,7,0
+ PRODUCTVERSION 1,0,7,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -15,19 +19,19 @@ VS_VERSION_INFO VERSIONINFO
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
-        BLOCK "040904b0"
+        BLOCK "040904B0"
         BEGIN
-            VALUE "CompanyName", "Sekiro Archipelago Client"
-            VALUE "FileDescription", "Sekiro Archipelago Injector"
-            VALUE "FileVersion", "1.0.6"
-            VALUE "InternalName", "SekiroInjector.dll"
-            VALUE "OriginalFilename", "SekiroInjector.dll"
-            VALUE "ProductName", "Sekiro Archipelago Client"
-            VALUE "ProductVersion", "1.0.6"
+            VALUE "CompanyName", "Sekiro Archipelago Client\0"
+            VALUE "FileDescription", "Sekiro Archipelago Injector\0"
+            VALUE "FileVersion", "1.0.7.0\0"
+            VALUE "InternalName", "SekiroInjector.dll\0"
+            VALUE "OriginalFilename", "SekiroInjector.dll\0"
+            VALUE "ProductName", "Sekiro Archipelago Client\0"
+            VALUE "ProductVersion", "1.0.7.0\0"
         END
     END
     BLOCK "VarFileInfo"
     BEGIN
-        VALUE "Translation", 0x409, 1200
+        VALUE "Translation", 0x0409, 1200
     END
 END

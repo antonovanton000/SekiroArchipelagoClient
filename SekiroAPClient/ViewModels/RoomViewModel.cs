@@ -89,6 +89,7 @@ public partial class RoomViewModel : MyBaseViewModel
     bool isDebug;
 
     private CancellationTokenSource _reconnectCts;
+    bool connectedToArchipelagoHintQueued;
 
     [ObservableProperty]
     bool isReconnecting = false;
@@ -158,7 +159,7 @@ public partial class RoomViewModel : MyBaseViewModel
                 deathLinkService.EnableDeathLink();
                 deathLinkService.OnDeathLinkReceived += DeathLinkService_OnDeathLinkReceived;
             }
-            await pipeServer.ShowConnectedToServerAsync("Connected to Archipelago!");
+            await ShowConnectedToArchipelagoHintAsync();
             if (CurrentSession.Items.Any())
             {
                 await RecieveItems(CurrentSession.Items);
@@ -246,8 +247,7 @@ public partial class RoomViewModel : MyBaseViewModel
     [RelayCommand]
     void OpenDebugPage()
     {
-        var newWindow = new MainWindow();
-        newWindow.frame.Navigate(new DebugPage() { DataContext = new DebugViewModel() });
+        var newWindow = new DebugWindow();        
         newWindow.Show();
     }
 
@@ -297,7 +297,7 @@ public partial class RoomViewModel : MyBaseViewModel
             if (CurrentSession.Socket.Connected)
             {
                 await Task.Delay(500);
-                await pipeServer.SendShowSmallHintWhenWorldLoaded("Connected to Archipelago!");
+                await ShowConnectedToArchipelagoHintAsync();
             }
         }
         else if (state == "disconnected")
@@ -520,6 +520,17 @@ public partial class RoomViewModel : MyBaseViewModel
         }
     }
 
+    async Task ShowConnectedToArchipelagoHintAsync(bool force = false)
+    {
+        if (!force && connectedToArchipelagoHintQueued)
+            return;
+
+        if (!force)
+            connectedToArchipelagoHintQueued = true;
+
+        await pipeServer.SendShowSmallHintWhenWorldLoaded("Connected to Archipelago!");
+    }
+
     async Task<ApRandomizationState?> TryLoadExistingRandomization(ArchipelagoSession session)
     {
 
@@ -634,7 +645,7 @@ public partial class RoomViewModel : MyBaseViewModel
                                 deathLinkService.EnableDeathLink();
                                 deathLinkService.OnDeathLinkReceived += DeathLinkService_OnDeathLinkReceived;
                             }
-                            await pipeServer.ShowConnectedToServerAsync("Connected to Archipelago!");
+                            await ShowConnectedToArchipelagoHintAsync(force: true);
                             if (CurrentSession.Items.Any())
                             {
                                 await RecieveItems(CurrentSession.Items);

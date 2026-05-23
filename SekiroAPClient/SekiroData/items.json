@@ -7,7 +7,7 @@
   {
     "code": 1001,
     "name": "Red Spirit Emblem",
-    "type": "???"
+    "type": "misc"
   },
   {
     "code": 1100,
@@ -27,7 +27,7 @@
   {
     "code": 1200,
     "name": "Skill Point",
-    "type": "???"
+    "type": "misc"
   },
   {
     "code": 2000,
@@ -62,7 +62,7 @@
   {
     "code": 2390,
     "name": "Night Eye",
-    "type": "???"
+    "type": "misc"
   },
   {
     "code": 2400,
@@ -182,17 +182,17 @@
   {
     "code": 2930,
     "name": "Recovery Charm",
-    "type": "???"
+    "type": "misc"
   },
   {
     "code": 3000,
     "name": "Healing Gourd",
-    "type": "???"
+    "type": "misc"
   },
   {
     "code": 3001,
     "name": "Healing Gourd (2)",
-    "type": "???"
+    "type": "misc"
   },
   {
     "code": 3020,
@@ -467,7 +467,7 @@
   {
     "code": 3730,
     "name": "Bell Demon",
-    "type": "???"
+    "type": "misc"
   },
   {
     "code": 3800,
@@ -482,17 +482,17 @@
   {
     "code": 3900,
     "name": "Nightjar Monocular",
-    "type": "???"
+    "type": "misc"
   },
   {
     "code": 3980,
     "name": "Homeward Idol",
-    "type": "???"
+    "type": "misc"
   },
   {
     "code": 3990,
     "name": "Illusive Hall Bell",
-    "type": "???"
+    "type": "misc"
   },
   {
     "code": 4000,
@@ -718,7 +718,7 @@
   {
     "code": 9003,
     "name": "Kuro's Charm",
-    "type": "???"
+    "type": "misc"
   },
   {
     "code": 9009,
@@ -1060,12 +1060,12 @@
   {
     "code": 131000,
     "name": "Protagonist body with sword",
-    "type": "???"
+    "type": "misc"
   },
   {
     "code": 102000,
     "name": "Protagonist body with prothesis",
-    "type": "???"
+    "type": "misc"
   },
   {
     "code": 5300,
@@ -1161,5 +1161,11 @@
     "code": 5400,
     "name": "Test Memory 5400",
     "type": "test"
+  },
+  {
+    "code": 10000,
+    "name": "Treasure Carp Scale",
+    "type": "money"
   }
+
 ]

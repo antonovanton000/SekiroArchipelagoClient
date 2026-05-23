@@ -328,12 +328,12 @@ namespace RandomizerCommon
                 20006200,
             };
 
-            //Add some text to FMGs for InGameMessaging
-            var eventFmg = game.MenuFMGs["イベントテキスト"];
-            eventFmg[15100005] = "Notification";
-            eventFmg[15100006] = "Death Link";
-            eventFmg[15000450] = "Additional Options";
-            eventFmg[15100450] = "Additional option for idols.";
+            // Add fallback text to every language FMG used by in-game messaging.
+            AddInGameMessagingText(game.MenuFMGs);
+            foreach (var langFmgs in game.OtherMenuFMGs.Values)
+            {
+                AddInGameMessagingText(langFmgs);
+            }
 
             // Slowless slow walk
             if (opt["headlesswalk"]) deleteEvents.Add(20005431);
@@ -373,6 +373,17 @@ namespace RandomizerCommon
                 }
             }
                        
+        }
+
+        private static void AddInGameMessagingText(Dictionary<string, FMG> menuFmgs)
+        {
+            if (!menuFmgs.TryGetValue("イベントテキスト", out var eventFmg))
+                return;
+
+            eventFmg[15100005] = "Notification";
+            eventFmg[15100006] = "Death Link";
+            eventFmg[15000450] = "Additional Options";
+            eventFmg[15100450] = "Additional option for idols.";
         }
 
         public static readonly List<string> Langs = new List<string>

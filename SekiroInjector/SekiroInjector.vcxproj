@@ -170,6 +170,7 @@
     <ClInclude Include="Overlay.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="PipeConnection.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="SekiroGame.h" />
     <ClInclude Include="SekiroTypes.h" />
     <ClInclude Include="Utils.h" />

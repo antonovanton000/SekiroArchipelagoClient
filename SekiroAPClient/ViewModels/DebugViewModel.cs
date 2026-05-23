@@ -184,7 +184,8 @@ public partial class DebugViewModel : MyBaseViewModel
             12500003,
             12000000,
             11500000,
-            11700000
+            11700000,
+            11000000
         };
 
         foreach (var flag in areaIdolFlags)
@@ -195,10 +196,28 @@ public partial class DebugViewModel : MyBaseViewModel
     }
 
     [RelayCommand]
+    void StartInvasion1()
+    {
+        SetDebugEventFlag(8301, 1, "Started invasion 1");
+    }
+
+    [RelayCommand]
+    void StartInvasion2()
+    {
+        SetDebugEventFlag(8302, 1, "Started invasion 2");
+    }
+
+    [RelayCommand]
     void SendEventFlagValue()
     {
         if (EventFlagId == 0 || EventFlagValue <= -1 || EventFlagValue >1) return;
         pipeServer.SendSetEventFlagId(EventFlagId, EventFlagValue);
+    }
+
+    void SetDebugEventFlag(int eventFlagId, int value, string message)
+    {
+        pipeServer.SendSetEventFlagId(eventFlagId, value);
+        LogText += $"[Debug] {message}: flag {eventFlagId} = {value}" + Environment.NewLine;
     }
 
     void ChangeDebugState(bool debug)

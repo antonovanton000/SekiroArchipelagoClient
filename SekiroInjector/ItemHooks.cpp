@@ -52,7 +52,11 @@ bool IsAllowedGoods(uint32_t goodsId)
 bool IsTrackedRewardLot(uint32_t lotId)
 {
 	return lotId == 51300  // DT: Hidden Tooth - complete Hanbei's quest
-		|| lotId == 52810; // MV: Treasure Carp Scale - Head Priest's house, enemy drop
+		|| lotId == 61600  // AO: Young Lord's Bell Charm - Inosuke's Mother
+		|| lotId == 52810  // MV: Treasure Carp Scale - Head Priest's house, enemy drop
+		|| lotId == 53110  // AD: Academics' Red Lump - red-eyed Doujun, enemy drop
+		|| lotId == 53050  // AD: Red Lump - red-eyed Jinzaemon, enemy drop
+		|| lotId == 52650; // AD: Red Lump - red-eyed Kotaro, enemy drop
 }
 
 void OnLootDetected(uint32_t lotIndex, uint32_t goodid, bool isFromShop)

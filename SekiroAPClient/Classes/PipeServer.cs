@@ -40,7 +40,7 @@ public class PipeServer : IDisposable
 
             _isWorldLoaded = value;
 
-            // Мир только что загрузился → планируем сброс через 8 секунд
+            // The world has just loaded; schedule a flush in 8 seconds.
             if (_isWorldLoaded)
             {
                 ScheduleSpawnQueueFlush();
@@ -55,7 +55,7 @@ public class PipeServer : IDisposable
     private bool _flushScheduled;
 
     /// <summary>
-    /// Вызывается при получении JSON-сообщения от DLL.
+    /// Raised when a JSON message is received from the DLL.
     /// </summary>
     public event Action<string>? MessageReceived;
     public event Action<ItemRecievedArgs>? ItemReceived;
@@ -68,7 +68,7 @@ public class PipeServer : IDisposable
 
     static readonly JsonSerializerOptions JsonOpts = new()
     {
-        Encoder = JavaScriptEncoder.Create(UnicodeRanges.All), // или UnsafeRelaxedJsonEscaping ниже
+        Encoder = JavaScriptEncoder.Create(UnicodeRanges.All), // Or use UnsafeRelaxedJsonEscaping below.
     };
 
     static readonly JsonSerializerOptions JsonOptsRelaxed = new()
@@ -84,9 +84,9 @@ public class PipeServer : IDisposable
 
     public void Start()
     {
-        // Запускаем фоновую задачу, которая будет:
-        // - ждать подключения
-        // - после подключения читать/писать в этот пайп
+        // Start a background task that:
+        // - waits for a connection
+        // - reads from and writes to this pipe after connecting
         IsStarted = true;
         _acceptLoopTask = Task.Run(AcceptLoopAsync);
     }
@@ -110,8 +110,8 @@ public class PipeServer : IDisposable
     }
 
     /// <summary>
-    /// Поставить JSON-строку в очередь на отправку.
-    /// Она уйдёт при первом удобном случае, когда есть подключение.
+    /// Queue a JSON string for sending.
+    /// It will be sent as soon as a connection is available.
     /// </summary>
     public void SendJson(string json)
     {
@@ -229,7 +229,7 @@ public class PipeServer : IDisposable
 
         if (!IsWorldLoaded)
         {
-            // Мир ещё не готов — складываем в очередь
+            // The world is not ready yet; queue the request.
             lock (_spawnQueueLock)
             {
                 _spawnQueue.Enqueue(request);
@@ -238,7 +238,7 @@ public class PipeServer : IDisposable
             return;
         }
 
-        // Мир уже загружен — отправляем сразу
+        // The world is already loaded; send immediately.
         SendSpawnItemNow(request);
     }
 
@@ -286,16 +286,16 @@ public class PipeServer : IDisposable
 
     public async Task SendShowSmallHintWhenWorldLoaded(string text, CancellationToken cancellationToken = default)
     {
-        // 1. Ждём загрузку мира
+        // 1. Wait until the world is loaded.
         while (!IsWorldLoaded)
         {
             if (cancellationToken.IsCancellationRequested)
                 return;
 
-            await Task.Delay(500, cancellationToken); // проверяем каждые 0.5 сек
+            await Task.Delay(500, cancellationToken); // Poll every 0.5 seconds.
         }
 
-        // 2. Дополнительная задержка (экран загрузки)
+        // 2. Extra delay for the loading screen.
         try
         {
             await Task.Delay(TimeSpan.FromSeconds(8), cancellationToken);
@@ -305,7 +305,7 @@ public class PipeServer : IDisposable
             return;
         }
 
-        // 3. Показываем хинт
+        // 3. Show the hint.
         SendShowSmallHint(text);
     }
 
@@ -350,7 +350,7 @@ public class PipeServer : IDisposable
         {
             try
             {
-                // Создаём серверный пайп (один клиент)
+                // Create a server pipe for a single client.
                 _server = new NamedPipeServerStream(
                     _pipeName,
                     PipeDirection.InOut,
@@ -364,11 +364,11 @@ public class PipeServer : IDisposable
                 LogDebug("[Pipe] Client connected");
 
                 ConnectionChanged?.Invoke("connected");
-                // Когда подключились — запускаем две задачи: чтение и запись
+                // Once connected, start separate read and write tasks.
                 var readTask = Task.Run(() => ReadLoopAsync(_server, token), token);
                 var writeTask = Task.Run(() => WriteLoopAsync(_server, token), token);
 
-                // Ждём, пока одна из задач не завершится (чаще всего из-за дисконнекта)
+                // Wait until either task completes, usually because of a disconnect.
                 await Task.WhenAny(readTask, writeTask).ConfigureAwait(false);
 
                 LogDebug("[Pipe] Client disconnected");
@@ -376,12 +376,12 @@ public class PipeServer : IDisposable
                 IsWorldLoaded = false;
                 CloseServer();
 
-                // Небольшая пауза перед следующей попыткой
+                // Small delay before the next attempt.
                 await Task.Delay(1000, token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
-                // Нормальное завершение
+                // Normal shutdown.
                 break;
             }
             catch (Exception ex)
@@ -400,17 +400,17 @@ public class PipeServer : IDisposable
 
         while (!token.IsCancellationRequested && pipe.IsConnected)
         {
-            // Читаем 4 байта длины
+            // Read the 4-byte length prefix.
             if (!await ReadExactAsync(pipe, lengthBuffer, 0, 4, token).ConfigureAwait(false))
             {
-                // Дисконнект или ошибка
+                // Disconnect or read error.
                 break;
             }
 
             uint length = BitConverter.ToUInt32(lengthBuffer, 0);
             if (length == 0)
             {
-                // Пустое сообщение — пропускаем
+                // Empty message; skip it.
                 continue;
             }
 
@@ -422,7 +422,7 @@ public class PipeServer : IDisposable
 
             string json = Encoding.UTF8.GetString(payload);
 
-            // Вызываем callback на UI/лог
+            // Notify UI/log subscribers.
             try
             {
                 MessageReceived?.Invoke(json);
@@ -507,7 +507,7 @@ public class PipeServer : IDisposable
                                    .ConfigureAwait(false);
             if (read == 0)
             {
-                // Клиент отключился
+                // Client disconnected.
                 return false;
             }
             totalRead += read;
@@ -519,10 +519,10 @@ public class PipeServer : IDisposable
     {
         while (!token.IsCancellationRequested && pipe.IsConnected)
         {
-            // Ждём, пока появятся сообщения в очереди
+            // Wait until messages appear in the queue.
             if (_sendQueue.IsEmpty)
             {
-                // Либо ждём событие, либо выходим, если отмена
+                // Wait for a send signal, or exit if cancellation is requested.
                 WaitHandle.WaitAny(new WaitHandle[] { _sendEvent, token.WaitHandle });
                 if (token.IsCancellationRequested || !pipe.IsConnected)
                     break;
@@ -548,7 +548,7 @@ public class PipeServer : IDisposable
                 }
                 catch (IOException)
                 {
-                    // Клиент отвалился
+                    // Client disconnected.
                     return;
                 }
                 catch (OperationCanceledException)
@@ -592,7 +592,7 @@ public class PipeServer : IDisposable
 
     private void ScheduleSpawnQueueFlush()
     {
-        // Уже висит отложенный флеш — не запускаем ещё один
+        // A delayed flush is already pending; do not start another one.
         if (_flushScheduled)
             return;
 
@@ -642,7 +642,7 @@ public class PipeServer : IDisposable
         const int maxLineLength = 35;
         const int maxTotalLength = 128;
 
-        // 1) Нормализуем переносы, но НЕ удаляем их
+        // 1) Normalize line endings without removing them.
         input = input.Replace("\r\n", "\n");
 
         var inputLines = input.Split('\n');

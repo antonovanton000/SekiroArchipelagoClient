@@ -100,7 +100,7 @@
                     <LineBreak/>
                     Installed version: <Run Text="{Binding SekiroInjectorDllVersion}" Background="{StaticResource BlueAlpha80}"/>
                     <LineBreak/>
-                    Required version: <Run Text=" 1.0.6 " Background="{StaticResource BlueAlpha80}"/>
+                    Required version: <Run Text="{Binding SekiroInjectorRequieredVersion, Mode=OneWay}" Background="{StaticResource BlueAlpha80}"/>
                     <LineBreak/>
                     Please download the latest release of Sekiro Archipelago Client from the official GitHub repository <LineBreak/> and replace <Run Text=" SekiroInjector.dll " Background="{StaticResource BlueAlpha80}"/> with the updated file.
                     <LineBreak/>

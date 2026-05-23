@@ -256,6 +256,7 @@ public class PermutationWriter
         List<string> raceModeInfo = new List<string>();
         Dictionary<int, int> rewrittenFlags = new Dictionary<int, int>();
         Dictionary<int, int> shopPermanentFlags = new Dictionary<int, int>();
+        HashSet<int> archipelagoTalkLocationFlags = isArchipelago ? GetArchipelagoTalkLocationFlags() : new HashSet<int>();
         Console.WriteLine($"-- Spoilers:");
         foreach (KeyValuePair<RandomSilo, SiloPermutation> siloEntry in permutation.Silos)
         {
@@ -386,6 +387,11 @@ public class PermutationWriter
                                 {
                                     lotCells["getItemFlagId"] = apFlag;
                                     setEventFlag = apFlag;
+                                    RegisterArchipelagoScriptFlagRewrite(
+                                        eventFlag,
+                                        apFlag,
+                                        archipelagoTalkLocationFlags,
+                                        rewrittenFlags);
                                 }
                             }
                             
@@ -519,11 +525,9 @@ public class PermutationWriter
         }
 
         // Events / EMEVD rewrites
-        // In Archipelago (ForcedMode) we do NOT touch EMEVD at all.
         if (isArchipelago)
         {
-            ApplyArchipelagoCarpLotRelocations(events);
-            // Skip all other event editing; items are handled via params / DLL.
+            ApplyArchipelagoScriptFixes(events, rewrittenFlags);
             return;
         }
 
@@ -1218,6 +1222,308 @@ public class PermutationWriter
             return targetLocation.Scope.EventID;
 
         return -1;
+    }
+
+    private HashSet<int> GetArchipelagoTalkLocationFlags()
+    {
+        var flags = new HashSet<int>();
+
+        foreach (EventSpec spec in eventConfig.ItemTalks)
+        {
+            foreach (ItemTemplate template in spec.ItemTemplate)
+            {
+                if (template.Type != "loc" || template.EventFlag == null)
+                    continue;
+
+                if (int.TryParse(template.EventFlag, out int flag) && flag > 0)
+                    flags.Add(flag);
+            }
+        }
+
+        foreach (EventSpec spec in eventConfig.ItemEvents)
+        {
+            foreach (ItemTemplate template in spec.ItemTemplate)
+            {
+                if (template.Type != "loc" || template.EventFlag == null)
+                    continue;
+
+                if (int.TryParse(template.EventFlag, out int flag) && flag > 0)
+                    flags.Add(flag);
+            }
+        }
+
+        return flags;
+    }
+
+    private void RegisterArchipelagoScriptFlagRewrite(
+        int vanillaFlag,
+        int archipelagoFlag,
+        HashSet<int> archipelagoTalkLocationFlags,
+        Dictionary<int, int> rewrittenFlags)
+    {
+        if (vanillaFlag <= 0 || archipelagoFlag <= 0 || vanillaFlag == archipelagoFlag)
+            return;
+
+        if (!archipelagoTalkLocationFlags.Contains(vanillaFlag) && !IsSekiroPermanentScriptFlag(vanillaFlag))
+            return;
+
+        if (rewrittenFlags.TryGetValue(vanillaFlag, out int existing) && existing != archipelagoFlag)
+        {
+            Console.WriteLine($"[AP][ESD] Keeping first rewrite for flag {vanillaFlag}: {existing}; skipped conflicting {archipelagoFlag}");
+            return;
+        }
+
+        rewrittenFlags[vanillaFlag] = archipelagoFlag;
+    }
+
+    private static bool IsSekiroPermanentScriptFlag(int eventFlag)
+    {
+        return eventFlag >= 6500 && eventFlag < 6800;
+    }
+
+    private void ApplyArchipelagoScriptFixes(Events events, Dictionary<int, int> rewrittenFlags)
+    {
+        if (!game.Sekiro)
+            return;
+
+        ApplyArchipelagoCarpLotRelocations(events);
+        ApplyArchipelagoTalkFixes(rewrittenFlags);
+        ApplyArchipelagoEventLocationFixes(events, rewrittenFlags);
+        RemoveArchipelagoPermanentShopFlagSync(events);
+    }
+
+    private void ApplyArchipelagoTalkFixes(Dictionary<int, int> rewrittenFlags)
+    {
+        Dictionary<string, Dictionary<string, ESD>> talks = game.Talk;
+        Dictionary<int, EventSpec> talkTemplates = eventConfig.ItemTalks.ToDictionary(e => e.ID, e => e);
+
+        bool parseMachineName(string mIdStr, out int mId)
+        {
+            if (int.TryParse(mIdStr, out mId))
+                return true;
+
+            if (mIdStr.StartsWith("x") && int.TryParse(mIdStr.Substring(1), out int diffpart))
+            {
+                mId = 0x7FFFFFFF - diffpart;
+                return true;
+            }
+
+            return false;
+        }
+
+        void rewriteCondition(ESD.Condition cond, Action<byte[]> rewriteExpr)
+        {
+            rewriteExpr(cond.Evaluator);
+            cond.PassCommands.ForEach(c => rewriteCommand(c, rewriteExpr));
+            cond.Subconditions.ForEach(c => rewriteCondition(c, rewriteExpr));
+        }
+
+        void rewriteCommand(ESD.CommandCall cmd, Action<byte[]> rewriteExpr)
+        {
+            cmd.Arguments.ForEach(rewriteExpr);
+        }
+
+        int esdRewrites = 0;
+        foreach (KeyValuePair<string, ESD> entry in talks.SelectMany(s => s.Value))
+        {
+            string esdName = entry.Key;
+            if (!esdName.StartsWith("t") || !int.TryParse(esdName.Substring(1), out int esdId))
+                continue;
+
+            if (!talkTemplates.TryGetValue(esdId, out EventSpec spec))
+                continue;
+
+            var replaceInts = new Dictionary<int, int>();
+            var machines = new HashSet<int>();
+
+            foreach (ItemTemplate template in spec.ItemTemplate)
+            {
+                foreach (string machineStr in phraseRe.Split(template.Machine))
+                {
+                    int machine = parseMachineName(machineStr, out int machineId)
+                        ? machineId
+                        : throw new Exception($"Unknown machine id {template.Machine} of {esdName}");
+                    machines.Add(machine);
+                }
+
+                if (template.EventFlag == null)
+                    continue;
+
+                int flag = int.Parse(template.EventFlag);
+                if (template.Type == "loc")
+                {
+                    if (rewrittenFlags.TryGetValue(flag, out int newFlag))
+                        replaceInts[flag] = newFlag;
+                }
+                else if (template.Type == "isshin")
+                {
+                    replaceInts[flag] = int.Parse(template.Replace);
+                }
+            }
+
+            if (replaceInts.Count == 0)
+                continue;
+
+            void rewriteExpr(byte[] bytes)
+            {
+                foreach (KeyValuePair<int, int> replace in replaceInts)
+                {
+                    int search;
+                    while ((search = SearchInt(bytes, (uint)replace.Key)) != -1)
+                    {
+                        Array.Copy(BitConverter.GetBytes(replace.Value), 0, bytes, search, 4);
+                        esdRewrites++;
+                    }
+                }
+            }
+
+            foreach (KeyValuePair<long, Dictionary<long, ESD.State>> machine in entry.Value.StateGroups)
+            {
+                if (!machines.Contains((int)machine.Key))
+                    continue;
+
+                foreach (ESD.State state in machine.Value.Values)
+                {
+                    state.Conditions.ForEach(c => rewriteCondition(c, rewriteExpr));
+                    state.EntryCommands.ForEach(c => rewriteCommand(c, rewriteExpr));
+                    state.ExitCommands.ForEach(c => rewriteCommand(c, rewriteExpr));
+                    state.WhileCommands.ForEach(c => rewriteCommand(c, rewriteExpr));
+                }
+            }
+        }
+
+        if (esdRewrites > 0)
+            Console.WriteLine($"[AP][ESD] Applied {esdRewrites} talk-script flag rewrites");
+    }
+
+    private void ApplyArchipelagoEventLocationFixes(Events events, Dictionary<int, int> rewrittenFlags)
+    {
+        if (rewrittenFlags.Count == 0)
+            return;
+
+        Dictionary<int, EventSpec> templates = eventConfig.ItemEvents.ToDictionary(e => e.ID, e => e);
+        int rewrittenInits = 0;
+        int rewrittenEvents = 0;
+
+        foreach (KeyValuePair<string, EMEVD> entry in game.Emevds)
+        {
+            Dictionary<int, EMEVD.Event> fileEvents = entry.Value.Events.ToDictionary(e => (int)e.ID, e => e);
+
+            foreach (EMEVD.Event e in entry.Value.Events)
+            {
+                OldParams initOld = OldParams.Preprocess(e);
+                try
+                {
+                    for (int i = 0; i < e.Instructions.Count; i++)
+                    {
+                        Instr init = events.Parse(e.Instructions[i]);
+                        if (!init.Init)
+                            continue;
+
+                        if (!templates.TryGetValue(init.Callee, out EventSpec ev))
+                            continue;
+
+                        var reloc = new Dictionary<int, int>();
+                        foreach (ItemTemplate template in ev.ItemTemplate.Where(t => t.Type == "loc" && t.EventFlag != null))
+                        {
+                            int flag;
+                            if (events.ParseArgSpec(template.EventFlag, out int pos))
+                            {
+                                flag = (int)init.Args[init.Offset + pos];
+                            }
+                            else if (!int.TryParse(template.EventFlag, out flag))
+                            {
+                                continue;
+                            }
+
+                            if (rewrittenFlags.TryGetValue(flag, out int newFlag) && flag != newFlag)
+                                reloc[flag] = newFlag;
+                        }
+
+                        if (reloc.Count == 0)
+                            continue;
+
+                        events.RewriteInts(init, reloc);
+                        init.Save();
+                        e.Instructions[i] = init.Val;
+                        rewrittenInits++;
+
+                        if (!fileEvents.TryGetValue(init.Callee, out EMEVD.Event templateEvent))
+                            continue;
+
+                        OldParams templateOld = OldParams.Preprocess(templateEvent);
+                        try
+                        {
+                            for (int j = 0; j < templateEvent.Instructions.Count; j++)
+                            {
+                                Instr instr = events.Parse(templateEvent.Instructions[j]);
+                                if (instr.Init)
+                                    continue;
+
+                                events.RewriteInts(instr, reloc);
+                                instr.Save();
+                                templateEvent.Instructions[j] = instr.Val;
+                            }
+
+                            rewrittenEvents++;
+                        }
+                        finally
+                        {
+                            templateOld.Postprocess();
+                        }
+                    }
+                }
+                finally
+                {
+                    initOld.Postprocess();
+                }
+            }
+        }
+
+        if (rewrittenInits > 0 || rewrittenEvents > 0)
+            Console.WriteLine($"[AP][EMEVD] Applied location flag rewrites to {rewrittenInits} initializers and {rewrittenEvents} template events");
+    }
+
+    private void RemoveArchipelagoPermanentShopFlagSync(Events events)
+    {
+        Dictionary<int, EventSpec> templates = eventConfig.ItemEvents.ToDictionary(e => e.ID, e => e);
+        int removed = 0;
+
+        foreach (KeyValuePair<string, EMEVD> entry in game.Emevds)
+        {
+            foreach (EMEVD.Event e in entry.Value.Events)
+            {
+                OldParams initOld = OldParams.Preprocess(e);
+                try
+                {
+                    for (int i = 0; i < e.Instructions.Count; i++)
+                    {
+                        Instr init = events.Parse(e.Instructions[i]);
+                        if (!init.Init)
+                            continue;
+
+                        if (init.Callee != 750)
+                            continue;
+
+                        if (!templates.TryGetValue(init.Callee, out EventSpec ev))
+                            continue;
+
+                        if (ev.ItemTemplate.Count == 0 || ev.ItemTemplate[0].Type != "remove")
+                            continue;
+
+                        e.Instructions[i] = new EMEVD.Instruction(1014, 69);
+                        removed++;
+                    }
+                }
+                finally
+                {
+                    initOld.Postprocess();
+                }
+            }
+        }
+
+        if (removed > 0)
+            Console.WriteLine($"[AP][EMEVD] Removed {removed} permanent/shop flag sync initializers");
     }
 
     private void ApplyArchipelagoCarpLotRelocations(Events events)
