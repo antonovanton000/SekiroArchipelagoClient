@@ -35,7 +35,8 @@ public partial class DebugViewModel : MyBaseViewModel
         if (IsSendBack)
         {
             await Task.Delay(50);
-            pipeServer.SendSpawnItem(item.GoodId, item.Quantity);
+            var eventId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(item.GoodId & 0x0FFFFFFF);
+            pipeServer.SendSpawnItem(item.GoodId, item.Quantity, eventId);
         }
     }
 
@@ -137,8 +138,8 @@ public partial class DebugViewModel : MyBaseViewModel
         //if (SpawnCount <= 0)
         //    return;
 
-        //var eventId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(SelectedItem.Id & 0x0FFFFFFF);
-        pipeServer.SendSpawnItem(SelectedItem.Id, SpawnCount);//, eventId);            
+        var eventId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(SelectedItem.Id & 0x0FFFFFFF);
+        pipeServer.SendSpawnItem(SelectedItem.Id, SpawnCount, eventId);
     }
 
     [RelayCommand]

@@ -4,8 +4,10 @@
 #include <thread>
 #include <chrono>
 #include <atomic>
+#include <cstdio>
 #include <fstream>
 #include <string>
+#include <cstring>
 #include "SekiroGame.h"
 #include <Psapi.h>
 #pragma comment(lib, "Psapi.lib")
@@ -14,6 +16,55 @@
 
 static HMODULE g_hOriginalDInput8 = nullptr;
 static std::atomic<bool> g_CoreStarted = false;
+static HANDLE g_CoreStartMutex = nullptr;
+
+static const char* GetBaseName(const char* path)
+{
+	const char* lastSlash = strrchr(path, '\\');
+	const char* lastForwardSlash = strrchr(path, '/');
+	const char* last = lastSlash > lastForwardSlash ? lastSlash : lastForwardSlash;
+	return last ? last + 1 : path;
+}
+
+static bool IsSekiroProcess()
+{
+	char exePath[MAX_PATH]{};
+	if (!GetModuleFileNameA(nullptr, exePath, MAX_PATH))
+	{
+		Log("[Core] Could not read process image path; allowing startup");
+		return true;
+	}
+
+	Logf("[Core] Process image: %s", exePath);
+	return _stricmp(GetBaseName(exePath), "sekiro.exe") == 0;
+}
+
+static bool TryAcquireCoreStartGuard()
+{
+	char mutexName[96];
+	sprintf_s(
+		mutexName,
+		sizeof(mutexName),
+		"Local\\SekiroAPClientCore_%lu",
+		GetCurrentProcessId());
+
+	HANDLE mutex = CreateMutexA(nullptr, TRUE, mutexName);
+	if (!mutex)
+	{
+		Log("[Core] CreateMutex guard failed");
+		return !g_CoreStarted.exchange(true);
+	}
+
+	if (GetLastError() == ERROR_ALREADY_EXISTS)
+	{
+		Log("[Core] Duplicate core start suppressed by mutex guard");
+		CloseHandle(mutex);
+		return false;
+	}
+
+	g_CoreStartMutex = mutex;
+	return true;
+}
 
 
 // ========================================================
@@ -61,7 +112,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID)
 	{
 		DisableThreadLibraryCalls(hModule);
 
-		if (!g_CoreStarted.exchange(true))
+		if (IsSekiroProcess() && !g_CoreStarted.exchange(true) && TryAcquireCoreStartGuard())
 		{
 			CreateThread(nullptr, 0, CoreThread, nullptr, 0, nullptr);
 		}

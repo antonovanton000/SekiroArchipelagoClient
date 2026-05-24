@@ -3,13 +3,18 @@
 #include <windows.h>
 #include <string>
 #include <deque>
-#include <mutex>
 
 enum class PipeState
 {
     Disconnected,
     Connecting,
     Connected
+};
+
+enum class ConnectionTransport
+{
+    NamedPipe,
+    Tcp
 };
 
 // Класс-клиент для named pipe \\.\pipe\SekiroAP
@@ -25,7 +30,7 @@ public:
 
     // Задать имя пайпа и подготовить состояние.
     // Реальное подключение делается лениво в Tick().
-    void Initialize(const std::wstring& pipeName);
+    void Initialize(const wchar_t* pipeName);
 
     // Закрыть пайп (можно вызывать при завершении DLL).
     void Shutdown();
@@ -55,22 +60,33 @@ private:
     void ClosePipe();
     void ProcessOutgoing();
     void ProcessIncoming();
+    void SelectTransport();
+    bool TryConnectNamedPipe();
+    bool TryConnectTcp();
+    bool WriteBytes(const char* data, DWORD size);
+    bool ReadBytes(void* data, DWORD size, DWORD& bytesRead);
+    bool PeekAvailable(DWORD& bytesAvailable);
 
 private:
     HANDLE      m_pipe;
+    SOCKET      m_socket;
     PipeState   m_state;
-    std::wstring m_pipeName;
+    ConnectionTransport m_transport;
+    wchar_t     m_pipeName[MAX_PATH];
+    std::string m_tcpHost;
+    uint16_t    m_tcpPort;
+    bool        m_wsaStarted;
 
     // Для reconnect-логики
     ULONGLONG   m_nextConnectAttemptMs;
     DWORD       m_connectIntervalMs; // интервал между попытками
 
     // Очередь исходящих сообщений
-    mutable std::mutex        m_sendMutex;
+    mutable CRITICAL_SECTION  m_sendLock;
     std::deque<std::string>   m_sendQueue;
 
     // Очередь входящих сообщений
-    mutable std::mutex        m_recvMutex;
+    mutable CRITICAL_SECTION  m_recvLock;
     std::deque<std::string>   m_recvQueue;
 
     // Стейт для парсинга входящего стрима (length + payload)

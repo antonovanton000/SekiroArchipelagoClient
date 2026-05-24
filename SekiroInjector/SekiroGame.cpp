@@ -200,34 +200,97 @@ bool IsWorldLoaded()
 	if (!g_WCMStorageAddr) {
 		g_WCMStorageAddr = FindWorldChrManPtr();
 		if (!g_WCMStorageAddr) {
+			static bool loggedMissingStorage = false;
+			if (!loggedMissingStorage) {
+				Log("[WorldLoaded] WorldChrMan storage pattern not found");
+				loggedMissingStorage = true;
+			}
 			return false;
 		}
 	}
 
 	uintptr_t worldChrMan = 0;
 	if (!SafeReadPtr(g_WCMStorageAddr, worldChrMan) || !worldChrMan) {
+		static bool loggedMissingWorldChrMan = false;
+		if (!loggedMissingWorldChrMan) {
+			Logf("[WorldLoaded] WorldChrMan pointer is not ready. storage=0x%llX", g_WCMStorageAddr);
+			loggedMissingWorldChrMan = true;
+		}
 		return false;
 	}
 
 	uintptr_t p1 = 0, p2 = 0, p3 = 0;
 	if (!SafeReadPtr(worldChrMan + 0x48, p1) || !p1) {
+		static bool loggedMissingCoordP1 = false;
+		if (!loggedMissingCoordP1) {
+			Logf("[WorldLoaded] Coordinate chain p1 failed. worldChrMan=0x%llX", worldChrMan);
+			loggedMissingCoordP1 = true;
+		}
+		int hp = GetPlayerHp();
+		if (hp >= 0) {
+			Logf("[WorldLoaded] HP fallback succeeded. hp=%d", hp);
+			return true;
+		}
 		return false;
 	}
 	if (!SafeReadPtr(p1 + 0x28, p2) || !p2) {
+		static bool loggedMissingCoordP2 = false;
+		if (!loggedMissingCoordP2) {
+			Logf("[WorldLoaded] Coordinate chain p2 failed. worldChrMan=0x%llX p1=0x%llX", worldChrMan, p1);
+			loggedMissingCoordP2 = true;
+		}
+		int hp = GetPlayerHp();
+		if (hp >= 0) {
+			Logf("[WorldLoaded] HP fallback succeeded. hp=%d", hp);
+			return true;
+		}
 		return false;
 	}
 
 	float plX = 0;
 	float plY = 0;
 	if (!SafeReadFloat(p2 + 0x80, plX)) {
+		static bool loggedMissingCoordX = false;
+		if (!loggedMissingCoordX) {
+			Logf("[WorldLoaded] Coordinate X read failed. p2=0x%llX", p2);
+			loggedMissingCoordX = true;
+		}
+		int hp = GetPlayerHp();
+		if (hp >= 0) {
+			Logf("[WorldLoaded] HP fallback succeeded. hp=%d", hp);
+			return true;
+		}
 		return false;
 	}
 	if (!SafeReadFloat(p2 + 0x84, plY)) {
+		static bool loggedMissingCoordY = false;
+		if (!loggedMissingCoordY) {
+			Logf("[WorldLoaded] Coordinate Y read failed. p2=0x%llX x=%f", p2, plX);
+			loggedMissingCoordY = true;
+		}
+		int hp = GetPlayerHp();
+		if (hp >= 0) {
+			Logf("[WorldLoaded] HP fallback succeeded. hp=%d", hp);
+			return true;
+		}
 		return false;
 	}
 	if (plX != 0 && plY != 0) {
 		return true;
 	}
+
+	static bool loggedZeroCoords = false;
+	if (!loggedZeroCoords) {
+		Logf("[WorldLoaded] Coordinate chain read zero position. p2=0x%llX x=%f y=%f", p2, plX, plY);
+		loggedZeroCoords = true;
+	}
+
+	int hp = GetPlayerHp();
+	if (hp >= 0) {
+		Logf("[WorldLoaded] HP fallback succeeded after zero coords. hp=%d", hp);
+		return true;
+	}
+
 	return false;
 
 }
@@ -589,10 +652,9 @@ bool SekiroGame_Initialize()
 {
 	Logf("[SekiroGame] Initialize");
 	g_Initialized = true;
-	Sleep(8000);
+	Sleep(10000);
 	InitEventFlagSystem();
 	InitInGameMessaging();
-	g_Pipe.SendJson("{ \"type\":\"init\", \"status\": true }");
 	return true;
 }
 
@@ -741,6 +803,17 @@ void SekiroGame_GrantItem(const PendingApItem& item)
 // ---------------------------------------------------------
 void SekiroGame_GrantItemWithEvent(uint32_t eventId, uint32_t goodsId, uint32_t count)
 {
+	if (eventId != 0)
+	{
+		bool alreadyOwned = false;
+		if (GetEventFlagSafe(eventId, alreadyOwned) && alreadyOwned)
+		{
+			Logf("[GrantItemEF] Skipping goods=%u x%u because event flag %u is already set",
+				goodsId, count, eventId);
+			return;
+		}
+	}
+
 	PendingApItem tmp{};
 	tmp.itemId = goodsId;
 	tmp.quantity = count;
@@ -749,13 +822,7 @@ void SekiroGame_GrantItemWithEvent(uint32_t eventId, uint32_t goodsId, uint32_t 
 
 	SekiroGame_GrantItem(tmp);
 
-	if (eventId != 0)
-	{
-		bool ok = SetEventFlagSafe(eventId, true);
-		if (!ok)
-		{
-			Logf("[GrantItemEF] Failed to set event flag %u for goods %u x%u",
-				eventId, goodsId, count);
-		}
-	}
+	// Do not force-set the permanent item flag here. Sekiro updates these flags as
+	// part of its own GrantItem flow, and forcing them externally can corrupt
+	// one-off goods inventory state.
 }

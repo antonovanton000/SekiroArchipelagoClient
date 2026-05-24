@@ -10,6 +10,7 @@ namespace SekiroAPClient.Classes
         {
             { 2910, 6740 }, // Mechanical Barrel
             { 9790, 6509 }, // Slender Finger
+            //{ 9402, 51110984 }, // Gatehouse Key
             //{ 2110, 6746 }, // Puppeteer Ninjutsu
             //{ 9009, 6750 }, // Sakura Droplet
             //{ 9060, 6751 }, // Dragon's Tally Board

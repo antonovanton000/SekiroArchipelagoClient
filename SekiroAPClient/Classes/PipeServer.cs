@@ -5,6 +5,8 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Pipes;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -17,9 +19,19 @@ namespace SekiroAPClient;
 
 public class PipeServer : IDisposable
 {
+    private enum TransportKind
+    {
+        NamedPipe,
+        Tcp
+    }
+
     private readonly string _pipeName;
+    private readonly TransportKind _transportKind;
+    private readonly int _tcpPort;
     private readonly CancellationTokenSource _cts = new();
     private NamedPipeServerStream? _server;
+    private TcpListener? _tcpListener;
+    private TcpClient? _tcpClient;
     private Task? _acceptLoopTask;
     private readonly ConcurrentQueue<string> _sendQueue = new();
     private readonly AutoResetEvent _sendEvent = new(false);
@@ -27,7 +39,10 @@ public class PipeServer : IDisposable
     private int _eventFlagRequestId;
     public bool IsStarted { get; private set; }
 
-    public bool IsConnected => _server is { IsConnected: true };
+    public bool IsConnected => _transportKind == TransportKind.Tcp
+        ? _tcpClient is { Connected: true }
+        : _server is { IsConnected: true };
+    public bool IsTcpTransport => _transportKind == TransportKind.Tcp;
     public bool ShowDebugLog { get; set; } = false;
 
     public bool IsWorldLoaded
@@ -79,7 +94,38 @@ public class PipeServer : IDisposable
     public PipeServer(string pipeName)
     {
         _pipeName = pipeName;
+        _transportKind = ResolveTransportKind();
+        _tcpPort = ResolveTcpPort();
         IsStarted = false;
+    }
+
+    private static TransportKind ResolveTransportKind()
+    {
+        var value = Environment.GetEnvironmentVariable("SEKIRO_AP_TRANSPORT");
+        if (string.Equals(value, "tcp", StringComparison.OrdinalIgnoreCase))
+            return TransportKind.Tcp;
+
+        var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "connection_transport.txt");
+        if (File.Exists(configPath))
+        {
+            var text = File.ReadLines(configPath).FirstOrDefault()?.Trim();
+            if (string.Equals(text, "tcp", StringComparison.OrdinalIgnoreCase))
+                return TransportKind.Tcp;
+            if (string.Equals(text, "pipe", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(text, "namedpipe", StringComparison.OrdinalIgnoreCase))
+                return TransportKind.NamedPipe;
+        }
+
+        return TransportKind.NamedPipe;
+    }
+
+    private static int ResolveTcpPort()
+    {
+        var value = Environment.GetEnvironmentVariable("SEKIRO_AP_TCP_PORT");
+        if (int.TryParse(value, out var port) && port > 0 && port <= 65535)
+            return port;
+
+        return 38571;
     }
 
     public void Start()
@@ -350,23 +396,40 @@ public class PipeServer : IDisposable
         {
             try
             {
-                // Create a server pipe for a single client.
-                _server = new NamedPipeServerStream(
-                    _pipeName,
-                    PipeDirection.InOut,
-                    1, // max number of server instances
-                    PipeTransmissionMode.Byte,
-                    PipeOptions.Asynchronous);
+                Stream stream;
+                Func<bool> isConnected;
 
-                LogDebug("[Pipe] Waiting for client...");
-                await _server.WaitForConnectionAsync(token).ConfigureAwait(false);
+                if (_transportKind == TransportKind.Tcp)
+                {
+                    _tcpListener ??= new TcpListener(IPAddress.Loopback, _tcpPort);
+                    _tcpListener.Start(1);
+
+                    LogDebug($"[Pipe] Waiting for TCP client on 127.0.0.1:{_tcpPort}...");
+                    _tcpClient = await _tcpListener.AcceptTcpClientAsync(token).ConfigureAwait(false);
+                    _tcpClient.NoDelay = true;
+                    stream = _tcpClient.GetStream();
+                    isConnected = () => _tcpClient is { Connected: true };
+                }
+                else
+                {
+                    _server = new NamedPipeServerStream(
+                        _pipeName,
+                        PipeDirection.InOut,
+                        1,
+                        PipeTransmissionMode.Byte,
+                        PipeOptions.Asynchronous);
+
+                    LogDebug("[Pipe] Waiting for client...");
+                    await _server.WaitForConnectionAsync(token).ConfigureAwait(false);
+                    stream = _server;
+                    isConnected = () => _server is { IsConnected: true };
+                }
 
                 LogDebug("[Pipe] Client connected");
 
                 ConnectionChanged?.Invoke("connected");
-                // Once connected, start separate read and write tasks.
-                var readTask = Task.Run(() => ReadLoopAsync(_server, token), token);
-                var writeTask = Task.Run(() => WriteLoopAsync(_server, token), token);
+                var readTask = Task.Run(() => ReadLoopAsync(stream, isConnected, token), token);
+                var writeTask = Task.Run(() => WriteLoopAsync(stream, isConnected, token), token);
 
                 // Wait until either task completes, usually because of a disconnect.
                 await Task.WhenAny(readTask, writeTask).ConfigureAwait(false);
@@ -394,11 +457,11 @@ public class PipeServer : IDisposable
         }
     }
 
-    private async Task ReadLoopAsync(NamedPipeServerStream pipe, CancellationToken token)
+    private async Task ReadLoopAsync(Stream pipe, Func<bool> isConnected, CancellationToken token)
     {
         var lengthBuffer = new byte[4];
 
-        while (!token.IsCancellationRequested && pipe.IsConnected)
+        while (!token.IsCancellationRequested && isConnected())
         {
             // Read the 4-byte length prefix.
             if (!await ReadExactAsync(pipe, lengthBuffer, 0, 4, token).ConfigureAwait(false))
@@ -515,16 +578,16 @@ public class PipeServer : IDisposable
         return true;
     }
 
-    private async Task WriteLoopAsync(NamedPipeServerStream pipe, CancellationToken token)
+    private async Task WriteLoopAsync(Stream pipe, Func<bool> isConnected, CancellationToken token)
     {
-        while (!token.IsCancellationRequested && pipe.IsConnected)
+        while (!token.IsCancellationRequested && isConnected())
         {
             // Wait until messages appear in the queue.
             if (_sendQueue.IsEmpty)
             {
                 // Wait for a send signal, or exit if cancellation is requested.
                 WaitHandle.WaitAny(new WaitHandle[] { _sendEvent, token.WaitHandle });
-                if (token.IsCancellationRequested || !pipe.IsConnected)
+                if (token.IsCancellationRequested || !isConnected())
                     break;
             }
 
@@ -570,9 +633,11 @@ public class PipeServer : IDisposable
         {
             IsStarted = false;
             _server?.Dispose();
+            _tcpClient?.Dispose();
         }
         catch { /* ignore */ }
         _server = null;
+        _tcpClient = null;
     }
 
     private void LogDebug(string message)

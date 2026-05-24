@@ -71,11 +71,11 @@
                                 Command="{Binding OpenDebugPageCommand}"
                                 Margin="0,0,10,0"
                                 Visibility="{Binding IsDebug, Converter={StaticResource BoolToVisConverter}}" />
-                        <Button Content="Launch Game" Style="{StaticResource FlatButtonStylePrimaryNoArrow}" Width="120"
+                        <Button Content="{Binding GameActionButtonText}" Style="{StaticResource FlatButtonStylePrimaryNoArrow}" Width="120"
                                 Command="{Binding LaunchGameCommand}"
-                                Visibility="{Binding IsConnectedToGame, Converter={StaticResource NotBoolToVisibilityConverter}}" />
-                        <TextBlock Text="Connected to Game" Style="{StaticResource HeaderTextBlockBlockStyle}" VerticalAlignment="Center"
-                               Margin="0,0,0,0" FontSize="20" Visibility="{Binding IsConnectedToGame, Converter={StaticResource BoolToVisConverter}}" />
+                                Visibility="{Binding ShowGameActionButton, Converter={StaticResource BoolToVisConverter}}" />
+                        <TextBlock Text="{Binding GameConnectionStatusText}" Style="{StaticResource HeaderTextBlockBlockStyle}" VerticalAlignment="Center"
+                               Margin="10,0,0,0" FontSize="20" Visibility="{Binding ShowGameConnectionStatus, Converter={StaticResource BoolToVisConverter}}" />
                     </StackPanel>
                 </Grid>
                 <Grid Grid.Row="1">

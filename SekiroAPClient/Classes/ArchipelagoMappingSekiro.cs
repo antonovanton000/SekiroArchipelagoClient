@@ -18,7 +18,7 @@ public static class ArchipelagoMappingSekiro
         ["T"] = new[] { "ashinareservoir_start" },
         ["DT"] = new[] { "ashinaoutskirts_temple" },
         ["AO"] = new[] { "ashinaoutskirts" },
-        ["AO/C"] = new[] { "ashinaoutskirts_invasion" },
+        ["AO/C"] = new[] { "ashinaoutskirts_invasion", "ashinaoutskirts_invasion2" },
         ["HE1"] = new[] { "hirata", "hirata_temple1", "hirata_courtyard1", "hirata_thicketslope", "hirata_sidepath", "hirata_beforetemple", "hirata_pagoda", "hirata_underwater" },
         ["HE2"] = new[] { "hirata_courtyard2", "hirata_temple2" },
         ["AC"] = new[] { "ashinacastle" },
@@ -120,24 +120,26 @@ public static class ArchipelagoMappingSekiro
             bool usedFallback = false;
             bool usedFuzzyFallback = false;
             bool usedOverride = false;
-            if (!apIdsToKeys.TryGetValue(loc.LocationId, out var annKey))
+            string? annKey = null;
+            if (locationOverrides.TryGetValue(loc.LocationId, out annKey))
             {
-                if (locationOverrides.TryGetValue(loc.LocationId, out annKey))
+                usedOverride = true;
+            }
+            else if ((annKey = GetLocationNameOverride(loc.LocationName)) != null)
+            {
+                usedOverride = true;
+            }
+            else if (!apIdsToKeys.TryGetValue(loc.LocationId, out annKey))
+            {
+                annKey = ResolveAnnotationKeyFromArchipelagoOrder(loc.LocationName, archipelagoFallback);
+                if (annKey != null)
                 {
-                    usedOverride = true;
+                    usedFallback = true;
                 }
                 else
                 {
-                    annKey = ResolveAnnotationKeyFromArchipelagoOrder(loc.LocationName, archipelagoFallback);
-                    if (annKey != null)
-                    {
-                        usedFallback = true;
-                    }
-                    else
-                    {
-                        annKey = ResolveAnnotationKeyFromLocationName(loc.LocationName, ann);
-                        usedFuzzyFallback = annKey != null;
-                    }
+                    annKey = ResolveAnnotationKeyFromLocationName(loc.LocationName, ann);
+                    usedFuzzyFallback = annKey != null;
                 }
             }
 
@@ -260,6 +262,24 @@ public static class ArchipelagoMappingSekiro
         return result;
     }
 
+    private static string? GetLocationNameOverride(string locationName)
+    {
+        string normalized = NormalizeText(locationName);
+
+        // apworld names this as the Tengu tower ground-floor droplet, while the
+        // local randomizer annotation describes the same invasion-2 pickup as
+        // the fortress building after Demon of Hatred. Keep the AP location on
+        // its real ItemLotParam row instead of falling through to Shigekichi.
+        if (normalized.Contains("ao/c:")
+            && normalized.Contains("dragon's blood droplet")
+            && normalized.Contains("inside tengu tower"))
+        {
+            return "00,0:51100850::";
+        }
+
+        return null;
+    }
+
     private static void ApplyLocationSpecificLotExpansion(string locationName, HashSet<int> ids)
     {
         string normalized = NormalizeText(locationName);
@@ -288,7 +308,11 @@ public static class ArchipelagoMappingSekiro
 
     private static Dictionary<long, string> LoadLocationOverrides()
     {
-        string path = Path.Combine("..", "..", "..", "dists", "Base", "ap_location_overrides.json");
+        string appLocation = AppContext.BaseDirectory;
+        string path = Path.Combine(appLocation, "dists", "Base", "ap_location_overrides.json");
+        if (!File.Exists(path))
+            path = Path.GetFullPath(Path.Combine(appLocation, "..", "..", "..", "dists", "Base", "ap_location_overrides.json"));
+
         if (!File.Exists(path))
             return new Dictionary<long, string>();
 

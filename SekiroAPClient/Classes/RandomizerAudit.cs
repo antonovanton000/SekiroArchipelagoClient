@@ -15,14 +15,14 @@ public class RandomizerAudit
 {
     public static void Start(ApRandomizationState state)
     {
-        using var fs = File.Open("randoaudit.txt", FileMode.Create, FileAccess.Write, FileShare.Read);
+        using var fs = File.Open(Path.Combine(App.Location, "randoaudit.txt"), FileMode.Create, FileAccess.Write, FileShare.Read);
         using var sw = new StreamWriter(fs);
 
         try
         {
-            var distDir = "../../../dists";
+            var distDir = ResolveDistDir();
             GameData game = new GameData(distDir, FromGame.SDT);
-            game.Load("randomizer");
+            game.Load(Path.Combine(App.Location, "randomizer"));
 
             var itemLotParam = game.Params["ItemLotParam"];
             var shopParam = game.Params["ShopLineupParam"];
@@ -45,6 +45,19 @@ public class RandomizerAudit
             sw.WriteLine("[Audit] ERROR:");
             sw.WriteLine(ex.ToString());
         }
+    }
+
+    private static string ResolveDistDir()
+    {
+        string publishedDist = Path.Combine(App.Location, "dists");
+        if (Directory.Exists(publishedDist))
+            return publishedDist;
+
+        string devDist = Path.GetFullPath(Path.Combine(App.Location, "..", "..", "..", "dists"));
+        if (Directory.Exists(devDist))
+            return devDist;
+
+        return publishedDist;
     }
 
     // ------------------------------------------------------------

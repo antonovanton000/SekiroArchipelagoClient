@@ -35,6 +35,16 @@ void Log(const char* msg)
     DWORD written;
     WriteFile(hFile, timeBuf, (DWORD)strlen(timeBuf), &written, nullptr);
     WriteFile(hFile, " ", 1, &written, nullptr);
+
+    char idBuf[64];
+    sprintf_s(
+        idBuf,
+        sizeof(idBuf),
+        "[pid=%lu tid=%lu] ",
+        GetCurrentProcessId(),
+        GetCurrentThreadId());
+    WriteFile(hFile, idBuf, (DWORD)strlen(idBuf), &written, nullptr);
+
     WriteFile(hFile, msg, (DWORD)strlen(msg), &written, nullptr);
     WriteFile(hFile, "\r\n", 2, &written, nullptr);
 

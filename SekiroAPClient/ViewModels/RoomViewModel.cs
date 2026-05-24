@@ -16,6 +16,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Windows;
 using System.Windows.Threading;
 
 namespace SekiroAPClient.ViewModels;
@@ -30,6 +31,7 @@ public partial class RoomViewModel : MyBaseViewModel
         pipeServer = App.PipeServer;
         stateStorage = new StateStorage<ApRandomizationState>(Path.Combine(App.Location, "ap_randomization_state.json"));
         localItemsStore = new ReceivedItemStore(Path.Combine(App.Location, "randomizer\\localItemsStore.json"));
+        UpdateGameLaunchUi();
 
     }
 
@@ -40,6 +42,7 @@ public partial class RoomViewModel : MyBaseViewModel
         pipeServer = App.PipeServer;
         stateStorage = new StateStorage<ApRandomizationState>(Path.Combine(App.Location, "ap_randomization_state.json"));
         localItemsStore = new ReceivedItemStore(Path.Combine(App.Location, "randomizer\\localItemsStore.json"));
+        UpdateGameLaunchUi();
     }
     #endregion
 
@@ -74,6 +77,18 @@ public partial class RoomViewModel : MyBaseViewModel
 
     [ObservableProperty]
     bool isConnectedToGame;
+
+    [ObservableProperty]
+    bool showGameActionButton = true;
+
+    [ObservableProperty]
+    bool showGameConnectionStatus;
+
+    [ObservableProperty]
+    string gameConnectionStatusText = "";
+
+    [ObservableProperty]
+    string gameActionButtonText = "Launch Game";
 
     [ObservableProperty]
     bool showNotifications = true;
@@ -254,6 +269,16 @@ public partial class RoomViewModel : MyBaseViewModel
     [RelayCommand]
     void LaunchGame()
     {
+        if (pipeServer.IsTcpTransport)
+        {
+            var window = new SteamLaunchOptionsWindow
+            {
+                Owner = App.Current.MainWindow
+            };
+            window.ShowDialog();
+            return;
+        }
+
 #if DEBUG
         Process.Start(new ProcessStartInfo() { FileName = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Sekiro\\sekiro.exe", WorkingDirectory = Path.Combine(App.Location, "..") });
 #else
@@ -305,6 +330,28 @@ public partial class RoomViewModel : MyBaseViewModel
             IsConnectedToGame = false;
             LogText += $"Disconnected from Game!\r\n";
         }
+    }
+
+    partial void OnIsConnectedToGameChanged(bool value)
+    {
+        UpdateGameLaunchUi();
+    }
+
+    private void UpdateGameLaunchUi()
+    {
+        if (pipeServer.IsTcpTransport)
+        {
+            ShowGameActionButton = true;
+            ShowGameConnectionStatus = true;
+            GameActionButtonText = "Steam Setup";
+            GameConnectionStatusText = IsConnectedToGame ? "Game: Connected" : "Game: Disconnected";
+            return;
+        }
+
+        ShowGameActionButton = !IsConnectedToGame;
+        ShowGameConnectionStatus = IsConnectedToGame;
+        GameActionButtonText = "Launch Game";
+        GameConnectionStatusText = "Connected to Game";
     }
     private async void Socket_ErrorReceived(Exception e, string message)
     {
@@ -367,12 +414,6 @@ public partial class RoomViewModel : MyBaseViewModel
             if (lotMaps.Count() > 0)
             {
                 await CurrentSession.Locations.CompleteLocationChecksAsync(lotMaps.Select(i => i.LocationId).ToArray());
-                var permanentFlag = PermanentGoodToFlagCollection.GetPermanentFlagForItem(obj.GoodId);
-                if (permanentFlag > 0)
-                {
-                    pipeServer.SendSetEventFlagId(permanentFlag, 1);
-                }
-
                 if (IsSekiroMemoryItem(obj.GoodId))
                 {
                     pipeServer.SendSpawnItem(0x40000000 + 5400, 1);

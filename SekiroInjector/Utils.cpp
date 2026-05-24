@@ -15,6 +15,24 @@ uint32_t DecodeGoodsId(uint32_t encoded)
     return (encoded & 0x0FFFFFFF);
 }
 
+static bool IsReadableMemoryProtection(DWORD protect)
+{
+    protect &= ~(PAGE_GUARD | PAGE_NOCACHE | PAGE_WRITECOMBINE);
+
+    switch (protect)
+    {
+    case PAGE_READONLY:
+    case PAGE_READWRITE:
+    case PAGE_WRITECOPY:
+    case PAGE_EXECUTE_READ:
+    case PAGE_EXECUTE_READWRITE:
+    case PAGE_EXECUTE_WRITECOPY:
+        return true;
+    default:
+        return false;
+    }
+}
+
 bool SafeReadPtr(uintptr_t addr, uintptr_t& out)
 {
     if (!addr) return false;
@@ -23,11 +41,7 @@ bool SafeReadPtr(uintptr_t addr, uintptr_t& out)
     if (!VirtualQuery((LPCVOID)addr, &mbi, sizeof(mbi))) return false;
     if (mbi.State != MEM_COMMIT) return false;
 
-    const DWORD ok =
-        PAGE_READONLY | PAGE_READWRITE |
-        PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE;
-
-    if (!(mbi.Protect & ok)) return false;
+    if (!IsReadableMemoryProtection(mbi.Protect)) return false;
 
     __try {
         out = *(uintptr_t*)addr;
@@ -47,11 +61,7 @@ bool SafeReadInt(uintptr_t addr, int& out)
     if (!VirtualQuery((LPCVOID)addr, &mbi, sizeof(mbi))) return false;
     if (mbi.State != MEM_COMMIT) return false;
 
-    const DWORD ok =
-        PAGE_READONLY | PAGE_READWRITE |
-        PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE;
-
-    if (!(mbi.Protect & ok)) return false;
+    if (!IsReadableMemoryProtection(mbi.Protect)) return false;
 
     __try {
         out = *(int*)addr;
@@ -71,11 +81,7 @@ bool SafeReadByte(uintptr_t addr, uint8_t& out)
     if (!VirtualQuery((LPCVOID)addr, &mbi, sizeof(mbi))) return false;
     if (mbi.State != MEM_COMMIT) return false;
 
-    const DWORD ok =
-        PAGE_READONLY | PAGE_READWRITE |
-        PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE;
-
-    if (!(mbi.Protect & ok)) return false;
+    if (!IsReadableMemoryProtection(mbi.Protect)) return false;
 
     __try {
         out = *(uint8_t*)addr;
@@ -99,11 +105,7 @@ bool SafeReadFloat(uintptr_t addr, float& out)
     if (mbi.State != MEM_COMMIT)
         return false;
 
-    const DWORD ok =
-        PAGE_READONLY | PAGE_READWRITE |
-        PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE;
-
-    if (!(mbi.Protect & ok))
+    if (!IsReadableMemoryProtection(mbi.Protect))
         return false;
 
     __try

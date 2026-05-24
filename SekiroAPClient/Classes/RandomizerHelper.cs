@@ -71,6 +71,19 @@ public partial class RandomizerHelper : ObservableObject
         }
     }
 
+    private static string ResolveDistDir()
+    {
+        string publishedDist = Path.Combine(App.Location, "dists");
+        if (Directory.Exists(publishedDist))
+            return publishedDist;
+
+        string devDist = Path.GetFullPath(Path.Combine(App.Location, "..", "..", "..", "dists"));
+        if (Directory.Exists(devDist))
+            return devDist;
+
+        return publishedDist;
+    }
+
     public async Task<ApRandomizationState?> RandomizeArchipelago(ArchipelagoSession session)
     {
         if (IsBusy) return null;
@@ -78,7 +91,7 @@ public partial class RandomizerHelper : ObservableObject
         HasErrors = false;
         IsFatalError = false;
         IsSuccess = false;
-        var outPath = "randomizer";
+        var outPath = Path.Combine(App.Location, "randomizer");
 
         var locations = session.Locations
             .ScoutLocationsAsync(session.Locations.AllLocations.ToArray())
@@ -125,17 +138,14 @@ public partial class RandomizerHelper : ObservableObject
 
         if (Properties.Settings.Default.IsDebug)
         {
-            File.WriteAllText("debug_apIdsToItemIds.json", JsonConvert.SerializeObject(apIdsToItemIds, Formatting.Indented));
-            File.WriteAllText("debug_apIdsToKeys.json", JsonConvert.SerializeObject(apIdsToKeys, Formatting.Indented));
-            File.WriteAllText("debug_itemCounts.json", JsonConvert.SerializeObject(itemCounts, Formatting.Indented));
-            File.WriteAllText("debug_locations.json", JsonConvert.SerializeObject(locations, Formatting.Indented));
+            File.WriteAllText(Path.Combine(App.Location, "debug_apIdsToItemIds.json"), JsonConvert.SerializeObject(apIdsToItemIds, Formatting.Indented));
+            File.WriteAllText(Path.Combine(App.Location, "debug_apIdsToKeys.json"), JsonConvert.SerializeObject(apIdsToKeys, Formatting.Indented));
+            File.WriteAllText(Path.Combine(App.Location, "debug_itemCounts.json"), JsonConvert.SerializeObject(itemCounts, Formatting.Indented));
+            File.WriteAllText(Path.Combine(App.Location, "debug_locations.json"), JsonConvert.SerializeObject(locations, Formatting.Indented));
         }
 
 
-        string distDir = @"dists";
-#if DEBUG
-        distDir = "../../../dists";
-#endif
+        string distDir = ResolveDistDir();
         if (!Directory.Exists(distDir))
         {
             throw new Exception("Missing data directory");
@@ -144,9 +154,10 @@ public partial class RandomizerHelper : ObservableObject
         State = await Task.Factory.StartNew(() =>
         {
             ApRandomizationState state = null;
-            Directory.CreateDirectory(@"spoiler_logs");
+            string spoilerLogDir = Path.Combine(App.Location, "spoiler_logs");
+            Directory.CreateDirectory(spoilerLogDir);
             string runId = $"{DateTime.Now.ToString("yyyy-MM-dd_HH.mm.ss")}_log_{Options.Seed}_{Options.ConfigHash()}.txt";
-            LogFilePath = $@"spoiler_logs\{runId}";
+            LogFilePath = Path.Combine(spoilerLogDir, runId);
             TextWriter log = File.CreateText(LogFilePath);
             TextWriter stdout = Console.Out;
             Console.SetOut(log);
@@ -706,12 +717,22 @@ public partial class RandomizerHelper : ObservableObject
 
     static int GetForcedLotEventFlag(int lotId, int vanillaEventFlag, long archipelagoLocationId, int goodId)
     {
+        if (RequiresPrivateArchipelagoFlag(lotId))
+            return GetArchipelagoLotEventFlag(archipelagoLocationId);
+
         if (IsSekiroPermanentItemFlag(vanillaEventFlag))
             return GetArchipelagoLotEventFlag(archipelagoLocationId);
 
         return IsSekiroMapTreasureFlag(vanillaEventFlag)
             ? vanillaEventFlag
             : GetArchipelagoLotEventFlag(archipelagoLocationId);
+    }
+
+    static bool RequiresPrivateArchipelagoFlag(int lotId)
+    {
+        // The apworld now exposes the dungeon and Senpou Kotaro outcomes as
+        // separate AP locations, but vanilla gives both rewards the same flag.
+        return lotId is 52650 or 62600;
     }
 
     static bool IsSekiroPermanentItemFlag(int eventFlag)
