@@ -12,4 +12,13 @@ struct ItemEvent
 };
 
 bool ItemHooks_Initialize();
-void ItemHooks_Shutdown(); 
+void ItemHooks_Shutdown();
+
+// Serializes AP item grants against native pickup/shop operations.
+// Reward/suction delivery remains outside this barrier.
+bool ItemHooks_TryBeginApGrant();
+void ItemHooks_EndApGrant();
+
+// Experimental: remove foreign synthetic goods after their native pickup
+// notification has had time to complete.
+void ItemHooks_ProcessPendingForeignRemovals();

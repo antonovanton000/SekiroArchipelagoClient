@@ -170,20 +170,7 @@ static void HandlePipeMessage(const std::string& msg)
              return;
          }
 
-        if (eventId != 0)
-        {
-            // New path: set event flag first, then grant the item.
-            SekiroGame_GrantItemWithEvent(eventId, goodsId, quantity);
-        }
-        else
-        {
-            // Backwards-compatible path: old behavior without event flag.
-            PendingApItem item{};
-            item.itemId = goodsId;
-            item.quantity = quantity;
-
-            SekiroGame_GrantItem(item);
-        }
+        SekiroGame_QueueGrantItem(eventId, goodsId, quantity);
 
         return;
     }
@@ -266,6 +253,9 @@ DWORD WINAPI CoreThread(LPVOID)
         {
 			HandlePipeMessage(msg);
         }
+
+        SekiroGame_ProcessPendingGrants();
+        ItemHooks_ProcessPendingForeignRemovals();
 
         Sleep(33); // ~30 fps for overlay
     }

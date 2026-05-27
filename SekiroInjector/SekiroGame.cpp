@@ -12,7 +12,9 @@
 #include "InGameMessaging.h"
 #include "PipeConnection.h"
 #include "EndingDetector.h"
+#include "ItemHooks.h"
 #include "MinHook.h"
+#include <deque>
 
 extern PipeConnection g_Pipe;
 
@@ -39,12 +41,25 @@ static bool g_WorldJustLoaded = false;
 static bool g_WorldJustUnloaded = false;
 
 static bool g_OverlayStarted = false;
-bool g_InOurGrant = false;
+thread_local bool g_InOurGrant = false;
 
 static bool g_DeathFromDeathlink = false;
 
 static std::mutex g_PickupMutex;
 static std::vector<PickupEvent> g_PickupQueue;
+
+struct QueuedApGrant
+{
+	uint32_t eventId;
+	uint32_t goodsId;
+	uint32_t quantity;
+};
+
+static std::mutex g_ApGrantQueueMutex;
+static std::deque<QueuedApGrant> g_ApGrantQueue;
+static ULONGLONG g_LastApGrantMs = 0;
+static bool g_ApGrantWaitLogged = false;
+static constexpr ULONGLONG AP_GRANT_INTERVAL_MS = 100;
 
 static uintptr_t g_GameDataManStorage = 0;
 static uintptr_t g_GameDataMan = 0;
@@ -825,4 +840,72 @@ void SekiroGame_GrantItemWithEvent(uint32_t eventId, uint32_t goodsId, uint32_t 
 	// Do not force-set the permanent item flag here. Sekiro updates these flags as
 	// part of its own GrantItem flow, and forcing them externally can corrupt
 	// one-off goods inventory state.
+}
+
+void SekiroGame_QueueGrantItem(uint32_t eventId, uint32_t goodsId, uint32_t count)
+{
+	{
+		std::lock_guard<std::mutex> lock(g_ApGrantQueueMutex);
+		g_ApGrantQueue.push_back({ eventId, goodsId, count });
+	}
+
+	Logf("[GrantQueue] queued goods=%u x%u eventId=%u", goodsId, count, eventId);
+}
+
+void SekiroGame_ProcessPendingGrants()
+{
+	if (!IsWorldLoaded())
+		return;
+
+	const ULONGLONG now = GetTickCount64();
+	if (g_LastApGrantMs != 0 && now - g_LastApGrantMs < AP_GRANT_INTERVAL_MS)
+		return;
+
+	QueuedApGrant grant{};
+	{
+		std::lock_guard<std::mutex> lock(g_ApGrantQueueMutex);
+		if (g_ApGrantQueue.empty())
+			return;
+		grant = g_ApGrantQueue.front();
+	}
+
+	if (!ItemHooks_TryBeginApGrant())
+	{
+		if (!g_ApGrantWaitLogged)
+		{
+			Log("[GrantQueue] waiting for gameplay item operation quiet period");
+			g_ApGrantWaitLogged = true;
+		}
+		return;
+	}
+
+	{
+		std::lock_guard<std::mutex> lock(g_ApGrantQueueMutex);
+		if (g_ApGrantQueue.empty())
+		{
+			ItemHooks_EndApGrant();
+			return;
+		}
+
+		grant = g_ApGrantQueue.front();
+		g_ApGrantQueue.pop_front();
+	}
+
+	Logf("[GrantQueue] dispatch goods=%u x%u eventId=%u", grant.goodsId, grant.quantity, grant.eventId);
+	g_ApGrantWaitLogged = false;
+
+	if (grant.eventId != 0)
+	{
+		SekiroGame_GrantItemWithEvent(grant.eventId, grant.goodsId, grant.quantity);
+	}
+	else
+	{
+		PendingApItem item{};
+		item.itemId = grant.goodsId;
+		item.quantity = grant.quantity;
+		SekiroGame_GrantItem(item);
+	}
+
+	g_LastApGrantMs = GetTickCount64();
+	ItemHooks_EndApGrant();
 }

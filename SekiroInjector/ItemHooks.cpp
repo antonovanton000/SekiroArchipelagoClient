@@ -11,6 +11,7 @@
 #include <vector>
 #include <mutex>
 #include <queue>
+#include <atomic>
 
 extern PipeConnection g_Pipe;
 static MapItemMan_GrantItem_t g_GrantItem_Original = nullptr;
@@ -18,7 +19,7 @@ ShopFunc_t g_ShopFunc_Original = nullptr;
 
 using BuildItemFromLot_t = void(__fastcall*)(void* outStruct, uint32_t lotId);
 static BuildItemFromLot_t g_BuildItemFromLot_Original = nullptr;
-static bool g_PickupHandled = false;
+static thread_local bool g_PickupHandled = false;
 thread_local uint32_t g_LastTrackedRewardLotId = 0;
 thread_local uint32_t g_LastRewardParamReportedLotId = 0;
 thread_local uint32_t g_LastRewardParamReportedGoodsId = 0;
@@ -39,10 +40,170 @@ using RewardParamInit_t = void(__fastcall*)(void* rewardParam, int mode);
 static RewardExec_t       g_RewardExec_Original = nullptr;
 static RewardParamInit_t  g_RewardParamInit_Original = nullptr;
 static bool g_InterruptItemAcquiring = false;
+// -1 means an AP grant is executing; values above zero mean native pickup or
+// shop operations are executing. Reward/suction delivery intentionally does
+// not participate because its GrantItem path is sensitive to interception.
+static std::atomic<int> g_ItemOperationState{ 0 };
+static std::atomic<ULONGLONG> g_LastGameplayItemOperationEndMs{ 0 };
+static constexpr ULONGLONG AP_GRANT_QUIET_PERIOD_MS = 250;
+static constexpr ULONGLONG FOREIGN_REMOVE_DELAY_MS = 1000;
+
+using RemoveItem_t = void(__fastcall*)(
+	uintptr_t luaEventMan,
+	uint32_t category,
+	uint32_t goodsId,
+	uint32_t quantity
+);
+
+static RemoveItem_t g_RemoveItem = nullptr;
+
+struct PendingForeignRemoval
+{
+	uint32_t goodsId;
+	ULONGLONG removeAfterMs;
+};
+
+static std::mutex g_ForeignRemovalMutex;
+static std::queue<PendingForeignRemoval> g_PendingForeignRemovals;
+
+class GameplayItemOperationScope
+{
+public:
+	explicit GameplayItemOperationScope(bool enabled = true)
+		: m_enabled(enabled)
+	{
+		if (!m_enabled)
+			return;
+
+		for (;;)
+		{
+			int current = g_ItemOperationState.load(std::memory_order_acquire);
+			if (current < 0)
+			{
+				Sleep(0);
+				continue;
+			}
+
+			if (g_ItemOperationState.compare_exchange_weak(
+				current,
+				current + 1,
+				std::memory_order_acq_rel,
+				std::memory_order_acquire))
+			{
+				break;
+			}
+		}
+	}
+
+	~GameplayItemOperationScope()
+	{
+		if (!m_enabled)
+			return;
+
+		g_LastGameplayItemOperationEndMs.store(GetTickCount64(), std::memory_order_release);
+		g_ItemOperationState.fetch_sub(1, std::memory_order_release);
+	}
+
+private:
+	bool m_enabled;
+};
 
 // -----------------------------------------------------------------------------
 // Helpers
 // -----------------------------------------------------------------------------
+
+bool ItemHooks_TryBeginApGrant()
+{
+	int expected = 0;
+	if (!g_ItemOperationState.compare_exchange_strong(
+		expected,
+		-1,
+		std::memory_order_acq_rel,
+		std::memory_order_acquire))
+		return false;
+
+	const ULONGLONG lastGameplayOperation = g_LastGameplayItemOperationEndMs.load(std::memory_order_acquire);
+	const ULONGLONG now = GetTickCount64();
+	if (lastGameplayOperation != 0 && now - lastGameplayOperation < AP_GRANT_QUIET_PERIOD_MS)
+	{
+		g_ItemOperationState.store(0, std::memory_order_release);
+		return false;
+	}
+
+	return true;
+}
+
+void ItemHooks_EndApGrant()
+{
+	g_ItemOperationState.store(0, std::memory_order_release);
+}
+
+static void QueueForeignRemoval(uint32_t goodsId)
+{
+	const ULONGLONG removeAfterMs = GetTickCount64() + FOREIGN_REMOVE_DELAY_MS;
+	{
+		std::lock_guard<std::mutex> lock(g_ForeignRemovalMutex);
+		g_PendingForeignRemovals.push({ goodsId, removeAfterMs });
+	}
+
+	Logf("[ForeignRemove] queued goods=%u delayMs=%llu", goodsId, FOREIGN_REMOVE_DELAY_MS);
+}
+
+static void TryRemoveForeignItem(uint32_t goodsId)
+{
+	__try
+	{
+		g_RemoveItem(0, 0x40000000u, goodsId, 1);
+		Logf("[ForeignRemove] remove returned goods=%u", goodsId);
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+		Logf("[ForeignRemove] exception while removing goods=%u", goodsId);
+	}
+}
+
+void ItemHooks_ProcessPendingForeignRemovals()
+{
+	if (!g_RemoveItem || !IsWorldLoaded())
+		return;
+
+	PendingForeignRemoval pending{};
+	{
+		std::lock_guard<std::mutex> lock(g_ForeignRemovalMutex);
+		if (g_PendingForeignRemovals.empty())
+			return;
+
+		pending = g_PendingForeignRemovals.front();
+		if (GetTickCount64() < pending.removeAfterMs)
+			return;
+	}
+
+	if (!ItemHooks_TryBeginApGrant())
+		return;
+
+	{
+		std::lock_guard<std::mutex> lock(g_ForeignRemovalMutex);
+		if (g_PendingForeignRemovals.empty())
+		{
+			ItemHooks_EndApGrant();
+			return;
+		}
+
+		pending = g_PendingForeignRemovals.front();
+		if (GetTickCount64() < pending.removeAfterMs)
+		{
+			ItemHooks_EndApGrant();
+			return;
+		}
+
+		g_PendingForeignRemovals.pop();
+	}
+
+	Logf("[ForeignRemove] removing goods=%u category=0x%08X qty=1", pending.goodsId, 0x40000000u);
+	TryRemoveForeignItem(pending.goodsId);
+
+	ItemHooks_EndApGrant();
+}
 
 bool IsAllowedGoods(uint32_t goodsId)
 {
@@ -132,6 +293,12 @@ void __fastcall Hooked_RewardParamInit(void* rewardParam, int mode)
 	g_LastRewardParamReportedGoodsId = goodsId;
 	Logf("[Reward] staged tracked lot=%u goods=%u qty=%u allowed=%s", lotId, goodsId, quantity, isAllowedItem ? "true" : "false");
 	Overlay_AddLog("[Reward] staged lot=%u goods=%u", lotId, goodsId);
+
+	if (goodsId >= 6000000 && !IsTrackedRewardLot(lotId))
+	{
+		Logf("[Reward] queued foreign removal lot=%u goods=%u", lotId, goodsId);
+		QueueForeignRemoval(goodsId);
+	}
 }
 
 void __fastcall Hooked_BuildItemFromLot(void* outStruct, uint32_t lotId)
@@ -199,6 +366,7 @@ void __fastcall Hooked_PickupExec(
 	uint8_t   flag,
 	uint8_t   a4)
 {
+	GameplayItemOperationScope operation;
 	PickupRead before = ReadPickup(mapItemMan, a2, flag);
 	g_PickupExec_Original(mapItemMan, a2, flag, a4);
 	PickupRead after = ReadPickup(mapItemMan, a2, flag);
@@ -224,6 +392,12 @@ void __fastcall Hooked_PickupExec(
 		OnLootDetected(picked.lotId, picked.goodsId, false);
 		Logf("[PickupExec] staged lot=%u goodId=%u", picked.lotId, picked.goodsId);
 		Overlay_AddLog("[PickupExec] staged lot=%u goodId=%u", picked.lotId, picked.goodsId);
+
+		if (picked.goodsId >= 6000000)
+		{
+			Logf("[PickupExec] queued foreign removal lot=%u goodId=%u", picked.lotId, picked.goodsId);
+			QueueForeignRemoval(picked.goodsId);
+		}
 	}
 }
 
@@ -246,9 +420,10 @@ void __fastcall Hooked_MapItemMan_GrantItem(
 		return;
 	}
 
+	const uint32_t goodsId = DecodeGoodsId(entry->itemId);
+
 	if (!g_InOurGrant && !g_PickupHandled && IsTrackedRewardLot(g_LastTrackedRewardLotId))
 	{
-		uint32_t goodsId = DecodeGoodsId(entry->itemId);
 		if (g_LastRewardParamReportedLotId == g_LastTrackedRewardLotId && g_LastRewardParamReportedGoodsId == goodsId)
 		{
 			Logf("[GrantItemReward] skipped duplicate lot=%u goods=%u qty=%u", g_LastTrackedRewardLotId, goodsId, entry->quantity);
@@ -261,6 +436,7 @@ void __fastcall Hooked_MapItemMan_GrantItem(
 			Logf("[GrantItemReward] staged tracked lot=%u goods=%u qty=%u", g_LastTrackedRewardLotId, goodsId, entry->quantity);
 			Overlay_AddLog("[Reward] staged lot=%u goods=%u", g_LastTrackedRewardLotId, goodsId);
 		}
+
 	}
 
 	g_LastTrackedRewardLotId = 0;
@@ -275,6 +451,7 @@ static ShopPurchaseEntry_t g_ShopPurchaseEntry_Original = nullptr;
 
 __int64 __fastcall Hooked_ShopPurchaseEntry(void* shopEntry)
 {
+	GameplayItemOperationScope operation;
 	uint8_t* base = (uint8_t*)shopEntry;
 	uint32_t purchaseCount = *(uint32_t*)(base + 0x00);
 	uint32_t packed = *(uint32_t*)(base + 0x40);
@@ -286,6 +463,12 @@ __int64 __fastcall Hooked_ShopPurchaseEntry(void* shopEntry)
 		OnLootDetected(lineupId, goodsId, true);
 		Logf("[Shop] staged lot=%u goodsId=%u", lineupId, goodsId);
 		Overlay_AddLog("[Shop] staged lot=%u goodsId=%u", lineupId, goodsId);
+
+		if (goodsId >= 6000000)
+		{
+			Logf("[Shop] queued foreign removal lot=%u goodsId=%u", lineupId, goodsId);
+			QueueForeignRemoval(goodsId);
+		}
 	}
 
 	return g_ShopPurchaseEntry_Original(shopEntry);
@@ -311,10 +494,7 @@ int __fastcall Hooked_CommitItem(
 	int   goodsId,
 	int   qty)
 {
-	if (edx == 0x40000000 && goodsId >= 6000000)
-		return g_CommitItem_Original(rcx, edx, goodsId, 0);
-
-	return g_CommitItem_Original(rcx, edx, goodsId, qty);	
+	return g_CommitItem_Original(rcx, edx, goodsId, qty);
 }
 
 
@@ -539,6 +719,10 @@ bool ItemHooks_Initialize()
 		Log("[ItemHooks] MH_EnableHook(ShopCommitItem) failed");
 		return false;
 	}
+
+	g_RemoveItem = reinterpret_cast<RemoveItem_t>(base + 0x67B230);
+	Logf("[ItemHooks] Experimental RemoveItem = 0x%llX",
+		static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(g_RemoveItem)));
 
 	
 
