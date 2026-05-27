@@ -8,21 +8,13 @@
 #include "Overlay.h"
 #include "PipeConnection.h"
 #include "Core.h"
-#include <vector>
 #include <mutex>
 #include <queue>
 #include <atomic>
 
 extern PipeConnection g_Pipe;
-static MapItemMan_GrantItem_t g_GrantItem_Original = nullptr;
 ShopFunc_t g_ShopFunc_Original = nullptr;
 
-using BuildItemFromLot_t = void(__fastcall*)(void* outStruct, uint32_t lotId);
-static BuildItemFromLot_t g_BuildItemFromLot_Original = nullptr;
-static thread_local bool g_PickupHandled = false;
-thread_local uint32_t g_LastTrackedRewardLotId = 0;
-thread_local uint32_t g_LastRewardParamReportedLotId = 0;
-thread_local uint32_t g_LastRewardParamReportedGoodsId = 0;
 struct RewardContext
 {
 	bool     active = false;
@@ -289,8 +281,6 @@ void __fastcall Hooked_RewardParamInit(void* rewardParam, int mode)
 	}
 
 	OnLootDetected(lotId, goodsId, false);
-	g_LastRewardParamReportedLotId = lotId;
-	g_LastRewardParamReportedGoodsId = goodsId;
 	Logf("[Reward] staged tracked lot=%u goods=%u qty=%u allowed=%s", lotId, goodsId, quantity, isAllowedItem ? "true" : "false");
 	Overlay_AddLog("[Reward] staged lot=%u goods=%u", lotId, goodsId);
 
@@ -299,15 +289,6 @@ void __fastcall Hooked_RewardParamInit(void* rewardParam, int mode)
 		Logf("[Reward] queued foreign removal lot=%u goods=%u", lotId, goodsId);
 		QueueForeignRemoval(goodsId);
 	}
-}
-
-void __fastcall Hooked_BuildItemFromLot(void* outStruct, uint32_t lotId)
-{
-	g_LastTrackedRewardLotId = IsTrackedRewardLot(lotId) ? lotId : 0;
-	if (g_LastTrackedRewardLotId != 0)
-		Logf("[BuildItemFromLot] tracked reward lot=%u", g_LastTrackedRewardLotId);
-
-	g_BuildItemFromLot_Original(outStruct, lotId);
 }
 
 //////////////////////////////////////////////////////////
@@ -322,14 +303,25 @@ using PickupExec_t = void(__fastcall*)(
 using GetPickupStruct_t = uintptr_t(__fastcall*)(
 	uintptr_t mapItemMan,
 	uint32_t  a2,
-	uint8_t   flag
-	);
+	uint64_t  a3
+);
 
 // Original 91FCF0
 static PickupExec_t g_PickupExec_Original = nullptr;
 
 // Funciton 920330
 static GetPickupStruct_t g_GetPickupStruct = nullptr;
+
+// Original 91FF30. This path acquires item bags via suction and exposes the
+// concrete pickup structure before forwarding its Goods to GrantItem.
+using SuctionPickupExec_t = void(__fastcall*)(
+	uintptr_t mapItemMan,
+	uint32_t  a2,
+	uint64_t  a3,
+	uint64_t  a4
+);
+
+static SuctionPickupExec_t g_SuctionPickupExec_Original = nullptr;
 
 struct PickupRead
 {
@@ -341,13 +333,13 @@ struct PickupRead
 	bool isAllowedItem = false;
 };
 
-static PickupRead ReadPickup(uintptr_t mapItemMan, uint32_t a2, uint8_t flag)
+static PickupRead ReadPickup(uintptr_t mapItemMan, uint32_t a2, uint64_t a3)
 {
 	PickupRead read;
 	if (!g_GetPickupStruct)
 		return read;
 
-	uintptr_t pickupStruct = g_GetPickupStruct(mapItemMan, a2, flag);
+	uintptr_t pickupStruct = g_GetPickupStruct(mapItemMan, a2, a3);
 	if (!pickupStruct)
 		return read;
 
@@ -371,20 +363,20 @@ void __fastcall Hooked_PickupExec(
 	g_PickupExec_Original(mapItemMan, a2, flag, a4);
 	PickupRead after = ReadPickup(mapItemMan, a2, flag);
 
-	Logf(
-		"[PickupExec] probe a2=%u flag=%u before(valid=%d lot=%u good=%u qty=%u allowed=%d) after(valid=%d lot=%u good=%u qty=%u allowed=%d)",
-		a2,
-		flag,
-		before.valid ? 1 : 0,
-		before.lotId,
-		before.goodsId,
-		before.quantity,
-		before.isAllowedItem ? 1 : 0,
-		after.valid ? 1 : 0,
-		after.lotId,
-		after.goodsId,
-		after.quantity,
-		after.isAllowedItem ? 1 : 0);
+	// Logf(
+	// 	"[PickupExec] probe a2=%u flag=%u before(valid=%d lot=%u good=%u qty=%u allowed=%d) after(valid=%d lot=%u good=%u qty=%u allowed=%d)",
+	// 	a2,
+	// 	flag,
+	// 	before.valid ? 1 : 0,
+	// 	before.lotId,
+	// 	before.goodsId,
+	// 	before.quantity,
+	// 	before.isAllowedItem ? 1 : 0,
+	// 	after.valid ? 1 : 0,
+	// 	after.lotId,
+	// 	after.goodsId,
+	// 	after.quantity,
+	// 	after.isAllowedItem ? 1 : 0);
 
 	PickupRead picked = after.valid ? after : before;
 	if (picked.valid && !picked.isAllowedItem)
@@ -401,47 +393,31 @@ void __fastcall Hooked_PickupExec(
 	}
 }
 
-void __fastcall Hooked_MapItemMan_GrantItem(
+void __fastcall Hooked_SuctionPickupExec(
 	uintptr_t mapItemMan,
-	ItemBufferEntry* entry,
-	uint64_t ctx,
-	uint64_t a4)
+	uint32_t  a2,
+	uint64_t  a3,
+	uint64_t  a4)
 {
-	if (!entry)
-	{
-		g_GrantItem_Original(mapItemMan, entry, ctx, a4);
-		return;
-	}
+	GameplayItemOperationScope operation;
+	PickupRead picked = ReadPickup(mapItemMan, a2, a3);
 
-	uint32_t raw = entry->itemId;
-	if ((raw & 0xF0000000) != 0x40000000)
+	if (picked.valid && IsTrackedRewardLot(picked.lotId))
 	{
-		g_GrantItem_Original(mapItemMan, entry, ctx, a4);
-		return;
-	}
+		OnLootDetected(picked.lotId, picked.goodsId, false);
+		Logf("[SuctionPickup] staged lot=%u goods=%u qty=%u", picked.lotId, picked.goodsId, picked.quantity);
+		Overlay_AddLog("[SuctionPickup] staged lot=%u goods=%u", picked.lotId, picked.goodsId);
 
-	const uint32_t goodsId = DecodeGoodsId(entry->itemId);
-
-	if (!g_InOurGrant && !g_PickupHandled && IsTrackedRewardLot(g_LastTrackedRewardLotId))
-	{
-		if (g_LastRewardParamReportedLotId == g_LastTrackedRewardLotId && g_LastRewardParamReportedGoodsId == goodsId)
+		if (picked.goodsId >= 6000000)
 		{
-			Logf("[GrantItemReward] skipped duplicate lot=%u goods=%u qty=%u", g_LastTrackedRewardLotId, goodsId, entry->quantity);
-			g_LastRewardParamReportedLotId = 0;
-			g_LastRewardParamReportedGoodsId = 0;
+			Logf("[SuctionPickup] queued foreign removal lot=%u goods=%u", picked.lotId, picked.goodsId);
+			QueueForeignRemoval(picked.goodsId);
 		}
-		else
-		{
-			OnLootDetected(g_LastTrackedRewardLotId, goodsId, false);
-			Logf("[GrantItemReward] staged tracked lot=%u goods=%u qty=%u", g_LastTrackedRewardLotId, goodsId, entry->quantity);
-			Overlay_AddLog("[Reward] staged lot=%u goods=%u", g_LastTrackedRewardLotId, goodsId);
-		}
-
 	}
 
-	g_LastTrackedRewardLotId = 0;
-	g_PickupHandled = false;
-	g_GrantItem_Original(mapItemMan, entry, ctx, a4);
+	// Keep the native acquisition and popup path as the last active work in
+	// this hook. The queued removal runs asynchronously after the delay.
+	g_SuctionPickupExec_Original(mapItemMan, a2, a3, a4);
 }
 
 using ShopPurchaseEntry_t = __int64(__fastcall*)(void* shopRuntime);
@@ -548,25 +524,9 @@ bool ItemHooks_Initialize()
 	MH_STATUS status = MH_OK;
 
 	uintptr_t buildItemAddr = base + 0x913DF0;
-	status = MH_CreateHook(
-		reinterpret_cast<void*>(buildItemAddr),
-		&Hooked_BuildItemFromLot,
-		reinterpret_cast<void**>(&g_BuildItemFromLot_Original));
-
-	if (status != MH_OK)
-	{
-		Logf("[ItemHooks] MH_CreateHook(BuildItemFromLot) failed: %d", (int)status);
-		return false;
-	}
-
-	status = MH_EnableHook(reinterpret_cast<void*>(buildItemAddr));
-	if (status != MH_OK)
-	{
-		Logf("[ItemHooks] MH_EnableHook(BuildItemFromLot) failed: %d", (int)status);
-		return false;
-	}
-
-	Logf("[ItemHooks] BuildItemFromLot hook enabled. target=0x%llX",
+	// This function runs when a loot bag is created, not when that bag is
+	// collected. Leave it unhooked while we trace the real suction path.
+	Logf("[ItemHooks] BuildItemFromLot trace target (unhooked) = 0x%llX",
 		static_cast<unsigned long long>(buildItemAddr));
 
 	uintptr_t getPickupAddr = base + 0x920330;
@@ -599,6 +559,32 @@ bool ItemHooks_Initialize()
 	Logf("[ItemHooks] PickupExec hook enabled. target=0x%llX orig=0x%llX",
 		static_cast<unsigned long long>(pickupExecTarget),
 		static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(g_PickupExec_Original)));
+
+	uintptr_t suctionPickupExecTarget = base + 0x91FF30;
+	Logf("[ItemHooks] SuctionPickupExec target = 0x%llX",
+		static_cast<unsigned long long>(suctionPickupExecTarget));
+
+	status = MH_CreateHook(
+		reinterpret_cast<LPVOID>(suctionPickupExecTarget),
+		reinterpret_cast<LPVOID>(&Hooked_SuctionPickupExec),
+		reinterpret_cast<LPVOID*>(&g_SuctionPickupExec_Original));
+
+	if (status != MH_OK)
+	{
+		Logf("[ItemHooks] MH_CreateHook(SuctionPickupExec) failed: %d", (int)status);
+		return false;
+	}
+
+	status = MH_EnableHook(reinterpret_cast<LPVOID>(suctionPickupExecTarget));
+	if (status != MH_OK)
+	{
+		Logf("[ItemHooks] MH_EnableHook(SuctionPickupExec) failed: %d", (int)status);
+		return false;
+	}
+
+	Logf("[ItemHooks] SuctionPickupExec hook enabled. target=0x%llX orig=0x%llX",
+		static_cast<unsigned long long>(suctionPickupExecTarget),
+		static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(g_SuctionPickupExec_Original)));
 
 
 	uintptr_t rewardExecTarget = base + 0x918810;
@@ -675,30 +661,10 @@ bool ItemHooks_Initialize()
 
 	uintptr_t grantItemAddr = base + 0x91C970;
 
-	Logf("[ItemHooks] GrantItem target = 0x%llX",
+	// GrantItem identifies the delivered Goods but not its source lot. Leave
+	// it unhooked so debugger breakpoints see the native entry unchanged.
+	Logf("[ItemHooks] GrantItem trace target (unhooked) = 0x%llX",
 		static_cast<unsigned long long>(grantItemAddr));
-
-	status = MH_CreateHook(
-		reinterpret_cast<LPVOID>(grantItemAddr),
-		reinterpret_cast<LPVOID>(&Hooked_MapItemMan_GrantItem),
-		reinterpret_cast<LPVOID*>(&g_GrantItem_Original));
-
-	if (status != MH_OK)
-	{
-		Logf("[ItemHooks] MH_CreateHook(GrantItem) failed: %d", (int)status);
-		return false;
-	}
-
-	status = MH_EnableHook(reinterpret_cast<LPVOID>(grantItemAddr));
-	if (status != MH_OK)
-	{
-		Logf("[ItemHooks] MH_EnableHook(GrantItem) failed: %d", (int)status);
-		return false;
-	}
-
-	Logf("[ItemHooks] GrantItem hook enabled. target=0x%llX orig=0x%llX",
-		static_cast<unsigned long long>(grantItemAddr),
-		static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(g_GrantItem_Original)));
 
 	uintptr_t commitItemAddr = base + 0x79BF90;
 
