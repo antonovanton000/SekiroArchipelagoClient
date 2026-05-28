@@ -39,6 +39,7 @@ static std::atomic<int> g_ItemOperationState{ 0 };
 static std::atomic<ULONGLONG> g_LastGameplayItemOperationEndMs{ 0 };
 static constexpr ULONGLONG AP_GRANT_QUIET_PERIOD_MS = 250;
 static constexpr ULONGLONG FOREIGN_REMOVE_DELAY_MS = 1000;
+static constexpr ULONGLONG FOREIGN_REWARD_REMOVE_DELAY_MS = 3000;
 
 using RemoveItem_t = void(__fastcall*)(
 	uintptr_t luaEventMan,
@@ -130,15 +131,15 @@ void ItemHooks_EndApGrant()
 	g_ItemOperationState.store(0, std::memory_order_release);
 }
 
-static void QueueForeignRemoval(uint32_t goodsId)
+static void QueueForeignRemoval(uint32_t goodsId, ULONGLONG delayMs = FOREIGN_REMOVE_DELAY_MS)
 {
-	const ULONGLONG removeAfterMs = GetTickCount64() + FOREIGN_REMOVE_DELAY_MS;
+	const ULONGLONG removeAfterMs = GetTickCount64() + delayMs;
 	{
 		std::lock_guard<std::mutex> lock(g_ForeignRemovalMutex);
 		g_PendingForeignRemovals.push({ goodsId, removeAfterMs });
 	}
 
-	Logf("[ForeignRemove] queued goods=%u delayMs=%llu", goodsId, FOREIGN_REMOVE_DELAY_MS);
+	Logf("[ForeignRemove] queued goods=%u delayMs=%llu", goodsId, delayMs);
 }
 
 static void TryRemoveForeignItem(uint32_t goodsId)
@@ -284,10 +285,10 @@ void __fastcall Hooked_RewardParamInit(void* rewardParam, int mode)
 	Logf("[Reward] staged tracked lot=%u goods=%u qty=%u allowed=%s", lotId, goodsId, quantity, isAllowedItem ? "true" : "false");
 	Overlay_AddLog("[Reward] staged lot=%u goods=%u", lotId, goodsId);
 
-	if (goodsId >= 6000000 && !IsTrackedRewardLot(lotId))
+	if (goodsId >= 6000000)
 	{
 		Logf("[Reward] queued foreign removal lot=%u goods=%u", lotId, goodsId);
-		QueueForeignRemoval(goodsId);
+		QueueForeignRemoval(goodsId, FOREIGN_REWARD_REMOVE_DELAY_MS);
 	}
 }
 
