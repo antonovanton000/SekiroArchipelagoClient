@@ -159,7 +159,7 @@
 
                                     <c:RandoDisplayOptionControl Text="Remove Headless-induced slow walk" IsChecked="{Binding State.RoomRandomizerOptions.HeadlessSlowWalk}"
                                                                  Description="Removes the slow movement effect applied by Headless enemies" Margin="30,0,0,0"/>
-                                    <c:RandoDisplayOptionControl Text="Shuffle Skills" IsChecked="{Binding State.RoomRandomizerOptions.RandomSkills}"
+                                    <c:RandoDisplayOptionControl Text="Shuffle Skills and Prosthetics Upgades" IsChecked="{Binding State.RoomRandomizerOptions.RandomSkills}"
                                                                  Description="Shuffle all skills within every Esoteric Text" Margin="30,0,0,0"/>
 
                                     <Button Style="{StaticResource FlatTextButtonStyleNoArrow}" Content="Rerandomize run" Foreground="{StaticResource Danger}"
@@ -168,7 +168,7 @@
                                 </StackPanel>
                             </Grid>
                         </TabItem>
-                        <TabItem Header="Server Log" Style="{StaticResource FlatUnderlineTabItemStyle}">
+                        <TabItem Header="Server" Style="{StaticResource FlatUnderlineTabItemStyle}">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="250"/>
@@ -183,8 +183,65 @@
                                 </Grid>
                                 <StackPanel Grid.Row="2">
                                     <Grid>
-                                        <icnt:InputField Label="Command" Placeholder="Server command" Text="{Binding ServerCommand, Mode=TwoWay}" Margin="0,0,0,0"
+                                        <icnt:InputField x:Name="commandInput" Label="Command" Placeholder="Server command" Text="{Binding ServerCommand, Mode=TwoWay}" Margin="0,0,0,0"
                                                          KeyDown="InputField_KeyDown" PreviewKeyDown="InputField_PreviewKeyDown"/>
+                                        <Popup PlacementTarget="{Binding ElementName=commandInput}"
+                                               Placement="Bottom"
+                                               IsOpen="{Binding IsHintAutocompleteOpen}"
+                                               AllowsTransparency="True"
+                                               StaysOpen="False"
+                                               PopupAnimation="Slide">
+                                            <Border Width="{Binding ActualWidth, ElementName=commandInput}"
+                                                    MaxHeight="240"
+                                                    Background="{DynamicResource BackgroundBrush}"
+                                                    BorderBrush="{DynamicResource BorderColorBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="5"
+                                                    Padding="3">
+                                                <ListBox x:Name="hintSuggestionsList"
+                                                         ItemsSource="{Binding HintSuggestions}"
+                                                         SelectedItem="{Binding SelectedHintSuggestion, Mode=TwoWay}"
+                                                         Background="Transparent"
+                                                         BorderThickness="0"
+                                                         Foreground="{DynamicResource PrimaryTextDarkerBrush}"
+                                                         FontFamily="{StaticResource LexendDeca}"
+                                                         FontSize="15"
+                                                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                         SelectionChanged="HintSuggestionsList_SelectionChanged"
+                                                         PreviewMouseLeftButtonUp="HintSuggestionsList_PreviewMouseLeftButtonUp">
+                                                    <ListBox.ItemContainerStyle>
+                                                        <Style TargetType="ListBoxItem">
+                                                            <Setter Property="Height" Value="32"/>
+                                                            <Setter Property="Padding" Value="9,0"/>
+                                                            <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                                            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextDarkerBrush}"/>
+                                                            <Setter Property="Template">
+                                                                <Setter.Value>
+                                                                    <ControlTemplate TargetType="ListBoxItem">
+                                                                        <Border x:Name="itemBorder"
+                                                                                Background="Transparent"
+                                                                                CornerRadius="4"
+                                                                                Padding="{TemplateBinding Padding}">
+                                                                            <ContentPresenter VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                                                                        </Border>
+                                                                        <ControlTemplate.Triggers>
+                                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                                <Setter TargetName="itemBorder" Property="Background" Value="{DynamicResource AccentBrushLight}"/>
+                                                                            </Trigger>
+                                                                            <Trigger Property="IsSelected" Value="True">
+                                                                                <Setter TargetName="itemBorder" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                                                            </Trigger>
+                                                                        </ControlTemplate.Triggers>
+                                                                    </ControlTemplate>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </Style>
+                                                    </ListBox.ItemContainerStyle>
+                                                </ListBox>
+                                            </Border>
+                                        </Popup>
                                         <Button Style="{StaticResource FlatButtonStylePrimaryNoArrow}" Content="Send" HorizontalAlignment="Right" Height="48"
                                             Command="{Binding SendCommandCommand}" VerticalAlignment="Bottom" Margin="0,0,1,1" Width="80"/>
                                     </Grid>
@@ -192,7 +249,7 @@
                                         <Button Content="help" Style="{StaticResource FlatTextButtonStyle}" Margin="0,0,10,0"
                                                 Command="{Binding SetDefaultCommandCommand}" CommandParameter="!help"/>
                                         <Button Content="hint" Style="{StaticResource FlatTextButtonStyle}" Margin="0,0,10,0"
-                                                Command="{Binding SetDefaultCommandCommand}" CommandParameter="!hint"/>
+                                                Command="{Binding SetDefaultCommandCommand}" CommandParameter="!hint "/>
                                         <Button Content="remaining" Style="{StaticResource FlatTextButtonStyle}" Margin="0,0,10,0"
                                                 Command="{Binding SetDefaultCommandCommand}" CommandParameter="!remaining"/>
                                         <Button Content="release" Style="{StaticResource FlatTextButtonStyle}" Margin="0,0,10,0"

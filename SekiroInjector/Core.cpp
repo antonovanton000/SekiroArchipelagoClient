@@ -13,7 +13,7 @@
 
 static bool g_Running = true;
 static bool g_HooksInitialized = false;
-bool g_IsDebug = true;
+bool g_IsDebug = false;
 bool g_IsFullDeathDetection = true;
 
 PipeConnection g_Pipe;

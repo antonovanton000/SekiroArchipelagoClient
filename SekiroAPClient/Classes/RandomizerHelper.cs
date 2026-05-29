@@ -110,14 +110,15 @@ public partial class RandomizerHelper : ObservableObject
             .ToDictionary(entry => long.Parse(entry.Key), entry => entry.Value);
 
 
-        CheckVersionRange(slotData);
+        //CheckVersionRange(slotData);
         var options = ((JObject)slotData["options"]).ToObject<Dictionary<string, int>>();
 
         Options = ConvertRandomizerOptions(options);
         var seed = HashStringToInt(session.RoomState.Seed) + session.ConnectionInfo.Slot;
         Options.Seed = (uint)seed;
 
-        if (!string.IsNullOrEmpty(Properties.Settings.Default.SelectedPreset))
+        SelectedPreset = ReadWorldEnemyPreset(slotData);
+        if (SelectedPreset == null && !string.IsNullOrEmpty(Properties.Settings.Default.SelectedPreset))
         {
             try
             {
@@ -261,6 +262,19 @@ public partial class RandomizerHelper : ObservableObject
                         shopKeys = scopedKeys
                             .SelectMany(slot => data.Location(slot).Keys)
                             .Where(k => k.Type == LocationKey.LocationType.SHOP && apLotIds.Contains(k.ID))
+                            .GroupBy(k => (k.Type, k.ID, k.BaseID))
+                            .Select(g => g.First())
+                            .ToList();
+                    }
+
+                    // Some finite locations can also be obtained from a linked shop
+                    // entry, most notably Prayer Beads transferred to the Offering
+                    // Box. The AP location name may identify only the enemy lot, but
+                    // the alternate shop route must contain the same AP item.
+                    if (lotKeys.Count > 0)
+                    {
+                        shopKeys = shopKeys
+                            .Concat(itemLoc.Keys.Where(k => k.Type == LocationKey.LocationType.SHOP))
                             .GroupBy(k => (k.Type, k.ID, k.BaseID))
                             .Select(g => g.First())
                             .ToList();
@@ -438,10 +452,18 @@ public partial class RandomizerHelper : ObservableObject
                     .Where(e => e.IsShop)
                     .Select(e => e.LotId)
                     .ToHashSet();
+                var apTargetSlots = items.Keys.ToHashSet();
+                var apShopGoodsByMerchant = apLotMap
+                    .Where(e => e.IsShop)
+                    .GroupBy(e => GetShopMerchantId(checked((int)e.LotId)))
+                    .ToDictionary(g => g.Key, g => g.Select(e => e.GoodId).ToHashSet());
+                var shopParam = game.Param("ShopLineupParam");
 
                 var rnd = new Random(seed + 1);
 
                 int randomizedShopRows = 0;
+                int resolvedShopCollisions = 0;
+                int skippedLinkedApTargets = 0;
                 int skippedApRows = 0;
                 int skippedNotWhitelisted = 0;
 
@@ -454,9 +476,15 @@ public partial class RandomizerHelper : ObservableObject
                     foreach (var shopKey in locEntry.Keys.Where(k => k.Type == LocationKey.LocationType.SHOP))
                     {
                         int shopId = shopKey.ID;
+                        int merchantId = GetShopMerchantId(shopId);
+                        apShopGoodsByMerchant.TryGetValue(merchantId, out var reservedApGoods);
+                        var sourceShopRow = shopParam[shopId];
+                        bool collidesWithApItem = reservedApGoods != null
+                            && sourceShopRow != null
+                            && reservedApGoods.Contains((int)sourceShopRow["EquipId"].Value);
 
-                        // Only take shopIds that belong to defined pairs (our dynamic whitelist)
-                        if (!RandomizedShopIds.Contains(shopId))
+                        // Also replace a non-AP row if it would merge with an AP item in the merchant UI.
+                        if (!RandomizedShopIds.Contains(shopId) && !collidesWithApItem)
                         {
                             skippedNotWhitelisted++;
                             continue;
@@ -487,13 +515,28 @@ public partial class RandomizerHelper : ObservableObject
                         if (targetSlotKey == null)
                             continue;
 
+                        // A shop row can be an alternate route for an AP lot in
+                        // the same ItemLocation. Do not let filler assignment
+                        // overwrite the already reserved AP lot.
+                        if (apTargetSlots.Contains(targetSlotKey))
+                        {
+                            skippedLinkedApTargets++;
+                            continue;
+                        }
+
                         // Determine the group considering discount pairs
                         int groupId = GetShopGroupId(shopId);
 
                         // Get (or create) a filler item for this group
                         if (!shopGroupItems.TryGetValue(groupId, out var fillerItem))
                         {
-                            fillerItem = fillerItems[rnd.Next(fillerItems.Length)];
+                            ItemKey[] availableFillerItems = reservedApGoods == null
+                                ? fillerItems
+                                : fillerItems.Where(item => !reservedApGoods.Contains(item.ID)).ToArray();
+                            if (availableFillerItems.Length == 0)
+                                availableFillerItems = fillerItems;
+
+                            fillerItem = availableFillerItems[rnd.Next(availableFillerItems.Length)];
                             data.AddLocationlessItem(fillerItem);
                             shopGroupItems[groupId] = fillerItem;
                         }
@@ -506,10 +549,14 @@ public partial class RandomizerHelper : ObservableObject
                         Util.AddMulti(items, targetSlotKey, sourceSlotKey);
 
                         randomizedShopRows++;
+                        if (collidesWithApItem)
+                            resolvedShopCollisions++;
                     }
                 }
 
                 Console.WriteLine($"[SHOP RNG] Randomized: {randomizedShopRows}");
+                Console.WriteLine($"[SHOP RNG] Resolved AP item collisions: {resolvedShopCollisions}");
+                Console.WriteLine($"[SHOP RNG] Skipped linked AP targets: {skippedLinkedApTargets}");
                 Console.WriteLine($"[SHOP RNG] Skipped AP: {skippedApRows}");
                 Console.WriteLine($"[SHOP RNG] Skipped not whitelisted: {skippedNotWhitelisted}");
 
@@ -850,7 +897,18 @@ public partial class RandomizerHelper : ObservableObject
     {
         if (ShopDiscountPartner.TryGetValue(shopId, out var other))
             return Math.Min(shopId, other);
+
+        // Dynamic collision replacements may affect rows outside the regular
+        // filler whitelist; discounted shop rows use a +50 ID offset.
+        if (shopId % 100 >= 50)
+            return shopId - 50;
+
         return shopId;
+    }
+
+    private static int GetShopMerchantId(int shopId)
+    {
+        return shopId / 100;
     }
 
     private static void RestoreForcedShopQuantities(GameData game, IReadOnlyDictionary<int, int> forcedShopQuantities)
@@ -961,11 +1019,32 @@ public partial class RandomizerHelper : ObservableObject
         opt["carpsanity"] = archiOptions["carpsanity"] == 1;
         opt["death_link"] = archiOptions["death_link"] != 0;
         opt["death_link_full"] = archiOptions["death_link"] == 1;
-        opt["norandom_skills"] = false;//archiOptions["shuffle_skills"] == 0;
+        opt["norandom_skills"] = archiOptions["randomize_skills_and_prosthetics"] == 0;
         opt["headlesswalk"] = archiOptions["remove_headless_slow_walk"] == 1;
         opt["splitskills"] = false;//FOR NOW ITS OFF
         opt["openstart"] = false;
         return opt;
+    }
+
+    private static Preset? ReadWorldEnemyPreset(Dictionary<string, object> slotData)
+    {
+        if (!slotData.TryGetValue("random_enemy_preset", out var serializedPreset) ||
+            serializedPreset is not string json ||
+            string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        var presetData = JObject.Parse(json);
+        if (!presetData.HasValues)
+            return null;
+
+        var preset = presetData.ToObject<Preset>();
+        if (preset == null)
+            return null;
+
+        preset.Name = "World Options";
+        return preset;
     }
 
     private void SaveRoomOptions(ApRandomizationState state)
@@ -984,6 +1063,7 @@ public partial class RandomizerHelper : ObservableObject
         state.RoomRandomizerOptions.DeathLink = Options["death_link"];
         state.RoomRandomizerOptions.DeathLinkOnFullDeath = Options["death_link_full"];
         state.RoomRandomizerOptions.RandomSkills = !Options["norandom_skills"];
+        state.RoomRandomizerOptions.HeadlessSlowWalk = Options["headlesswalk"];
         state.RoomRandomizerOptions.PresetName = SelectedPreset?.DisplayName ?? "None";
     }
 

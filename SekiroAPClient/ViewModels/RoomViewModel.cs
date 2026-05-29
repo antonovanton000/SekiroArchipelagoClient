@@ -31,6 +31,7 @@ public partial class RoomViewModel : MyBaseViewModel
         pipeServer = App.PipeServer;
         stateStorage = new StateStorage<ApRandomizationState>(Path.Combine(App.Location, "ap_randomization_state.json"));
         localItemsStore = new ReceivedItemStore(Path.Combine(App.Location, "randomizer\\localItemsStore.json"));
+        hintItemNames = LoadHintItemNames();
         UpdateGameLaunchUi();
 
     }
@@ -42,6 +43,7 @@ public partial class RoomViewModel : MyBaseViewModel
         pipeServer = App.PipeServer;
         stateStorage = new StateStorage<ApRandomizationState>(Path.Combine(App.Location, "ap_randomization_state.json"));
         localItemsStore = new ReceivedItemStore(Path.Combine(App.Location, "randomizer\\localItemsStore.json"));
+        hintItemNames = LoadHintItemNames();
         UpdateGameLaunchUi();
     }
     #endregion
@@ -96,6 +98,16 @@ public partial class RoomViewModel : MyBaseViewModel
     public ObservableCollection<ServerNotification> Notifications { get; }
         = new ObservableCollection<ServerNotification>();
 
+    public ObservableCollection<string> HintSuggestions { get; } = [];
+
+    [ObservableProperty]
+    string? selectedHintSuggestion;
+
+    [ObservableProperty]
+    bool isHintAutocompleteOpen;
+
+    readonly List<string> hintItemNames;
+
     Dictionary<long, int> ApIdsToItemIds = new();
 
     DeathLinkService? deathLinkService;
@@ -104,6 +116,7 @@ public partial class RoomViewModel : MyBaseViewModel
     bool isDebug;
 
     private CancellationTokenSource _reconnectCts;
+    private readonly CancellationTokenSource _receivedItemsCts = new();
     bool connectedToArchipelagoHintQueued;
 
     [ObservableProperty]
@@ -177,7 +190,7 @@ public partial class RoomViewModel : MyBaseViewModel
             await ShowConnectedToArchipelagoHintAsync();
             if (CurrentSession.Items.Any())
             {
-                await RecieveItems(CurrentSession.Items);
+                await RecieveItems(CurrentSession.Items, _receivedItemsCts.Token);
             }
         }
 
@@ -194,6 +207,7 @@ public partial class RoomViewModel : MyBaseViewModel
     {
         if (CurrentSession != null && !string.IsNullOrEmpty(ServerCommand))
         {
+            IsHintAutocompleteOpen = false;
             CurrentSession.Say(ServerCommand);
             consoleCommands.Add(ServerCommand);
             lastSentCommandIndex = consoleCommands.Count;
@@ -206,6 +220,49 @@ public partial class RoomViewModel : MyBaseViewModel
     {
         if (!string.IsNullOrEmpty(command))
             ServerCommand = command;
+    }
+
+    public void SelectPreviousHintSuggestion()
+    {
+        if (!IsHintAutocompleteOpen || HintSuggestions.Count == 0)
+            return;
+
+        var currentIndex = SelectedHintSuggestion == null
+            ? 0
+            : HintSuggestions.IndexOf(SelectedHintSuggestion);
+
+        SelectedHintSuggestion = currentIndex <= 0
+            ? HintSuggestions[^1]
+            : HintSuggestions[currentIndex - 1];
+    }
+
+    public void SelectNextHintSuggestion()
+    {
+        if (!IsHintAutocompleteOpen || HintSuggestions.Count == 0)
+            return;
+
+        var currentIndex = SelectedHintSuggestion == null
+            ? -1
+            : HintSuggestions.IndexOf(SelectedHintSuggestion);
+
+        SelectedHintSuggestion = currentIndex >= HintSuggestions.Count - 1
+            ? HintSuggestions[0]
+            : HintSuggestions[currentIndex + 1];
+    }
+
+    public bool AcceptSelectedHintSuggestion()
+    {
+        if (!IsHintAutocompleteOpen || string.IsNullOrWhiteSpace(SelectedHintSuggestion))
+            return false;
+
+        ServerCommand = $"!hint {SelectedHintSuggestion}";
+        IsHintAutocompleteOpen = false;
+        return true;
+    }
+
+    public void CloseHintAutocomplete()
+    {
+        IsHintAutocompleteOpen = false;
     }
 
 
@@ -301,6 +358,87 @@ public partial class RoomViewModel : MyBaseViewModel
             await Randomize();
         });
     }
+    
+    #endregion
+
+    #region Hint Autocomplete
+
+    partial void OnServerCommandChanged(string value)
+    {
+        UpdateHintSuggestions(value);
+    }
+
+    static List<string> LoadHintItemNames()
+    {
+        try
+        {
+            return SekiroItemRepository.LoadItems()
+                .Select(item => item.name)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Select(name => name!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(name => name)
+                .ToList();
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    void UpdateHintSuggestions(string command)
+    {
+        HintSuggestions.Clear();
+        SelectedHintSuggestion = null;
+
+        if (!TryGetHintQuery(command, out var query) || query.Length < 3)
+        {
+            IsHintAutocompleteOpen = false;
+            return;
+        }
+
+        if (hintItemNames.Any(name => string.Equals(name, query, StringComparison.OrdinalIgnoreCase)))
+        {
+            IsHintAutocompleteOpen = false;
+            return;
+        }
+
+        var matches = hintItemNames
+            .Where(name => name.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(name => name.StartsWith(query, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(name => name)
+            .Take(10)
+            .ToList();
+
+        foreach (var match in matches)
+        {
+            HintSuggestions.Add(match);
+        }
+
+        SelectedHintSuggestion = HintSuggestions.FirstOrDefault();
+        IsHintAutocompleteOpen = HintSuggestions.Count > 0;
+    }
+
+    static bool TryGetHintQuery(string command, out string query)
+    {
+        query = string.Empty;
+
+        const string hintCommand = "!hint";
+        if (string.IsNullOrWhiteSpace(command) ||
+            !command.StartsWith(hintCommand, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (command.Length == hintCommand.Length)
+            return true;
+
+        if (!char.IsWhiteSpace(command[hintCommand.Length]))
+            return false;
+
+        query = command[hintCommand.Length..].TrimStart();
+        return true;
+    }
 
     #endregion
 
@@ -337,22 +475,6 @@ public partial class RoomViewModel : MyBaseViewModel
         UpdateGameLaunchUi();
     }
 
-    private void UpdateGameLaunchUi()
-    {
-        if (pipeServer.IsTcpTransport)
-        {
-            ShowGameActionButton = true;
-            ShowGameConnectionStatus = true;
-            GameActionButtonText = "Steam Setup";
-            GameConnectionStatusText = IsConnectedToGame ? "Game: Connected" : "Game: Disconnected";
-            return;
-        }
-
-        ShowGameActionButton = !IsConnectedToGame;
-        ShowGameConnectionStatus = IsConnectedToGame;
-        GameActionButtonText = "Launch Game";
-        GameConnectionStatusText = "Connected to Game";
-    }
     private async void Socket_ErrorReceived(Exception e, string message)
     {
         LogText += $"Connection Error. Error: {message}\r\n";
@@ -403,7 +525,7 @@ public partial class RoomViewModel : MyBaseViewModel
 
     private async void Items_ItemReceived(ReceivedItemsHelper helper)
     {
-        await RecieveItems(helper);
+        await RecieveItems(helper, _receivedItemsCts.Token);
     }
 
     private async void PipeServer_ItemReceived(ItemRecievedArgs obj)
@@ -419,6 +541,13 @@ public partial class RoomViewModel : MyBaseViewModel
                     pipeServer.SendSpawnItem(0x40000000 + 5400, 1);
                 }
 
+                if (IsMechanicalBarrelItem(obj.GoodId))
+                {
+                    int eventFlagId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(obj.GoodId);
+                    await Task.Delay(20);
+                    pipeServer.SendSetEventFlagId(eventFlagId, 1);
+                }
+
                 if (KeyItemTracker.CheckItem(obj.GoodId))
                 {
                     if (State != null)
@@ -430,11 +559,6 @@ public partial class RoomViewModel : MyBaseViewModel
 
             }
         }
-    }
-
-    private static bool IsSekiroMemoryItem(int goodId)
-    {
-        return goodId >= 5200 && goodId <= 5213;
     }
 
     private void PipeServer_PlayerDeath(bool isRealDeath)
@@ -458,6 +582,7 @@ public partial class RoomViewModel : MyBaseViewModel
             {
                 MainWindow.ShowMessage("Are you sure you want to go back?\r\n\r\nThis will disconnect you from the Archipelago server.", MessageNotificationType.YesNo, async () =>
                 {
+                    _receivedItemsCts.Cancel();
                     RemoveEventHandlers();
                     isGoBackEnabled = true;
                     if (CurrentSession.Socket.Connected)
@@ -479,6 +604,7 @@ public partial class RoomViewModel : MyBaseViewModel
         {
             MainWindow.ShowMessage("Are you sure you want close this app?\r\n\r\nThis will disconnect you from the Archipelago server.", MessageNotificationType.YesNo, async () =>
             {
+                _receivedItemsCts.Cancel();
                 RemoveEventHandlers();
                 isClosingEnabled = true;
                 pipeServer.SendShowSmallHint("Disconnected from Archipelago!");
@@ -511,6 +637,23 @@ public partial class RoomViewModel : MyBaseViewModel
     #endregion
 
     #region Methods
+
+    private void UpdateGameLaunchUi()
+    {
+        if (pipeServer.IsTcpTransport)
+        {
+            ShowGameActionButton = true;
+            ShowGameConnectionStatus = true;
+            GameActionButtonText = "Steam Setup";
+            GameConnectionStatusText = IsConnectedToGame ? "Game: Connected" : "Game: Disconnected";
+            return;
+        }
+
+        ShowGameActionButton = !IsConnectedToGame;
+        ShowGameConnectionStatus = IsConnectedToGame;
+        GameActionButtonText = "Launch Game";
+        GameConnectionStatusText = "Connected to Game";
+    }
 
     void AddEventHandlers()
     {
@@ -603,15 +746,14 @@ public partial class RoomViewModel : MyBaseViewModel
         return loaded;
     }
 
-    async Task RecieveItems(IReceivedItemsHelper helper)
+    async Task RecieveItems(IReceivedItemsHelper helper, CancellationToken cancellationToken)
     {
-        while (helper.Any())
+        while (!cancellationToken.IsCancellationRequested && helper.Any())
         {
             var item = helper.DequeueItem();
+            var isCheatConsole = item.LocationName == "Cheat Console";
             var key = ReceivedItemStore.MakeKey(item.ItemId, item.LocationId, item.Player.Slot);
-            if (!localItemsStore.TryMark(key) && item.LocationName != "Cheat Console")
-                continue;
-
+            var alreadyReceived = !isCheatConsole && localItemsStore.Has(key);
 
             var gameItemFullId = ApIdsToItemIds.ContainsKey(item.ItemId) ? ApIdsToItemIds[item.ItemId] : -1;
             if (gameItemFullId != -1)
@@ -619,20 +761,8 @@ public partial class RoomViewModel : MyBaseViewModel
                 var goodId = gameItemFullId & 0x0FFFFFFF;
                 var count = ItemCountParser.GetCountFromItemName(item.ItemName);
                 var itemEventId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(goodId);
-
-                if (itemEventId>0)
-                {
-                    pipeServer.SendSpawnItem(gameItemFullId, count, itemEventId);                    
-                }                
-                else
-                {
-                    pipeServer.SendSpawnItem(gameItemFullId, count);
-                }
-                if (goodId >= 5200 && goodId <= 5213)
-                {                        
-                    pipeServer.SendSpawnItem(0x40000000 + 5400, 1);//Add extra memory item for proper memorys count in idol menu
-                }                    
-
+                var isSingleton = SingletonItemPolicy.ShouldClampToOne(goodId);
+                var singletonKey = isSingleton ? MakeSingletonItemKey(goodId, itemEventId) : null;
 
                 if (KeyItemTracker.CheckItem(goodId))
                 {
@@ -643,13 +773,76 @@ public partial class RoomViewModel : MyBaseViewModel
                     }
                 }
 
+                if (alreadyReceived)
+                {
+                    if (singletonKey != null)
+                        localItemsStore.TryMark(singletonKey);
+
+                    continue;
+                }
+
+                if (!isCheatConsole && singletonKey != null && localItemsStore.Has(singletonKey))
+                {
+                    LogText += $"[AP] Skipped duplicate singleton item: {item.ItemName} goodId={goodId} eventId={itemEventId} from={item.Player.Name} location={item.LocationName}\r\n";
+                    localItemsStore.TryMark(key);
+                    continue;
+                }
+
+                if (count > 1 && isSingleton)
+                {
+                    LogText += $"[AP] Clamped singleton item quantity to 1: {item.ItemName} goodId={goodId} originalQty={count} from={item.Player.Name} location={item.LocationName}\r\n";
+                    count = 1;
+                }
+
+                if (!isCheatConsole)
+                {
+                    localItemsStore.TryMark(key);
+                    if (singletonKey != null)
+                        localItemsStore.TryMark(singletonKey);
+                }
+
+                if (itemEventId>0)
+                {
+                    pipeServer.SendSpawnItem(gameItemFullId, count, itemEventId);                    
+                }                
+                else
+                {
+                    pipeServer.SendSpawnItem(gameItemFullId, count);
+                }
+
+                if (IsMechanicalBarrelItem(goodId))
+                {
+                    int eventFlagId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(goodId);                    
+                    pipeServer.SendSetEventFlagId(eventFlagId, 1);
+                }
+
+                if (IsSekiroMemoryItem(goodId))
+                {
+                    pipeServer.SendSpawnItem(0x40000000 + 5400, 1);//Add extra memory item for proper memorys count in idol menu
+                }                    
+
             }
             else
             {
+                if (alreadyReceived)
+                    continue;
+
+                if (!isCheatConsole)
+                    localItemsStore.TryMark(key);
+
                 LogText += $"Received unknown item with AP Item ID: {item.ItemId}\r\n";
             }
+
+            await Task.Yield();
         }
         localItemsStore.Save();
+    }
+
+    static string MakeSingletonItemKey(int goodId, int itemEventId)
+    {
+        return itemEventId > 0
+            ? $"singleton:event:{itemEventId}"
+            : $"singleton:good:{goodId}";
     }
 
     async Task TryReconnectAgain()
@@ -689,7 +882,7 @@ public partial class RoomViewModel : MyBaseViewModel
                             await ShowConnectedToArchipelagoHintAsync(force: true);
                             if (CurrentSession.Items.Any())
                             {
-                                await RecieveItems(CurrentSession.Items);
+                                await RecieveItems(CurrentSession.Items, _receivedItemsCts.Token);
                             }
                         });
                         break;
@@ -729,6 +922,17 @@ public partial class RoomViewModel : MyBaseViewModel
             Notifications.Remove(notification);
         });
     }
+
+    private static bool IsSekiroMemoryItem(int goodId)
+    {
+        return goodId >= 5200 && goodId <= 5213;
+    }
+
+    private static bool IsMechanicalBarrelItem(int goodId)
+    {
+        return goodId == 2910;
+    }
+
 
     #endregion
 

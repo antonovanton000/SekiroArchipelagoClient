@@ -421,10 +421,16 @@ public class PermutationWriter
                             // If mixed, event flag is present or not based on which shop entry this is (infinite or not)
                             bool infiniteMixed = siloType == RandomSilo.MIXED && (short)shopCells["sellQuantity"] <= 0;
                             // Ignore scope event flag for shop assignment, because some shops also form multidrops
-                            int shopEventFlag = (int)shops[target.ID]["EventFlag"].Value;
+                            int vanillaShopEventFlag = (int)shops[target.ID]["EventFlag"].Value;
+                            int shopEventFlag = vanillaShopEventFlag;
                             if (isArchipelago && shopEventFlags != null && shopEventFlags.TryGetValue(target.ID, out int apShopEventFlag))
                             {
                                 shopEventFlag = apShopEventFlag;
+                                RegisterArchipelagoScriptFlagRewrite(
+                                    vanillaShopEventFlag,
+                                    shopEventFlag,
+                                    archipelagoTalkLocationFlags,
+                                    rewrittenFlags);
                             }
                             if (!isArchipelago && permanentSlots.TryGetValue(sourceKey, out int permanentFlag))
                             {
@@ -1288,8 +1294,106 @@ public class PermutationWriter
 
         ApplyArchipelagoCarpLotRelocations(events);
         ApplyArchipelagoTalkFixes(rewrittenFlags);
+        ApplyArchipelagoUnconditionalItemEventFixes(events);
         ApplyArchipelagoEventLocationFixes(events, rewrittenFlags);
         RemoveArchipelagoPermanentShopFlagSync(events);
+    }
+
+    private void ApplyArchipelagoUnconditionalItemEventFixes(Events events)
+    {
+        Dictionary<int, EventSpec> templates = eventConfig.ItemEvents.ToDictionary(e => e.ID, e => e);
+        List<(int EventId, ItemTemplate Template)> actionableTemplates = eventConfig.ItemEvents
+            .SelectMany(spec => spec.ItemTemplate
+                .Where(template => template.Type == "any" && !template.IsDefault())
+                .Select(template => (spec.ID, template)))
+            .ToList();
+
+        var appliedTemplates = new HashSet<ItemTemplate>();
+        var appliedEventIds = new List<int>();
+
+        foreach (KeyValuePair<string, EMEVD> entry in game.Emevds)
+        {
+            Dictionary<int, EMEVD.Event> fileEvents = entry.Value.Events.ToDictionary(e => (int)e.ID, e => e);
+
+            foreach (EMEVD.Event e in entry.Value.Events)
+            {
+                OldParams initOld = OldParams.Preprocess(e);
+                try
+                {
+                    for (int instructionIndex = 0; instructionIndex < e.Instructions.Count; instructionIndex++)
+                    {
+                        Instr init = events.Parse(e.Instructions[instructionIndex]);
+                        if (!init.Init || !templates.TryGetValue(init.Callee, out EventSpec spec))
+                            continue;
+
+                        if (!fileEvents.TryGetValue(init.Callee, out EMEVD.Event templateEvent))
+                            continue;
+
+                        foreach (ItemTemplate template in spec.ItemTemplate.Where(t => t.Type == "any" && !t.IsDefault()))
+                        {
+                            if (!appliedTemplates.Add(template))
+                                continue;
+
+                            var edits = new EventEdits();
+                            if (template.Remove != null)
+                            {
+                                foreach (string remove in Regex.Split(template.Remove, @"\s*;\s*"))
+                                    events.RemoveMacro(edits, remove);
+                            }
+                            if (template.Replace != null)
+                            {
+                                foreach (string replace in Regex.Split(template.Replace, @"\s*;\s*"))
+                                    events.ReplaceMacro(edits, replace);
+                            }
+
+                            OldParams templateOld = OldParams.Preprocess(templateEvent);
+                            try
+                            {
+                                if (template.Add != null)
+                                    events.AddMacro(edits, template.Add);
+
+                                for (int i = 0; i < templateEvent.Instructions.Count; i++)
+                                {
+                                    Instr eventInstruction = events.Parse(templateEvent.Instructions[i]);
+                                    if (eventInstruction.Init)
+                                        throw new Exception($"Unexpected event initialization in template event {templateEvent.ID}");
+
+                                    edits.ApplyEdits(eventInstruction, i);
+                                    eventInstruction.Save();
+                                    templateEvent.Instructions[i] = eventInstruction.Val;
+                                }
+
+                                events.ApplyAdds(edits, templateEvent);
+                            }
+                            finally
+                            {
+                                templateOld.Postprocess();
+                            }
+
+                            if (edits.PendingEdits.Count != 0)
+                                throw new Exception($"{init.Callee} has unapplied AP unconditional edits: {string.Join("; ", edits.PendingEdits)}");
+
+                            appliedEventIds.Add(init.Callee);
+                        }
+                    }
+                }
+                finally
+                {
+                    initOld.Postprocess();
+                }
+            }
+        }
+
+        List<int> missingEventIds = actionableTemplates
+            .Where(entry => !appliedTemplates.Contains(entry.Template))
+            .Select(entry => entry.EventId)
+            .Distinct()
+            .ToList();
+        if (missingEventIds.Count > 0)
+            throw new Exception($"Could not apply AP unconditional item-event fixes for events: {string.Join(", ", missingEventIds)}");
+
+        if (appliedEventIds.Count > 0)
+            Console.WriteLine($"[AP][EMEVD] Applied original unconditional item-event fixes: {string.Join(", ", appliedEventIds.Distinct())}");
     }
 
     private void ApplyArchipelagoTalkFixes(Dictionary<int, int> rewrittenFlags)

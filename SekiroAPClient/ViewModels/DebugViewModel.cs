@@ -6,8 +6,6 @@ using SekiroAPClient.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
-using System.IO.Packaging;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
@@ -18,7 +16,7 @@ namespace SekiroAPClient.ViewModels;
 public partial class DebugViewModel : MyBaseViewModel
 {
     PipeServer pipeServer;
-    List<RawSekiroItem> rawItems;
+    List<RawSekiroItem> rawItems = [];
     public DebugViewModel()
     {
         pipeServer = App.PipeServer;
@@ -185,7 +183,9 @@ public partial class DebugViewModel : MyBaseViewModel
             12500003,
             12000000,
             11500000,
+            11500001,
             11700000,
+            11700002,
             11000000
         };
 
@@ -236,30 +236,11 @@ public partial class DebugViewModel : MyBaseViewModel
     {
         GameItemCategories.Clear();
 
-        // 1. Читаем WPF-ресурс SekiroData/items.json
-        var resourceUri = new Uri("SekiroData/items.json", UriKind.Relative);
-        var sri = Application.GetResourceStream(resourceUri);
-        if (sri == null)
-            throw new FileNotFoundException("Resource SekiroData/items.json not found. Проверь Build Action = Resource и путь.");
+        rawItems = SekiroItemRepository.LoadItems();
 
-        string json;
-        using (var reader = new StreamReader(sri.Stream))
-        {
-            json = reader.ReadToEnd();
-        }
-
-        // 2. Десериализация
-        var options = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        };
-
-        rawItems = JsonSerializer.Deserialize<List<RawSekiroItem>>(json, options) ?? [];
-
-        // 3. Группировка по type -> категории
         var groups = rawItems
             .GroupBy(i => i.type ?? string.Empty)
-            .OrderBy(g => g.Key); // по имени категории
+            .OrderBy(g => g.Key);
 
         foreach (var group in groups)
         {

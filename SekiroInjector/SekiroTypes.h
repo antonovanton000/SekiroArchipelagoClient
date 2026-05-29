@@ -33,7 +33,7 @@ struct PickupEvent
 using MapItemMan_GrantItem_t = void(__fastcall*)(uintptr_t mapItemMan, ItemBufferEntry* entry, uint64_t ctx, uint64_t a4);
 
 extern MapItemMan_GrantItem_t g_MapItemMan_GrantItem;
-extern bool g_InOurGrant;
+extern thread_local bool g_InOurGrant;
 
 using ShopFunc_t = 
 __int64(__fastcall*)(void* itemData, int count, void* a3, void* a4);
