@@ -154,6 +154,12 @@ public partial class RandomizerHelper : ObservableObject
 
         State = await Task.Factory.StartNew(() =>
         {
+            var oldLocalStoragePath = Path.Combine(App.Location, "randomizer", "localItemsStore.json");
+            if (File.Exists(oldLocalStoragePath))
+            {
+                File.Delete(oldLocalStoragePath);
+            }
+
             ApRandomizationState state = null;
             string spoilerLogDir = Path.Combine(App.Location, "spoiler_logs");
             Directory.CreateDirectory(spoilerLogDir);
