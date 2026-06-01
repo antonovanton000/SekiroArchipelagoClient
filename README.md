@@ -35,7 +35,7 @@ testing new AP world versions or unusual room option combinations.
 - Adds English fallback text for generated foreign items in Russian game
   language mode.
 
-[!IMPORTANT]
+# IMPORTANT
 Unofficial Client Notice
 
 This client is not an official Sekiro Archipelago client and is not affiliated with the Archipelago project or the From Software Archipelago team.
