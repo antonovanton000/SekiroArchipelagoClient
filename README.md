@@ -35,6 +35,19 @@ testing new AP world versions or unusual room option combinations.
 - Adds English fallback text for generated foreign items in Russian game
   language mode.
 
+[!IMPORTANT]
+Unofficial Client Notice
+
+This client is not an official Sekiro Archipelago client and is not affiliated with the Archipelago project or the From Software Archipelago team.
+
+It was created and is maintained by me independently as a personal community project.
+
+The client is currently stable, supports full playthroughs, is compatible with the latest Sekiro APWorld releases, and fully supports Enemy Randomizer gameplay.
+
+If you are looking for the official Sekiro Archipelago client, please use:
+
+https://github.com/fswap/from-software-archipelago-clients/releases?q=Sekiro
+
 ## Requirements
 
 - Windows.
