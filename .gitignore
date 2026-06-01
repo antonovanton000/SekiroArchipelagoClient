@@ -365,3 +365,5 @@ FodyWeavers.xsd
 /ParamsExport
 /x64
 /.codex/SaveInspect
+/ReleaseTool/ReleaseTool.csproj
+/ReleaseTool/Program.cs
