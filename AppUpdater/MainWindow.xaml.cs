@@ -54,25 +54,20 @@ namespace AppUpdater
                 using var http = new HttpClient();
                 var provider = new GitHubReleaseProvider(http, "antonovanton000", "SekiroArchipelagoClient");
 
-                var alpha = await provider.GetLatestAsync(includePrerelease: true, assetName: "randomizerAP.zip");
-                var stable = await provider.GetLatestAsync(includePrerelease: false, assetName: "randomizerAP.zip");
+                var stable = await provider.GetLatestAsync(includePrerelease: false, assetName: "randomizerAP");
 
                 if (stable == null)
                 {
-                    if (alpha == null)
-                    {
-                         throw new Exception("No releases found.");
-                    }                    
+                    throw new Exception("No releases found.");
                 }
 
-                var url = stable == null ? alpha.DownloadUrl : stable.DownloadUrl;
-                var version = stable == null ? alpha.Version.ToString() : stable.Version.ToString();
+                var url = stable.DownloadUrl;
+                var version = stable.Version.ToString();
 
                 tbl.Text = "Downloading update...";
                 progress.IsIndeterminate = false;                
                 var pr = new Progress<double>(p =>
                 {
-                    // Эти колбэки выполняются в UI thread автоматически
                     progress.Value = p;                 // ProgressBar: Minimum=0 Maximum=100
                     progressText.Text = $"{p:0.0}%";
                 });

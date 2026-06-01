@@ -3737,6 +3737,15 @@ namespace RandomizerCommon
                                             replaceCond(before, after);
                                         }
                                     }
+                                    if (game.Sekiro)
+                                    {
+                                        foreach (int helperTarget in getHelperTargets(t.Entity))
+                                        {
+                                            e2.Instructions.Add(events.ParseAdd($"Change Character Enable State ({helperTarget},0)"));
+                                            e2.Instructions.Add(events.ParseAdd($"Set Character Animation State ({helperTarget},0)"));
+                                            e2.Instructions.Add(events.ParseAdd($"Force Character Death ({helperTarget},0)"));
+                                        }
+                                    }
                                 }
                                 pre.Postprocess();
                             }  // If e2 defined

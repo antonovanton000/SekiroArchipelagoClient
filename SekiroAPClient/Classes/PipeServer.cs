@@ -79,6 +79,7 @@ public class PipeServer : IDisposable
     public event Action<bool>? WorldStateChanged;
     public event Action<bool>? PlayerDeath;
     public event Action<string>? EndingDetected;
+    public event Action<int, bool>? ItemGrantDelivered;
 
 
     static readonly JsonSerializerOptions JsonOpts = new()
@@ -264,13 +265,14 @@ public class PipeServer : IDisposable
     }
 
 
-    public void SendSpawnItem(int goods_id, int quantity, int eventId = 0)
+    public void SendSpawnItem(int goods_id, int quantity, int eventId = 0, int deliveryFlagId = 0)
     {
         var request = new SpawnItemRequest
         {
             GoodsId = goods_id,
             Quantity = quantity,
-            EventId = eventId
+            EventId = eventId,
+            DeliveryFlagId = deliveryFlagId
         };
 
         if (!IsWorldLoaded)
@@ -295,7 +297,8 @@ public class PipeServer : IDisposable
             type = "grant_item",
             goods_id = req.GoodsId,
             quantity = req.Quantity,
-            event_id = req.EventId
+            event_id = req.EventId,
+            delivery_flag_id = req.DeliveryFlagId
         };
 
         string json = JsonSerializer.Serialize(payload, JsonOptsRelaxed);
@@ -508,6 +511,13 @@ public class PipeServer : IDisposable
                 {
                     HandleEventFlagResponse(jobj);
                 }
+                else if (jobj.Value<string>("type") == "grant_item_ack")
+                {
+                    int deliveryFlagId = jobj.Value<int?>("delivery_flag_id") ?? 0;
+                    bool delivered = jobj.Value<bool?>("delivered") ?? false;
+                    if (deliveryFlagId > 0)
+                        ItemGrantDelivered?.Invoke(deliveryFlagId, delivered);
+                }
                 else if (jobj.Value<string>("type") == "world")
                 {
                     IsWorldLoaded = jobj.Value<bool>("status");
@@ -653,6 +663,7 @@ public class PipeServer : IDisposable
         public int GoodsId { get; init; }
         public int Quantity { get; init; }
         public int EventId { get; init; }
+        public int DeliveryFlagId { get; init; }
     }
 
     private void ScheduleSpawnQueueFlush()

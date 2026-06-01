@@ -37,6 +37,8 @@ public class RandomizerAudit
             sw.WriteLine();
             AuditEventFlags(sw, state, itemLotParam, shopParam);
             sw.WriteLine();
+            AuditDeliveryFlagRange(sw, itemLotParam, shopParam);
+            sw.WriteLine();
 
             sw.WriteLine("====== END ======");
         }
@@ -389,6 +391,45 @@ public class RandomizerAudit
         sw.WriteLine();
         sw.WriteLine($"[EVENTFLAG] Total={rows.Count} Missing={missing} StateMismatch={mismatch} NotPrivate={nonPrivate} DuplicateFlags={duplicate} SemanticLeaks={semanticLeak}");
         sw.WriteLine("------ END EVENT FLAGS ------");
+    }
+
+    private static void AuditDeliveryFlagRange(StreamWriter sw, PARAM itemLotParam, PARAM shopParam)
+    {
+        sw.WriteLine("------ DELIVERY FLAGS ------");
+
+        int start = ReceivedItemStore.DeliveryFlagBase;
+        int end = ReceivedItemStore.DeliveryFlagBase + ReceivedItemStore.DeliveryFlagCount - 1;
+        var collisions = new List<string>();
+
+        foreach (var row in itemLotParam.Rows)
+        {
+            int flag = ReadInt(row, "getItemFlagId", fallback: int.MinValue);
+            if (IsDeliveryFlag(flag))
+                collisions.Add($"ItemLotParam id={row.ID} getItemFlagId={flag}");
+        }
+
+        foreach (var row in shopParam.Rows)
+        {
+            int eventFlag = ReadInt(row, "EventFlag", fallback: int.MinValue);
+            if (IsDeliveryFlag(eventFlag))
+                collisions.Add($"ShopLineupParam id={row.ID} EventFlag={eventFlag}");
+
+            int qwcId = ReadInt(row, "qwcID", fallback: int.MinValue);
+            if (IsDeliveryFlag(qwcId))
+                collisions.Add($"ShopLineupParam id={row.ID} qwcID={qwcId}");
+        }
+
+        foreach (string collision in collisions)
+            sw.WriteLine($"[DELIVERYFLAG][COLLISION] {collision}");
+
+        sw.WriteLine($"[DELIVERYFLAG] Range={start}-{end} Collisions={collisions.Count}");
+        sw.WriteLine("------ END DELIVERY FLAGS ------");
+
+        static bool IsDeliveryFlag(int flag)
+        {
+            return flag >= ReceivedItemStore.DeliveryFlagBase
+                && flag < ReceivedItemStore.DeliveryFlagBase + ReceivedItemStore.DeliveryFlagCount;
+        }
     }
 
     private static int ReadEventFlagFromLot(PARAM itemLotParam, ApLotEntry info)

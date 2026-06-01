@@ -25,7 +25,7 @@ public sealed class GitHubReleaseProvider
    
     public async Task<LatestReleaseInfo?> GetLatestAsync(
         bool includePrerelease,
-        string assetName = "randomizerAP.zip",
+        string assetName = "randomizerAP",
         CancellationToken ct = default)
     {
         EnsureGitHubHeaders();
@@ -58,7 +58,7 @@ public sealed class GitHubReleaseProvider
         if (assets.Length == 0)
             throw new InvalidOperationException("Release has no assets attached.");
 
-        var asset = assets.FirstOrDefault(a => a.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase))
+        var asset = assets.FirstOrDefault(a => a.Name.Contains(assetName, StringComparison.OrdinalIgnoreCase))
                     ?? throw new InvalidOperationException($"Asset '{assetName}' not found in release assets.");
 
         if (string.IsNullOrWhiteSpace(asset.BrowserDownloadUrl))

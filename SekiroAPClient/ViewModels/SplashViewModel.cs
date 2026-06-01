@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SekiroAPClient.Classes;
 using System.Diagnostics;
@@ -8,7 +8,7 @@ namespace SekiroAPClient.ViewModels;
 
 public partial class SplashViewModel : MyBaseViewModel
 {
-    private static readonly System.Version RequiredSekiroInjectorDllVersion = new(1, 1, 0, 0);
+    private static readonly System.Version RequiredSekiroInjectorDllVersion = new(1, 1, 1, 0);
 
     #region Properties
 

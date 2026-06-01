@@ -53,6 +53,7 @@ struct QueuedApGrant
 	uint32_t eventId;
 	uint32_t goodsId;
 	uint32_t quantity;
+	uint32_t deliveryFlagId;
 };
 
 static std::mutex g_ApGrantQueueMutex;
@@ -777,12 +778,12 @@ void SekiroGame_Update()
 // ---------------------------------------------------------
 // Grant a single item to the player via MapItemMan::GrantItem
 // ---------------------------------------------------------
-void SekiroGame_GrantItem(const PendingApItem& item)
+bool SekiroGame_GrantItem(const PendingApItem& item)
 {
 	EnsureGrantItemResolved();
 
 	if (!g_MapItemMan || !g_MapItemMan_GrantItem)
-		return;
+		return false;
 
 	/*const uint32_t rawGoodsId = item.itemId;
 	const uint32_t encodedId = EncodeGoodsId(rawGoodsId);*/
@@ -808,15 +809,18 @@ void SekiroGame_GrantItem(const PendingApItem& item)
 	__except (EXCEPTION_EXECUTE_HANDLER)
 	{
 		Log("[GrantItem] Exception while calling GrantItem");
+		g_InOurGrant = false;
+		return false;
 	}
 	g_InOurGrant = false;
+	return true;
 }
 
 
 // ---------------------------------------------------------
 // Grant item + set event flag first (EventId, GoodId, Count)
 // ---------------------------------------------------------
-void SekiroGame_GrantItemWithEvent(uint32_t eventId, uint32_t goodsId, uint32_t count)
+bool SekiroGame_GrantItemWithEvent(uint32_t eventId, uint32_t goodsId, uint32_t count)
 {
 	if (eventId != 0)
 	{
@@ -825,7 +829,7 @@ void SekiroGame_GrantItemWithEvent(uint32_t eventId, uint32_t goodsId, uint32_t 
 		{
 			Logf("[GrantItemEF] Skipping goods=%u x%u because event flag %u is already set",
 				goodsId, count, eventId);
-			return;
+			return true;
 		}
 	}
 
@@ -835,21 +839,22 @@ void SekiroGame_GrantItemWithEvent(uint32_t eventId, uint32_t goodsId, uint32_t 
 
 	Logf("[GrantItemEF] Granting goods=%u x%u (eventId=%u)", goodsId, count, eventId);
 
-	SekiroGame_GrantItem(tmp);
+	bool granted = SekiroGame_GrantItem(tmp);
 
 	// Do not force-set the permanent item flag here. Sekiro updates these flags as
 	// part of its own GrantItem flow, and forcing them externally can corrupt
 	// one-off goods inventory state.
+	return granted;
 }
 
-void SekiroGame_QueueGrantItem(uint32_t eventId, uint32_t goodsId, uint32_t count)
+void SekiroGame_QueueGrantItem(uint32_t eventId, uint32_t goodsId, uint32_t count, uint32_t deliveryFlagId)
 {
 	{
 		std::lock_guard<std::mutex> lock(g_ApGrantQueueMutex);
-		g_ApGrantQueue.push_back({ eventId, goodsId, count });
+		g_ApGrantQueue.push_back({ eventId, goodsId, count, deliveryFlagId });
 	}
 
-	Logf("[GrantQueue] queued goods=%u x%u eventId=%u", goodsId, count, eventId);
+	Logf("[GrantQueue] queued goods=%u x%u eventId=%u deliveryFlagId=%u", goodsId, count, eventId, deliveryFlagId);
 }
 
 void SekiroGame_ProcessPendingGrants()
@@ -891,19 +896,35 @@ void SekiroGame_ProcessPendingGrants()
 		g_ApGrantQueue.pop_front();
 	}
 
-	Logf("[GrantQueue] dispatch goods=%u x%u eventId=%u", grant.goodsId, grant.quantity, grant.eventId);
+	Logf("[GrantQueue] dispatch goods=%u x%u eventId=%u deliveryFlagId=%u", grant.goodsId, grant.quantity, grant.eventId, grant.deliveryFlagId);
 	g_ApGrantWaitLogged = false;
 
+	bool delivered = false;
 	if (grant.eventId != 0)
 	{
-		SekiroGame_GrantItemWithEvent(grant.eventId, grant.goodsId, grant.quantity);
+		delivered = SekiroGame_GrantItemWithEvent(grant.eventId, grant.goodsId, grant.quantity);
 	}
 	else
 	{
 		PendingApItem item{};
 		item.itemId = grant.goodsId;
 		item.quantity = grant.quantity;
-		SekiroGame_GrantItem(item);
+		delivered = SekiroGame_GrantItem(item);
+	}
+
+	if (grant.deliveryFlagId != 0)
+	{
+		if (delivered)
+		{
+			SetEventFlagSafe(grant.deliveryFlagId, true);
+		}
+
+		char response[192];
+		sprintf_s(response,
+			"{ \"type\":\"grant_item_ack\", \"delivery_flag_id\":%u, \"delivered\":%s }",
+			grant.deliveryFlagId,
+			delivered ? "true" : "false");
+		g_Pipe.SendJson(std::string(response));
 	}
 
 	g_LastApGrantMs = GetTickCount64();

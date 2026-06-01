@@ -665,8 +665,10 @@ public partial class RoomViewModel : MyBaseViewModel
         CurrentSession.Socket.ErrorReceived += Socket_ErrorReceived;
         pipeServer.ItemReceived += PipeServer_ItemReceived;
         pipeServer.ConnectionChanged += PipeServer_ConnectionChanged;
+        pipeServer.WorldStateChanged += PipeServer_WorldStateChanged;
         pipeServer.PlayerDeath += PipeServer_PlayerDeath;
         pipeServer.EndingDetected += PipeServer_EndingDetected;
+        pipeServer.ItemGrantDelivered += PipeServer_ItemGrantDelivered;
     }
 
     void RemoveEventHandlers()
@@ -679,8 +681,10 @@ public partial class RoomViewModel : MyBaseViewModel
         CurrentSession.Socket.ErrorReceived -= Socket_ErrorReceived;
         pipeServer.ItemReceived -= PipeServer_ItemReceived;
         pipeServer.ConnectionChanged -= PipeServer_ConnectionChanged;
+        pipeServer.WorldStateChanged -= PipeServer_WorldStateChanged;
         pipeServer.PlayerDeath -= PipeServer_PlayerDeath;
         pipeServer.EndingDetected -= PipeServer_EndingDetected;
+        pipeServer.ItemGrantDelivered -= PipeServer_ItemGrantDelivered;
     }
 
     async Task Randomize()
@@ -753,7 +757,25 @@ public partial class RoomViewModel : MyBaseViewModel
             var item = helper.DequeueItem();
             var isCheatConsole = item.LocationName == "Cheat Console";
             var key = ReceivedItemStore.MakeKey(item.ItemId, item.LocationId, item.Player.Slot);
-            var alreadyReceived = !isCheatConsole && localItemsStore.Has(key);
+            var alreadyDelivered = !isCheatConsole && localItemsStore.Has(key);
+            ReceivedItemRecord? deliveryRecord = null;
+            int deliveryFlagId = 0;
+
+            if (!isCheatConsole)
+            {
+                deliveryRecord = localItemsStore.GetOrCreateDelivery(key);
+                deliveryFlagId = deliveryRecord.DeliveryFlagId;
+
+                if (pipeServer.IsConnected && pipeServer.IsWorldLoaded)
+                {
+                    bool? deliveredInGame = await pipeServer.SendGetEventFlagIdAsync(deliveryFlagId);
+                    if (deliveredInGame == true)
+                    {
+                        localItemsStore.MarkDelivered(key);
+                        alreadyDelivered = true;
+                    }
+                }
+            }
 
             var gameItemFullId = ApIdsToItemIds.ContainsKey(item.ItemId) ? ApIdsToItemIds[item.ItemId] : -1;
             if (gameItemFullId != -1)
@@ -763,6 +785,8 @@ public partial class RoomViewModel : MyBaseViewModel
                 var itemEventId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(goodId);
                 var isSingleton = SingletonItemPolicy.ShouldClampToOne(goodId);
                 var singletonKey = isSingleton ? MakeSingletonItemKey(goodId, itemEventId) : null;
+                if (deliveryRecord != null && singletonKey != null)
+                    deliveryRecord.SingletonKey = singletonKey;
 
                 if (KeyItemTracker.CheckItem(goodId))
                 {
@@ -773,7 +797,7 @@ public partial class RoomViewModel : MyBaseViewModel
                     }
                 }
 
-                if (alreadyReceived)
+                if (alreadyDelivered)
                 {
                     if (singletonKey != null)
                         localItemsStore.TryMark(singletonKey);
@@ -784,7 +808,9 @@ public partial class RoomViewModel : MyBaseViewModel
                 if (!isCheatConsole && singletonKey != null && localItemsStore.Has(singletonKey))
                 {
                     LogText += $"[AP] Skipped duplicate singleton item: {item.ItemName} goodId={goodId} eventId={itemEventId} from={item.Player.Name} location={item.LocationName}\r\n";
-                    localItemsStore.TryMark(key);
+                    localItemsStore.MarkDelivered(key);
+                    if (deliveryFlagId > 0)
+                        pipeServer.SendSetEventFlagId(deliveryFlagId, 1);
                     continue;
                 }
 
@@ -794,41 +820,19 @@ public partial class RoomViewModel : MyBaseViewModel
                     count = 1;
                 }
 
-                if (!isCheatConsole)
-                {
-                    localItemsStore.TryMark(key);
-                    if (singletonKey != null)
-                        localItemsStore.TryMark(singletonKey);
-                }
+                if (deliveryRecord != null)
+                    localItemsStore.UpdateDeliveryPayload(key, gameItemFullId, goodId, count, itemEventId, item.ItemName);
 
-                if (itemEventId>0)
-                {
-                    pipeServer.SendSpawnItem(gameItemFullId, count, itemEventId);                    
-                }                
-                else
-                {
-                    pipeServer.SendSpawnItem(gameItemFullId, count);
-                }
-
-                if (IsMechanicalBarrelItem(goodId))
-                {
-                    int eventFlagId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(goodId);                    
-                    pipeServer.SendSetEventFlagId(eventFlagId, 1);
-                }
-
-                if (IsSekiroMemoryItem(goodId))
-                {
-                    pipeServer.SendSpawnItem(0x40000000 + 5400, 1);//Add extra memory item for proper memorys count in idol menu
-                }                    
+                SendTrackedItemToGame(gameItemFullId, goodId, count, itemEventId, deliveryFlagId);
 
             }
             else
             {
-                if (alreadyReceived)
+                if (alreadyDelivered)
                     continue;
 
                 if (!isCheatConsole)
-                    localItemsStore.TryMark(key);
+                    localItemsStore.MarkDelivered(key);
 
                 LogText += $"Received unknown item with AP Item ID: {item.ItemId}\r\n";
             }
@@ -836,6 +840,85 @@ public partial class RoomViewModel : MyBaseViewModel
             await Task.Yield();
         }
         localItemsStore.Save();
+    }
+
+    private void SendTrackedItemToGame(int fullId, int goodId, int count, int itemEventId, int deliveryFlagId)
+    {
+        if (itemEventId > 0)
+        {
+            pipeServer.SendSpawnItem(fullId, count, itemEventId, deliveryFlagId);
+        }
+        else
+        {
+            pipeServer.SendSpawnItem(fullId, count, deliveryFlagId: deliveryFlagId);
+        }
+
+        if (IsMechanicalBarrelItem(goodId))
+        {
+            int eventFlagId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(goodId);
+            pipeServer.SendSetEventFlagId(eventFlagId, 1);
+        }
+
+        if (IsSekiroMemoryItem(goodId))
+        {
+            pipeServer.SendSpawnItem(0x40000000 + 5400, 1);
+        }
+    }
+
+    private async void PipeServer_WorldStateChanged(bool isLoaded)
+    {
+        if (isLoaded)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(10));
+            if (_receivedItemsCts.IsCancellationRequested)
+                return;
+
+            await RetryPendingItemDeliveriesAsync();
+        }
+    }
+
+    private async Task RetryPendingItemDeliveriesAsync()
+    {
+        if (!pipeServer.IsConnected || !pipeServer.IsWorldLoaded)
+            return;
+
+        var pending = localItemsStore.GetPendingDeliveries();
+        if (pending.Count == 0)
+            return;
+
+        LogText += $"[AP] Checking {pending.Count} pending in-game item deliveries\r\n";
+
+        foreach (var record in pending)
+        {
+            bool? delivered = await pipeServer.SendGetEventFlagIdAsync(record.DeliveryFlagId);
+            if (delivered == true)
+            {
+                localItemsStore.MarkDeliveredByFlagId(record.DeliveryFlagId);
+                continue;
+            }
+
+            LogText += $"[AP] Retrying pending item delivery: {record.ItemName ?? record.Key} flag={record.DeliveryFlagId}\r\n";
+            SendTrackedItemToGame(record.FullId, record.GoodId, record.Quantity, record.EventId, record.DeliveryFlagId);
+            await Task.Delay(50);
+        }
+
+        localItemsStore.Save();
+    }
+
+    private void PipeServer_ItemGrantDelivered(int deliveryFlagId, bool delivered)
+    {
+        if (deliveryFlagId <= 0)
+            return;
+
+        if (delivered && localItemsStore.MarkDeliveredByFlagId(deliveryFlagId))
+        {
+            localItemsStore.Save();
+            LogText += $"[AP] Confirmed in-game item delivery flag {deliveryFlagId}\r\n";
+        }
+        else if (!delivered)
+        {
+            LogText += $"[AP] In-game item delivery failed for flag {deliveryFlagId}; it will be retried later\r\n";
+        }
     }
 
     static string MakeSingletonItemKey(int goodId, int itemEventId)

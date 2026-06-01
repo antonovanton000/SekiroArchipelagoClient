@@ -144,6 +144,7 @@ static void HandlePipeMessage(const std::string& msg)
         uint32_t goodsId = 0;
         uint32_t quantity = 1;
         uint32_t eventId = 0;
+        uint32_t deliveryFlagId = 0;
 
         // goods_id is required
         if (!JsonFieldToUInt(msg, "goods_id", goodsId))
@@ -160,9 +161,10 @@ static void HandlePipeMessage(const std::string& msg)
 
         // event_id is optional; if not present or invalid, stays 0
         JsonFieldToUInt(msg, "event_id", eventId);
+        JsonFieldToUInt(msg, "delivery_flag_id", deliveryFlagId);
 
-        Logf("[Pipe] grant_item -> goodsId=%u qty=%u eventId=%u",
-            goodsId, quantity, eventId);
+        Logf("[Pipe] grant_item -> goodsId=%u qty=%u eventId=%u deliveryFlagId=%u",
+            goodsId, quantity, eventId, deliveryFlagId);
         
          if (!IsWorldLoaded())
          {
@@ -170,7 +172,7 @@ static void HandlePipeMessage(const std::string& msg)
              return;
          }
 
-        SekiroGame_QueueGrantItem(eventId, goodsId, quantity);
+        SekiroGame_QueueGrantItem(eventId, goodsId, quantity, deliveryFlagId);
 
         return;
     }

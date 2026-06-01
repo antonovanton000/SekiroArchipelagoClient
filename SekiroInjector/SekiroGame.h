@@ -7,11 +7,11 @@ bool SekiroGame_Initialize();
 void SekiroGame_Update();
 
 // Item granting
-void SekiroGame_GrantItem(const PendingApItem& item);
+bool SekiroGame_GrantItem(const PendingApItem& item);
 
 // New: grant item + set event flag first
-void SekiroGame_GrantItemWithEvent(uint32_t eventId, uint32_t goodsId, uint32_t count);
-void SekiroGame_QueueGrantItem(uint32_t eventId, uint32_t goodsId, uint32_t count);
+bool SekiroGame_GrantItemWithEvent(uint32_t eventId, uint32_t goodsId, uint32_t count);
+void SekiroGame_QueueGrantItem(uint32_t eventId, uint32_t goodsId, uint32_t count, uint32_t deliveryFlagId = 0);
 void SekiroGame_ProcessPendingGrants();
 
 bool SetEventFlagSafe(uint32_t flagId, bool value);

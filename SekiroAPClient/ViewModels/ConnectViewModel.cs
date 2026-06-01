@@ -130,29 +130,25 @@ public partial class ConnectViewModel : MyBaseViewModel
 
     async Task CheckForUpdate()
     {
-        //using var http = new HttpClient();
-        //var provider = new GitHubReleaseProvider(http, "antonovanton000", "SekiroArchipelagoClient");
+        using var http = new HttpClient();
+        var provider = new GitHubReleaseProvider(http, "antonovanton000", "SekiroArchipelagoClient");
 
-        //var alpha = await provider.GetLatestAsync(includePrerelease: true, assetName: "randomizerAP.zip");
-        //var stable = await provider.GetLatestAsync(includePrerelease: false, assetName: "randomizerAP.zip");
+        var stable = await provider.GetLatestAsync(includePrerelease: false, assetName: "randomizerAP");
 
-        //var appVersion = Version.Parse(App.AppVersion);
+        var appVersion = System.Version.Parse(App.AppVersion);
 
-        //if (stable == null)
-        //{
-        //    if (alpha == null)
-        //    {
-        //        return;
-        //    }
-        //}
+        if (stable == null)
+        {
+            return;
+        }
 
-        //var latestVersion = stable?.Version ?? alpha?.Version;
-        //if (latestVersion == null) return;
+        var latestVersion = stable?.Version;
+        if (latestVersion == null) return;
 
-        //if (latestVersion > appVersion)
-        //{
-        //    ShowUpdateNotification = true;
-        //}
+        if (latestVersion > appVersion)
+        {
+            ShowUpdateNotification = true;
+        }        
     }
 
     #endregion
