@@ -3171,7 +3171,10 @@ namespace RandomizerCommon
                                 {
                                     if (targetFlag == 0)
                                     {
-                                        events.RemoveMacro(edits, templateFlag.ToString());
+                                        if (e2 != null && e2.Instructions.Any(ins => getIntArgs(events.Parse(ins).Args).Contains(templateFlag)))
+                                        {
+                                            events.RemoveMacro(edits, templateFlag.ToString());
+                                        }
                                     }
                                     else
                                     {
@@ -3184,6 +3187,13 @@ namespace RandomizerCommon
                                     if (targetInfo.DefeatFlag == 0 && targetInfo.IsImportantTarget)
                                     {
                                         throw new Exception($"{target} has no defeat flag defined, but was randomized to {entity} in {callee}");
+                                    }
+                                    if (e2 != null
+                                        && targetInfo.DefeatFlag > 0
+                                        && !e2.Instructions.Any(ins => getIntArgs(events.Parse(ins).Args).Contains(t.DefeatFlag))
+                                        && !e2.Instructions.Any(ins => getIntArgs(events.Parse(ins).Args).Contains(targetInfo.DefeatFlag)))
+                                    {
+                                        e2.Instructions.Insert(0, events.ParseAdd($"END IF Event Flag (0,1,0,{t.DefeatFlag})"));
                                     }
                                     removeOrReplaceFlag(t.DefeatFlag, targetInfo.DefeatFlag);
                                 }

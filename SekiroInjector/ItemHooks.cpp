@@ -206,6 +206,8 @@ bool IsAllowedGoods(uint32_t goodsId)
 bool IsTrackedRewardLot(uint32_t lotId)
 {
 	return lotId == 51300  // DT: Hidden Tooth - complete Hanbei's quest
+		|| lotId == 61000  // DT: Shinobi Esoteric Text - Sculptor with 1 skill point
+		|| lotId == 61004  // DT: Prosthetic Esoteric Text - Sculptor with 3 prosthetic tools
 		|| lotId == 51430  // AC/C: Mibu Pilgrimage Balloon - complete Blackhat Badger quest
 		|| lotId == 51600  // AO: Young Lord's Bell Charm - Inosuke's Mother
 		|| lotId == 61600  // AO: Young Lord's Bell Charm - Inosuke's Mother

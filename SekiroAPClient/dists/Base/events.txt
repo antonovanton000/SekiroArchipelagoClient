@@ -16160,6 +16160,7 @@ EnemyEvents:
   Template:
   - Type: multichronly
     Entity: 2500850
+    DefeatFlag: 9309
   DebugInfo:
   - 2500851 (c5005_0000 - Corrupted Monk Illusion)
   - 2500853 (c5005_0001 - Corrupted Monk Illusion)

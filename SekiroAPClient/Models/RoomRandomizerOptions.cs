@@ -38,6 +38,20 @@ public partial class RoomRandomizerOptions: ObservableObject
     [ObservableProperty]
     bool headlessSlowWalk;
     [ObservableProperty]
+    bool additionalRegionLock;
+    [ObservableProperty]
     string presetName = default!;
-}
+    [ObservableProperty]
+    int goalOption;
 
+    public string GoalOptionText => GoalOption switch
+    {
+        1 => "Shura",
+        _ => "Full Game",
+    };
+
+    partial void OnGoalOptionChanged(int value)
+    {
+        OnPropertyChanged(nameof(GoalOptionText));
+    }
+}

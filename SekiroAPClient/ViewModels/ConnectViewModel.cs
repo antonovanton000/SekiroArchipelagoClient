@@ -77,7 +77,7 @@ public partial class ConnectViewModel : MyBaseViewModel
     async Task Connect()
     {
         IsBusy = true;
-        _currentSession = ArchipelagoSessionFactory.CreateSession(ConnectModel.RoomUrl);
+        _currentSession = ArchipelagoSessionFactory.CreateSession(ConnectModel.RoomUrl.Trim());
         try
         {
             NotificationStatus = $"Connecting to {ConnectModel.RoomUrl}";

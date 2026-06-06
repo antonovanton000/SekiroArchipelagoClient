@@ -1166,6 +1166,25 @@
     "code": 10000,
     "name": "Treasure Carp Scale",
     "type": "money"
+  },
+  {
+    "code": 9406,
+    "name": "Senpou Temple Key",
+    "type": "archipelago"
+  },
+  {
+    "code": 9407,
+    "name": "Abandoned Dungeon Key",
+    "type": "archipelago"
+  },
+  {
+    "code": 9408,
+    "name": "Ashina Depths Key",
+    "type": "archipelago"
+  },
+  {
+    "code": 9409,
+    "name": "Bell of Dispelling",
+    "type": "archipelago"
   }
-
 ]

@@ -54,6 +54,8 @@ public partial class RandomizerHelper : ObservableObject
 
     public RandomizerOptions Options { get; private set; } = new();
 
+    public int GoalOption { get; private set; }
+
     public string LogFilePath { get; private set; } = default!;
 
     public RandomizerHelper()
@@ -114,6 +116,7 @@ public partial class RandomizerHelper : ObservableObject
         var options = ((JObject)slotData["options"]).ToObject<Dictionary<string, int>>();
 
         Options = ConvertRandomizerOptions(options);
+        GoalOption = GetIntOption(options, "goal_option", 0);
         var seed = HashStringToInt(session.RoomState.Seed) + session.ConnectionInfo.Slot;
         Options.Seed = (uint)seed;
 
@@ -174,7 +177,7 @@ public partial class RandomizerHelper : ObservableObject
                 Console.WriteLine();
 
                 SetStatus("Loading game data");
-                GameData game = new GameData(distDir, FromGame.SDT);
+                GameData game = new GameData(distDir, FromGame.SDT, Options["additional_region_locks"]);
                 game.Load(null);
 
                 if (Options["enemy"])
@@ -1029,6 +1032,7 @@ public partial class RandomizerHelper : ObservableObject
         opt["headlesswalk"] = archiOptions["remove_headless_slow_walk"] == 1;
         opt["splitskills"] = false;//FOR NOW ITS OFF
         opt["openstart"] = false;
+        opt["additional_region_locks"] = archiOptions["additional_region_locks"] == 1;
         return opt;
     }
 
@@ -1070,7 +1074,14 @@ public partial class RandomizerHelper : ObservableObject
         state.RoomRandomizerOptions.DeathLinkOnFullDeath = Options["death_link_full"];
         state.RoomRandomizerOptions.RandomSkills = !Options["norandom_skills"];
         state.RoomRandomizerOptions.HeadlessSlowWalk = Options["headlesswalk"];
+        state.RoomRandomizerOptions.AdditionalRegionLock = Options["additional_region_locks"];
         state.RoomRandomizerOptions.PresetName = SelectedPreset?.DisplayName ?? "None";
+        state.RoomRandomizerOptions.GoalOption = GoalOption;
+    }
+
+    private static int GetIntOption(IReadOnlyDictionary<string, int> options, string name, int fallback)
+    {
+        return options.TryGetValue(name, out var value) ? value : fallback;
     }
 
     /// <summary>

@@ -14,6 +14,9 @@
     <Compile Remove="SoulsFormatsBackup\**" />
     <EmbeddedResource Remove="modengine\**" />
     <EmbeddedResource Remove="SoulsFormatsBackup\**" />
+    <None Remove="dists\Base\*.emevd.dcx" />
+    <None Remove="dists\Base\*.msb.dcx" />
+    <None Remove="dists\Base\*.talkesdbnd.dcx" />
     <None Remove="modengine\**" />
     <None Remove="SoulsFormatsBackup\**" />
     <Page Remove="modengine\**" />
@@ -21,8 +24,8 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <Version>1.1.1</Version>
-    <AssemblyVersion>1.1.1</AssemblyVersion>
+    <Version>1.1.4</Version>
+    <AssemblyVersion>1.1.4</AssemblyVersion>
  </PropertyGroup>
 
 	
@@ -37,8 +40,14 @@
     <None Remove="Images\header-logo.png" />
     <None Remove="Images\items\branch.png" />
     <None Remove="Images\items\branch_no.png" />
+    <None Remove="Images\items\depths_key.png" />
+    <None Remove="Images\items\depths_key_no.png" />
+    <None Remove="Images\items\disbell.png" />
+    <None Remove="Images\items\disbell_no.png" />
     <None Remove="Images\items\dragon_tears.png" />
     <None Remove="Images\items\dragon_tears_no.png" />
+    <None Remove="Images\items\dungeon_key.png" />
+    <None Remove="Images\items\dungeon_key_no.png" />
     <None Remove="Images\items\fathers_bell_charm.png" />
     <None Remove="Images\items\fathers_bell_charm_no.png" />
     <None Remove="Images\items\gun_fort_key.png" />
@@ -55,6 +64,8 @@
     <None Remove="Images\items\prosthetic_tool_no.png" />
     <None Remove="Images\items\secret_passage_key.png" />
     <None Remove="Images\items\secret_passage_key_no.png" />
+    <None Remove="Images\items\senpou_key.png" />
+    <None Remove="Images\items\senpou_key_no.png" />
     <None Remove="Images\items\shelter_stone.png" />
     <None Remove="Images\items\shelter_stone_no.png" />
     <None Remove="Images\items\young_bell.png" />
@@ -101,8 +112,14 @@
     <Resource Include="Images\header-logo.png" />
     <Resource Include="Images\items\branch.png" />
     <Resource Include="Images\items\branch_no.png" />
+    <Resource Include="Images\items\depths_key.png" />
+    <Resource Include="Images\items\depths_key_no.png" />
+    <Resource Include="Images\items\disbell.png" />
+    <Resource Include="Images\items\disbell_no.png" />
     <Resource Include="Images\items\dragon_tears.png" />
     <Resource Include="Images\items\dragon_tears_no.png" />
+    <Resource Include="Images\items\dungeon_key.png" />
+    <Resource Include="Images\items\dungeon_key_no.png" />
     <Resource Include="Images\items\fathers_bell_charm.png" />
     <Resource Include="Images\items\fathers_bell_charm_no.png" />
     <Resource Include="Images\items\gun_fort_key.png" />
@@ -119,6 +136,8 @@
     <Resource Include="Images\items\prosthetic_tool_no.png" />
     <Resource Include="Images\items\secret_passage_key.png" />
     <Resource Include="Images\items\secret_passage_key_no.png" />
+    <Resource Include="Images\items\senpou_key.png" />
+    <Resource Include="Images\items\senpou_key_no.png" />
     <Resource Include="Images\items\shelter_stone.png" />
     <Resource Include="Images\items\shelter_stone_no.png" />
     <Resource Include="Images\items\young_bell.png" />
@@ -157,6 +176,10 @@
     <None Update="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <None Update="dists\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
   </ItemGroup>
 

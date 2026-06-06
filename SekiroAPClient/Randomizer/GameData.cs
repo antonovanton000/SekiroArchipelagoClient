@@ -23,6 +23,7 @@ namespace RandomizerCommon
         public bool Sekiro => Type == FromGame.SDT;
 
         public readonly string Dir;
+        private readonly bool useAdditionalRegionLocks;
 
         private string? ModDir;
 
@@ -103,9 +104,10 @@ namespace RandomizerCommon
 
         private List<string> writtenFiles = new List<string>();
 
-        public GameData(string dir, FromGame game)
+        public GameData(string dir, FromGame game, bool useAdditionalRegionLocks = false)
         {
             Dir = dir;
+            this.useAdditionalRegionLocks = useAdditionalRegionLocks;
             Editor = new GameEditor(game);
             Editor.Spec.GameDir = $@"{dir}";
             Editor.Spec.NameDir = $@"{dir}\Names";
@@ -321,6 +323,7 @@ namespace RandomizerCommon
             CopyLogosAndIcons(outPath, $@"{Dir}\Base\menu");
             CopySfx(outPath, $@"{Dir}\Base\sfx");
             CopyScripts(outPath, $@"{Dir}\Base\script");
+            CopyAdditionalRegionLockMapFiles(outPath);
             foreach (KeyValuePair<string, IMsb> entry in Maps)
             {
                 if (!Locations.ContainsKey(entry.Key)) continue;
@@ -332,7 +335,11 @@ namespace RandomizerCommon
             foreach (KeyValuePair<string, Dictionary<string, ESD>> entry in Talk)
             {
                 if (!Locations.ContainsKey(entry.Key) && entry.Key != "m00_00_00_00") continue;
-                WriteModDependentBnd(outPath, $@"{Dir}\Base\{entry.Key}.talkesdbnd.dcx", $@"script\talk\{entry.Key}.talkesdbnd.dcx", entry.Value);
+                string baseTalkPath = Path.Combine(Dir, "Base", "basegame", "talk", $"{entry.Key}.talkesdbnd.dcx");
+                if (!File.Exists(baseTalkPath))
+                    baseTalkPath = Path.Combine(Dir, "Base", $"{entry.Key}.talkesdbnd.dcx");
+
+                WriteModDependentBnd(outPath, baseTalkPath, $@"script\talk\{entry.Key}.talkesdbnd.dcx", entry.Value);
             }
             foreach (KeyValuePair<string, EMEVD> entry in Emevds)
             {
@@ -393,10 +400,10 @@ namespace RandomizerCommon
         void CopyScripts(string outPath, string basePath)
         {
             var destPath = Path.Combine(outPath, "script");
-            if (!Directory.Exists(destPath))
+            if (Directory.Exists(basePath))
             {
                 Directory.CreateDirectory(destPath);
-                CopyFilesRecursively(new DirectoryInfo(basePath), new DirectoryInfo(destPath));
+                CopyFilesRecursively(new DirectoryInfo(basePath), new DirectoryInfo(destPath), overwrite: true);
             }
         }
 
@@ -420,12 +427,24 @@ namespace RandomizerCommon
             }
         }
 
-        void CopyFilesRecursively(DirectoryInfo source, DirectoryInfo target)
+        void CopyAdditionalRegionLockMapFiles(string outPath)
+        {
+            if (!Sekiro || !useAdditionalRegionLocks) return;
+
+            string basePath = Path.Combine(Dir, "Base", "blockers", "mapadd");
+            if (!Directory.Exists(basePath)) return;
+
+            string destPath = Path.Combine(outPath, "map");
+            Directory.CreateDirectory(destPath);
+            CopyFilesRecursively(new DirectoryInfo(basePath), new DirectoryInfo(destPath), overwrite: true);
+        }
+
+        void CopyFilesRecursively(DirectoryInfo source, DirectoryInfo target, bool overwrite = false)
         {
             foreach (DirectoryInfo dir in source.GetDirectories())
-                CopyFilesRecursively(dir, target.CreateSubdirectory(dir.Name));
+                CopyFilesRecursively(dir, target.CreateSubdirectory(dir.Name), overwrite);
             foreach (FileInfo file in source.GetFiles())
-                file.CopyTo(Path.Combine(target.FullName, file.Name));
+                file.CopyTo(Path.Combine(target.FullName, file.Name), overwrite);
         }
 
         void WriteModDependentBnd<T>(string outPath, string basePath, string relOutputPath, Dictionary<string, T> diffData)
@@ -528,27 +547,241 @@ namespace RandomizerCommon
         {
             if (Sekiro)
             {
-                Maps = Editor.Load("Base", path => (IMsb)MSBS.Read(path), "*.msb.dcx");
+                Maps = LoadSekiroBaseAndAdditionalRegionLockFiles(path => (IMsb)MSBS.Read(path), "map", "*.msb.dcx");
                 MaybeOverrideFromModDir(Maps, name => $@"map\MapStudio\{name}.msb.dcx", path => MSBS.Read(path));
                 List<string> missing = Locations.Keys.Except(Maps.Keys).ToList();
-                if (missing.Count != 0) throw new Exception($@"Missing msbs in dists\Base: {string.Join(", ", missing)}");
+                if (missing.Count != 0) throw new Exception($@"Missing msbs in dist\Base\basegame\map: {string.Join(", ", missing)}");
             }
         }
 
         private void LoadTalk()
         {
-            Talk = Editor.LoadBnds("Base", (data, path) => ESD.Read(data), "*.talkesdbnd.dcx");
+            Talk = LoadSekiroBaseAndAdditionalRegionLockBnds((data, path) => ESD.Read(data), "talk", "*.talkesdbnd.dcx");
             MaybeOverrideFromModDir(Talk, name => $@"script\talk\{name}.talkesdbnd.dcx", path => Editor.LoadBnd(path, (data, path2) => ESD.Read(data)));
             List<string> missing = Locations.Keys.Concat(new[] { "m00_00_00_00" }).Except(Talk.Keys).ToList();
-            if (missing.Count != 0) throw new Exception($@"Missing talkesdbnds in dist\Base: {string.Join(", ", missing)}");
+            if (missing.Count != 0) throw new Exception($@"Missing talkesdbnds in dist\Base\basegame\talk: {string.Join(", ", missing)}");
         }
 
         private void LoadScripts()
         {
-            Emevds = Editor.Load("Base", path => EMEVD.Read(path), "*.emevd.dcx");
+            Emevds = Editor.Load(@"Base\basegame\event", path => EMEVD.Read(path), "*.emevd.dcx");
             MaybeOverrideFromModDir(Emevds, name => $@"event\{name}.emevd.dcx", path => EMEVD.Read(path));
             List<string> missing = Locations.Keys.Concat(new[] { "common", "common_func" }).Except(Emevds.Keys).ToList();
-            if (missing.Count != 0) throw new Exception($@"Missing emevds in dist\Base: {string.Join(", ", missing)}");
+            if (missing.Count != 0) throw new Exception($@"Missing emevds in dist\Base\basegame\event: {string.Join(", ", missing)}");
+            ApplyAdditionalRegionLockEmevdPatches();
+        }
+
+        private Dictionary<string, T> LoadSekiroBaseAndAdditionalRegionLockFiles<T>(Func<string, T> reader, string subdir, string ext)
+        {
+            Dictionary<string, T> ret = Editor.Load($@"Base\basegame\{subdir}", reader, ext);
+            if (!useAdditionalRegionLocks) return ret;
+
+            string blockerDir = Path.Combine(Dir, "Base", "blockers", subdir);
+            if (!Directory.Exists(blockerDir)) return ret;
+
+            foreach (KeyValuePair<string, T> entry in Editor.Load($@"Base\blockers\{subdir}", reader, ext))
+            {
+                ret[entry.Key] = entry.Value;
+            }
+            return ret;
+        }
+
+        private Dictionary<string, Dictionary<string, T>> LoadSekiroBaseAndAdditionalRegionLockBnds<T>(Func<byte[], string, T> reader, string subdir, string ext)
+        {
+            Dictionary<string, Dictionary<string, T>> ret = Editor.LoadBnds($@"Base\basegame\{subdir}", reader, ext);
+            if (!useAdditionalRegionLocks) return ret;
+
+            string blockerDir = Path.Combine(Dir, "Base", "blockers", subdir);
+            if (!Directory.Exists(blockerDir)) return ret;
+
+            foreach (KeyValuePair<string, Dictionary<string, T>> entry in Editor.LoadBnds($@"Base\blockers\{subdir}", reader, ext))
+            {
+                ret[entry.Key] = entry.Value;
+            }
+            return ret;
+        }
+
+        private void ApplyAdditionalRegionLockEmevdPatches()
+        {
+            if (!Sekiro || !useAdditionalRegionLocks) return;
+
+            Events events = new Events($@"{Dir}\Base\sekiro-common.emedf.json");
+            PatchAshinaCastleBlockers(events);
+            PatchAshinaReservoirBlockers(events);
+            PatchSunkenValleyBlockers(events);
+            PatchSenpouBlockers(events);
+        }
+
+        private void PatchAshinaCastleBlockers(Events events)
+        {
+            EMEVD emevd = RequireEmevd("m11_01_00_00");
+            EMEVD.Event init = RequireEvent(emevd, 50);
+            AddInitializeEventIfMissing(init, 11115950);
+            AddInitializeEventIfMissing(init, 11110999);
+            AddInitializeEventIfMissing(init, 11110998);
+            AddInitializeEventIfMissing(init, 11110997);
+            AddInstructionIfMissing(init, events.ParseAdd("Initialize Common Event (20005610, 1100030, 1121399, 12000003, 12000004)"));
+
+            AddEventIfMissing(emevd, events, 11110999, EMEVD.Event.RestBehaviorType.Restart, BuildAshinaCastleSfxEvent());
+            AddEventIfMissing(emevd, events, 11110998, EMEVD.Event.RestBehaviorType.Restart, BuildDoorLockEvent(
+                objectId: 1121799,
+                objActParamId: 999976,
+                openedFlag: 61120711,
+                requiredGoodId: 9407,
+                actionButtonId: 9610,
+                successDialogId: 10010155,
+                failureDialogId: 10010187));
+            AddEventIfMissing(emevd, events, 11110997, EMEVD.Event.RestBehaviorType.Default, new[]
+            {
+                "IF Character Has SpEffect (0, 10000, 3995, 1, 0, 1)",
+                "WAIT Fixed Time (Seconds) (1)",
+                "Set Event Flag (1102999, 1)",
+                "END Unconditionally (0)",
+            });
+        }
+
+        private void PatchAshinaReservoirBlockers(Events events)
+        {
+            EMEVD emevd = RequireEmevd("m11_02_00_00");
+            AddInitializeEventIfMissing(RequireEvent(emevd, 0), 11120999);
+            AddEventIfMissing(emevd, events, 11120999, EMEVD.Event.RestBehaviorType.Restart, BuildDoorLockEvent(
+                objectId: 1121798,
+                objActParamId: 999900,
+                openedFlag: 61110696,
+                requiredGoodId: 9407,
+                actionButtonId: 9610,
+                successDialogId: 10010155,
+                failureDialogId: 10010187));
+        }
+
+        private void PatchSunkenValleyBlockers(Events events)
+        {
+            EMEVD emevd = RequireEmevd("m17_00_00_00");
+            AddInitializeEventIfMissing(RequireEvent(emevd, 0), 11795202);
+            AddEventIfMissing(emevd, events, 11795202, EMEVD.Event.RestBehaviorType.Restart, BuildDoorLockEvent(
+                objectId: 1791550,
+                objActParamId: 999941,
+                openedFlag: 61700555,
+                requiredGoodId: 9408,
+                actionButtonId: 9610,
+                successDialogId: 10010156,
+                failureDialogId: 10010188));
+        }
+
+        private void PatchSenpouBlockers(Events events)
+        {
+            EMEVD emevd = RequireEmevd("m20_00_00_00");
+            AddInitializeEventIfMissing(RequireEvent(emevd, 0), 12009999);
+            AddEventIfMissing(emevd, events, 12009999, EMEVD.Event.RestBehaviorType.Restart, BuildDoorLockEvent(
+                objectId: 2009900,
+                objActParamId: 999921,
+                openedFlag: 62001111,
+                requiredGoodId: 9406,
+                actionButtonId: 9600,
+                successDialogId: 10010154,
+                failureDialogId: 10010186));
+        }
+
+        private EMEVD RequireEmevd(string name)
+        {
+            if (!Emevds.TryGetValue(name, out EMEVD emevd))
+            {
+                throw new Exception($"Missing emevd required for additional_region_locks: {name}");
+            }
+            return emevd;
+        }
+
+        private static EMEVD.Event RequireEvent(EMEVD emevd, long eventId)
+        {
+            EMEVD.Event ev = emevd.Events.FirstOrDefault(e => e.ID == eventId);
+            if (ev == null)
+            {
+                throw new Exception($"Missing event required for additional_region_locks patch: {eventId}");
+            }
+            return ev;
+        }
+
+        private static void AddEventIfMissing(EMEVD emevd, Events events, long eventId, EMEVD.Event.RestBehaviorType restBehavior, IEnumerable<string> commands)
+        {
+            if (emevd.Events.Any(e => e.ID == eventId)) return;
+
+            EMEVD.Event ev = new EMEVD.Event(eventId, restBehavior);
+            ev.Instructions.AddRange(commands.Select(events.ParseAdd));
+            emevd.Events.Add(ev);
+        }
+
+        private static void AddInitializeEventIfMissing(EMEVD.Event initEvent, int eventId)
+        {
+            AddInstructionIfMissing(initEvent, new EMEVD.Instruction(2000, 0, new List<object> { 0, (uint)eventId, (uint)0 }));
+        }
+
+        private static void AddInstructionIfMissing(EMEVD.Event ev, EMEVD.Instruction instruction)
+        {
+            if (ev.Instructions.Any(i => InstructionMatches(i, instruction))) return;
+            ev.Instructions.Add(instruction);
+        }
+
+        private static bool InstructionMatches(EMEVD.Instruction left, EMEVD.Instruction right)
+        {
+            return left.Bank == right.Bank
+                && left.ID == right.ID
+                && left.ArgData.SequenceEqual(right.ArgData);
+        }
+
+        private static IEnumerable<string> BuildAshinaCastleSfxEvent()
+        {
+            for (int objectId = 1121390; objectId <= 1121397; objectId++)
+            {
+                yield return $"(De)activate Object ({objectId}, 1)";
+                yield return $"Delete Object-following SFX ({objectId}, 1)";
+                yield return "WAIT Fixed Time (Frames) (1)";
+                yield return $"Create Object-following SFX ({objectId}, 101, 11)";
+            }
+
+            yield return "IF Event Flag (0, 1, 0, 1102999)";
+
+            for (int objectId = 1121390; objectId <= 1121397; objectId++)
+            {
+                yield return $"(De)activate Object ({objectId}, 0)";
+                yield return $"Delete Object-following SFX ({objectId}, 1)";
+            }
+
+            yield return "END Unconditionally (0)";
+        }
+
+        private static IEnumerable<string> BuildDoorLockEvent(
+            int objectId,
+            int objActParamId,
+            int openedFlag,
+            int requiredGoodId,
+            int actionButtonId,
+            int successDialogId,
+            int failureDialogId)
+        {
+            return new[]
+            {
+                $"GOTO IF Event Flag (1, 0, 0, {openedFlag})",
+                $"Set Object Interaction ({objectId}, 0, 0)",
+                $"Set Object Interaction ({objectId}, 10, 1)",
+                $"Set ObjAct State ({objectId}, {objActParamId}, 0)",
+                $"Reproduce Object Animation ({objectId}, 1)",
+                $"IF Object Backread (0, {objectId}, 1, 0, 1)",
+                "END Unconditionally (0)",
+                "Label 1 ()",
+                $"Set ObjAct State ({objectId}, {objActParamId}, 0)",
+                $"IF Action Button (0, {actionButtonId}, {objectId})",
+                $"IF Player Has/Doesn't Have Item (1, 3, {requiredGoodId}, 1)",
+                "GOTO IF Condition Group State (Uncompiled) (0, 0, 1)",
+                $"Force Use ObjAct (10000, {objectId}, {objActParamId}, -1)",
+                "WAIT Fixed Time (Seconds) (0.5)",
+                $"Display Generic Dialog ({successDialogId}, 0, 1, {objectId}, 3)",
+                $"Set Event Flag ({openedFlag}, 1)",
+                "END Unconditionally (0)",
+                "Label 0 ()",
+                $"Display Generic Dialog ({failureDialogId}, 0, 1, {objectId}, 3)",
+                "WAIT Fixed Time (Seconds) (3)",
+                "END Unconditionally (1)",
+            };
         }
 
         private void LoadText()

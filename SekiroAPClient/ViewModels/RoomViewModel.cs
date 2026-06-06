@@ -30,7 +30,7 @@ public partial class RoomViewModel : MyBaseViewModel
         RandomizerHelper = new();
         pipeServer = App.PipeServer;
         stateStorage = new StateStorage<ApRandomizationState>(Path.Combine(App.Location, "ap_randomization_state.json"));
-        localItemsStore = new ReceivedItemStore(Path.Combine(App.Location, "randomizer\\localItemsStore.json"));
+        itemTransferLogger = CreateItemTransferLogger();
         hintItemNames = LoadHintItemNames();
         UpdateGameLaunchUi();
 
@@ -42,7 +42,7 @@ public partial class RoomViewModel : MyBaseViewModel
         RandomizerHelper = new();
         pipeServer = App.PipeServer;
         stateStorage = new StateStorage<ApRandomizationState>(Path.Combine(App.Location, "ap_randomization_state.json"));
-        localItemsStore = new ReceivedItemStore(Path.Combine(App.Location, "randomizer\\localItemsStore.json"));
+        itemTransferLogger = CreateItemTransferLogger();
         hintItemNames = LoadHintItemNames();
         UpdateGameLaunchUi();
     }
@@ -55,7 +55,8 @@ public partial class RoomViewModel : MyBaseViewModel
     PipeServer pipeServer;
     public RandomizerHelper RandomizerHelper { get; set; }
 
-    public KeyItemTracker KeyItemTracker { get; set; } = new KeyItemTracker();
+    [ObservableProperty]
+    KeyItemTracker keyItemTracker = new();
 
     [ObservableProperty]
     string logText = "";
@@ -115,19 +116,35 @@ public partial class RoomViewModel : MyBaseViewModel
     [ObservableProperty]
     bool isDebug;
 
-    private CancellationTokenSource _reconnectCts;
+    private CancellationTokenSource? _reconnectCts;
     private readonly CancellationTokenSource _receivedItemsCts = new();
+    private readonly SemaphoreSlim _receivedItemsLock = new(1, 1);
+    private static int _nextRoomViewModelId;
+    private static int _activeRoomViewModelId;
+    private readonly int _roomViewModelId = Interlocked.Increment(ref _nextRoomViewModelId);
+    private bool _eventHandlersAdded;
+    private bool _receivedItemProcessingReady;
     bool connectedToArchipelagoHintQueued;
 
     [ObservableProperty]
     bool isReconnecting = false;
 
-    ReceivedItemStore localItemsStore;
+    ReceivedItemStore localItemsStore = null!;
+    ItemTransferLogger itemTransferLogger;
 
     List<string> consoleCommands = [];
 
     int lastSentCommandIndex = 0;
+    private static string LocalItemsStorePath
+    => Path.Combine(App.Location, "randomizer\\localItemsStore.json");
 
+    private static ReceivedItemStore CreateLocalItemsStore()
+        => new(LocalItemsStorePath);
+
+    private ItemTransferLogger CreateItemTransferLogger()
+        => new(Path.Combine(App.Location, "ap_item_transfer_log.txt"), () => IsDebug);
+
+    private bool IsActiveRoomViewModel => Volatile.Read(ref _activeRoomViewModelId) == _roomViewModelId;
     #endregion
 
     #region Appearing
@@ -135,21 +152,28 @@ public partial class RoomViewModel : MyBaseViewModel
     [RelayCommand]
     async Task Appearing()
     {
+        Volatile.Write(ref _activeRoomViewModelId, _roomViewModelId);
+        _receivedItemProcessingReady = false;
         MainWindow.HideTopButtons();
         IsDebug = Settings.Default.IsDebug;
         ShowNotifications = Settings.Default.ShowNotifications;
+        itemTransferLogger.Log($"SESSION START server={CurrentSession.Socket.Uri} slot={CurrentSession.ConnectionInfo.Slot} player={CurrentSession.Players.ActivePlayer.Name}");
         AddEventHandlers();
-        KeyItemTracker.InitializeKeyItems();
+        ResetKeyItemTracker(false);
         IsConnectedToGame = pipeServer.IsConnected;
-        var slotData = await CurrentSession.DataStorage.GetSlotDataAsync();
-        ApIdsToItemIds = ((JObject)slotData["apIdsToItemIds"]).ToObject<Dictionary<string, int>>()
-            .ToDictionary(entry => long.Parse(entry.Key), entry => entry.Value);
+        await LoadApItemMappingAsync(CurrentSession);
         LogText += $"Successfully connected to {CurrentSession.Socket.Uri.Authority}\r\n";
 
         ApRandomizationState? savedState = await TryLoadExistingRandomization(CurrentSession);
+        if (savedState == null)
+            DeleteLocalItemsStoreForNewRoom();
+
+        localItemsStore = CreateLocalItemsStore();
+
         if (savedState != null)
         {
             State = savedState;
+            ResetKeyItemTracker(State.RoomRandomizerOptions.AdditionalRegionLock);
             IsRandomizing = false;
             foreach (var goodId in State.CheckedKeyItems)
             {
@@ -188,6 +212,7 @@ public partial class RoomViewModel : MyBaseViewModel
                 deathLinkService.OnDeathLinkReceived += DeathLinkService_OnDeathLinkReceived;
             }
             await ShowConnectedToArchipelagoHintAsync();
+            _receivedItemProcessingReady = true;
             if (CurrentSession.Items.Any())
             {
                 await RecieveItems(CurrentSession.Items, _receivedItemsCts.Token);
@@ -446,6 +471,9 @@ public partial class RoomViewModel : MyBaseViewModel
 
     private async void PipeServer_ConnectionChanged(string state)
     {
+        if (!IsActiveRoomViewModel)
+            return;
+
         if (state == "connected")
         {
             IsConnectedToGame = true;
@@ -477,6 +505,9 @@ public partial class RoomViewModel : MyBaseViewModel
 
     private async void Socket_ErrorReceived(Exception e, string message)
     {
+        if (!IsActiveRoomViewModel)
+            return;
+
         LogText += $"Connection Error. Error: {message}\r\n";
         await PushNotificationAsync(new ServerNotification()
         {
@@ -487,12 +518,18 @@ public partial class RoomViewModel : MyBaseViewModel
 
     private async void Socket_SocketClosed(string reason)
     {
+        if (!IsActiveRoomViewModel)
+            return;
+
         LogText += $"Connection closed. Reason: {reason}\r\n";
         await TryReconnectAgain();
     }
 
     private async void MessageLog_OnMessageReceived(Archipelago.MultiClient.Net.MessageLog.Messages.LogMessage message)
     {
+        if (!IsActiveRoomViewModel)
+            return;
+
         if (message is ItemSendLogMessage itemMessage)
         {            
             if (ShowNotifications)
@@ -525,19 +562,38 @@ public partial class RoomViewModel : MyBaseViewModel
 
     private async void Items_ItemReceived(ReceivedItemsHelper helper)
     {
+        if (!IsActiveRoomViewModel || !_receivedItemProcessingReady)
+            return;
+
         await RecieveItems(helper, _receivedItemsCts.Token);
     }
 
     private async void PipeServer_ItemReceived(ItemRecievedArgs obj)
     {
+        if (!IsActiveRoomViewModel)
+            return;
+
         if (CurrentSession != null && State != null)
         {
             var lotMaps = State.ApLotMap.Where(i => (i.LotId == obj.LotId || i.BaseLotId == obj.LotId) && i.IsShop == obj.IsFromShop);
             if (lotMaps.Count() > 0)
             {
-                await CurrentSession.Locations.CompleteLocationChecksAsync(lotMaps.Select(i => i.LocationId).ToArray());
+                var locationIds = lotMaps.Select(i => i.LocationId).ToArray();
+                LogText += $"[AP] Sending location check(s): {string.Join(", ", locationIds)} lot={obj.LotId} good={obj.GoodId} shop={obj.IsFromShop}\r\n";
+                itemTransferLogger.Log($"SEND_CHECK start locations={string.Join(",", locationIds)} lot={obj.LotId} good={obj.GoodId} qty={obj.Quantity} shop={obj.IsFromShop}");
+                try
+                {
+                    await CurrentSession.Locations.CompleteLocationChecksAsync(locationIds);                    
+                    itemTransferLogger.Log($"SEND_CHECK ok locations={string.Join(",", locationIds)} lot={obj.LotId} good={obj.GoodId} qty={obj.Quantity} shop={obj.IsFromShop}");
+                }
+                catch (Exception ex)
+                {
+                    itemTransferLogger.Log($"SEND_CHECK error locations={string.Join(",", locationIds)} lot={obj.LotId} good={obj.GoodId} qty={obj.Quantity} shop={obj.IsFromShop} error={ex.Message}");
+                    throw;
+                }
                 if (IsSekiroMemoryItem(obj.GoodId))
                 {
+                    itemTransferLogger.Log($"LOCAL_PICKUP extra_memory_counter good={obj.GoodId} lot={obj.LotId}");
                     pipeServer.SendSpawnItem(0x40000000 + 5400, 1);
                 }
 
@@ -545,6 +601,7 @@ public partial class RoomViewModel : MyBaseViewModel
                 {
                     int eventFlagId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(obj.GoodId);
                     await Task.Delay(20);
+                    itemTransferLogger.Log($"LOCAL_PICKUP set_permanent_flag good={obj.GoodId} flag={eventFlagId} lot={obj.LotId}");
                     pipeServer.SendSetEventFlagId(eventFlagId, 1);
                 }
 
@@ -558,16 +615,27 @@ public partial class RoomViewModel : MyBaseViewModel
                 }
 
             }
+            else
+            {
+                LogText += $"[AP][LOT-MAP-MISSING] No AP location for lot={obj.LotId} good={obj.GoodId} shop={obj.IsFromShop}\r\n";
+                itemTransferLogger.Log($"SEND_CHECK missing_lot_map lot={obj.LotId} good={obj.GoodId} qty={obj.Quantity} shop={obj.IsFromShop}");
+            }
         }
     }
 
     private void PipeServer_PlayerDeath(bool isRealDeath)
     {
+        if (!IsActiveRoomViewModel)
+            return;
+
         deathLinkService?.SendDeathLink(new DeathLink(CurrentSession.Players.ActivePlayer.Name, DeathLinkReasonHelper.GetRandomDeathLinkReason()));
     }
 
     private async void DeathLinkService_OnDeathLinkReceived(DeathLink deathLink)
     {
+        if (!IsActiveRoomViewModel)
+            return;
+
         pipeServer.SendShowHint($"Player: {deathLink.Source}\nCause: {deathLink.Cause}", 15100006);
         await Task.Delay(1000);
         pipeServer.SendKillPlayer();
@@ -582,8 +650,12 @@ public partial class RoomViewModel : MyBaseViewModel
             {
                 MainWindow.ShowMessage("Are you sure you want to go back?\r\n\r\nThis will disconnect you from the Archipelago server.", MessageNotificationType.YesNo, async () =>
                 {
+                    _receivedItemProcessingReady = false;
                     _receivedItemsCts.Cancel();
+                    _reconnectCts?.Cancel();
                     RemoveEventHandlers();
+                    if (IsActiveRoomViewModel)
+                        Volatile.Write(ref _activeRoomViewModelId, 0);
                     isGoBackEnabled = true;
                     if (CurrentSession.Socket.Connected)
                         await CurrentSession.Socket.DisconnectAsync();
@@ -604,8 +676,12 @@ public partial class RoomViewModel : MyBaseViewModel
         {
             MainWindow.ShowMessage("Are you sure you want close this app?\r\n\r\nThis will disconnect you from the Archipelago server.", MessageNotificationType.YesNo, async () =>
             {
+                _receivedItemProcessingReady = false;
                 _receivedItemsCts.Cancel();
+                _reconnectCts?.Cancel();
                 RemoveEventHandlers();
+                if (IsActiveRoomViewModel)
+                    Volatile.Write(ref _activeRoomViewModelId, 0);
                 isClosingEnabled = true;
                 pipeServer.SendShowSmallHint("Disconnected from Archipelago!");
                 if (CurrentSession.Socket.Connected)
@@ -620,18 +696,20 @@ public partial class RoomViewModel : MyBaseViewModel
 
     private void PipeServer_EndingDetected(string endingType)
     {
-        if (!string.IsNullOrEmpty(endingType))
+        if (!IsActiveRoomViewModel)
+            return;
+
+        if (string.IsNullOrEmpty(endingType))
+            return;
+
+        if (IsEndingMatchingGoal(endingType, State?.RoomRandomizerOptions.GoalOption ?? 0))
         {
-            if (endingType == "shura") // Then we need to check global option witch ending is set 
-            {
-
-            }
-            else if (endingType == "immortal")
-            {
-
-            }
-            CurrentSession.SetGoalAchieved(); // For now just send anyway
+            LogText += $"[AP] Goal ending detected: {endingType}. Sending goal achieved.\r\n";
+            CurrentSession.SetGoalAchieved();
+            return;
         }
+
+        LogText += $"[AP] Ending detected: {endingType}, but current goal is {State?.RoomRandomizerOptions.GoalOptionText ?? "Full Game"}. Goal not sent.\r\n";
     }
 
     #endregion
@@ -657,6 +735,9 @@ public partial class RoomViewModel : MyBaseViewModel
 
     void AddEventHandlers()
     {
+        if (_eventHandlersAdded)
+            return;
+
         (App.Current.MainWindow as MainWindow).frame.Navigating += Frame_Navigating;
         (App.Current.MainWindow as MainWindow).Closing += RoomViewModel_Closing;
         CurrentSession.MessageLog.OnMessageReceived += MessageLog_OnMessageReceived;
@@ -668,11 +749,14 @@ public partial class RoomViewModel : MyBaseViewModel
         pipeServer.WorldStateChanged += PipeServer_WorldStateChanged;
         pipeServer.PlayerDeath += PipeServer_PlayerDeath;
         pipeServer.EndingDetected += PipeServer_EndingDetected;
-        pipeServer.ItemGrantDelivered += PipeServer_ItemGrantDelivered;
+        _eventHandlersAdded = true;
     }
 
     void RemoveEventHandlers()
     {
+        if (!_eventHandlersAdded)
+            return;
+
         (App.Current.MainWindow as MainWindow).frame.Navigating -= Frame_Navigating;
         (App.Current.MainWindow as MainWindow).Closing -= RoomViewModel_Closing;
         CurrentSession.MessageLog.OnMessageReceived -= MessageLog_OnMessageReceived;
@@ -684,7 +768,12 @@ public partial class RoomViewModel : MyBaseViewModel
         pipeServer.WorldStateChanged -= PipeServer_WorldStateChanged;
         pipeServer.PlayerDeath -= PipeServer_PlayerDeath;
         pipeServer.EndingDetected -= PipeServer_EndingDetected;
-        pipeServer.ItemGrantDelivered -= PipeServer_ItemGrantDelivered;
+        if (deathLinkService != null)
+        {
+            deathLinkService.OnDeathLinkReceived -= DeathLinkService_OnDeathLinkReceived;
+            deathLinkService = null;
+        }
+        _eventHandlersAdded = false;
     }
 
     async Task Randomize()
@@ -694,6 +783,7 @@ public partial class RoomViewModel : MyBaseViewModel
         State = await RandomizerHelper.RandomizeArchipelago(CurrentSession);
         if (State != null)
         {
+            ResetKeyItemTracker(State.RoomRandomizerOptions.AdditionalRegionLock);
             IsRandomizing = false;
             await Task.Delay(500);
             await PushNotificationAsync(new ServerNotification()
@@ -708,6 +798,12 @@ public partial class RoomViewModel : MyBaseViewModel
         }
     }
 
+    void ResetKeyItemTracker(bool withApItems)
+    {
+        KeyItemTracker = new KeyItemTracker();
+        KeyItemTracker.InitializeKeyItems(withApItems);
+    }
+
     async Task ShowConnectedToArchipelagoHintAsync(bool force = false)
     {
         if (!force && connectedToArchipelagoHintQueued)
@@ -717,6 +813,23 @@ public partial class RoomViewModel : MyBaseViewModel
             connectedToArchipelagoHintQueued = true;
 
         await pipeServer.SendShowSmallHintWhenWorldLoaded("Connected to Archipelago!");
+    }
+
+    void DeleteLocalItemsStoreForNewRoom()
+    {
+        try
+        {
+            if (!File.Exists(LocalItemsStorePath))
+                return;
+
+            File.Delete(LocalItemsStorePath);
+            itemTransferLogger.Log($"LOCAL_STORE deleted reason=state_mismatch_or_missing path='{LocalItemsStorePath}'");
+        }
+        catch (Exception ex)
+        {
+            LogText += $"[AP] Failed to delete local item store for a new room: {ex.Message}\r\n";
+            itemTransferLogger.Log($"LOCAL_STORE delete_failed path='{LocalItemsStorePath}' error='{ex.Message}'");
+        }
     }
 
     async Task<ApRandomizationState?> TryLoadExistingRandomization(ArchipelagoSession session)
@@ -750,175 +863,143 @@ public partial class RoomViewModel : MyBaseViewModel
         return loaded;
     }
 
-    async Task RecieveItems(IReceivedItemsHelper helper, CancellationToken cancellationToken)
+    async Task LoadApItemMappingAsync(ArchipelagoSession session)
     {
-        while (!cancellationToken.IsCancellationRequested && helper.Any())
-        {
-            var item = helper.DequeueItem();
-            var isCheatConsole = item.LocationName == "Cheat Console";
-            var key = ReceivedItemStore.MakeKey(item.ItemId, item.LocationId, item.Player.Slot);
-            var alreadyDelivered = !isCheatConsole && localItemsStore.Has(key);
-            ReceivedItemRecord? deliveryRecord = null;
-            int deliveryFlagId = 0;
-
-            if (!isCheatConsole)
-            {
-                deliveryRecord = localItemsStore.GetOrCreateDelivery(key);
-                deliveryFlagId = deliveryRecord.DeliveryFlagId;
-
-                if (pipeServer.IsConnected && pipeServer.IsWorldLoaded)
-                {
-                    bool? deliveredInGame = await pipeServer.SendGetEventFlagIdAsync(deliveryFlagId);
-                    if (deliveredInGame == true)
-                    {
-                        localItemsStore.MarkDelivered(key);
-                        alreadyDelivered = true;
-                    }
-                }
-            }
-
-            var gameItemFullId = ApIdsToItemIds.ContainsKey(item.ItemId) ? ApIdsToItemIds[item.ItemId] : -1;
-            if (gameItemFullId != -1)
-            {
-                var goodId = gameItemFullId & 0x0FFFFFFF;
-                var count = ItemCountParser.GetCountFromItemName(item.ItemName);
-                var itemEventId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(goodId);
-                var isSingleton = SingletonItemPolicy.ShouldClampToOne(goodId);
-                var singletonKey = isSingleton ? MakeSingletonItemKey(goodId, itemEventId) : null;
-                if (deliveryRecord != null && singletonKey != null)
-                    deliveryRecord.SingletonKey = singletonKey;
-
-                if (KeyItemTracker.CheckItem(goodId))
-                {
-                    if (State != null)
-                    {
-                        State.CheckedKeyItems.Add(gameItemFullId);
-                        await stateStorage.SaveAsync(State);
-                    }
-                }
-
-                if (alreadyDelivered)
-                {
-                    if (singletonKey != null)
-                        localItemsStore.TryMark(singletonKey);
-
-                    continue;
-                }
-
-                if (!isCheatConsole && singletonKey != null && localItemsStore.Has(singletonKey))
-                {
-                    LogText += $"[AP] Skipped duplicate singleton item: {item.ItemName} goodId={goodId} eventId={itemEventId} from={item.Player.Name} location={item.LocationName}\r\n";
-                    localItemsStore.MarkDelivered(key);
-                    if (deliveryFlagId > 0)
-                        pipeServer.SendSetEventFlagId(deliveryFlagId, 1);
-                    continue;
-                }
-
-                if (count > 1 && isSingleton)
-                {
-                    LogText += $"[AP] Clamped singleton item quantity to 1: {item.ItemName} goodId={goodId} originalQty={count} from={item.Player.Name} location={item.LocationName}\r\n";
-                    count = 1;
-                }
-
-                if (deliveryRecord != null)
-                    localItemsStore.UpdateDeliveryPayload(key, gameItemFullId, goodId, count, itemEventId, item.ItemName);
-
-                SendTrackedItemToGame(gameItemFullId, goodId, count, itemEventId, deliveryFlagId);
-
-            }
-            else
-            {
-                if (alreadyDelivered)
-                    continue;
-
-                if (!isCheatConsole)
-                    localItemsStore.MarkDelivered(key);
-
-                LogText += $"Received unknown item with AP Item ID: {item.ItemId}\r\n";
-            }
-
-            await Task.Yield();
-        }
-        localItemsStore.Save();
+        var slotData = await session.DataStorage.GetSlotDataAsync();
+        ApIdsToItemIds = ((JObject)slotData["apIdsToItemIds"]).ToObject<Dictionary<string, int>>()
+            .ToDictionary(entry => long.Parse(entry.Key), entry => entry.Value);
     }
 
-    private void SendTrackedItemToGame(int fullId, int goodId, int count, int itemEventId, int deliveryFlagId)
+    async Task RecieveItems(IReceivedItemsHelper helper, CancellationToken cancellationToken)
     {
+        if (!_receivedItemProcessingReady)
+            return;
+
+        try
+        {
+            await _receivedItemsLock.WaitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested && helper.Any())
+            {
+                var item = helper.DequeueItem();
+                var isCheatConsole = item.LocationName == "Cheat Console";
+                var key = ReceivedItemStore.MakeKey(item.ItemId, item.LocationId, item.Player.Slot);
+                var alreadyDelivered = !isCheatConsole && localItemsStore.Has(key);
+
+                itemTransferLogger.Log($"RECEIVE dequeued key={key} itemId={item.ItemId} item='{item.ItemName}' locationId={item.LocationId} location='{item.LocationName}' from='{item.Player.Name}' fromSlot={item.Player.Slot} cheat={isCheatConsole} storeDelivered={alreadyDelivered}");
+
+                var gameItemFullId = ApIdsToItemIds.ContainsKey(item.ItemId) ? ApIdsToItemIds[item.ItemId] : -1;
+                if (gameItemFullId != -1)
+                {
+                    var goodId = gameItemFullId & 0x0FFFFFFF;
+                    var count = ItemCountParser.GetCountFromItemName(item.ItemName);
+                    var itemEventId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(goodId);
+                    var isSingleton = SingletonItemPolicy.ShouldClampToOne(goodId);
+                    var singletonKey = isSingleton ? MakeSingletonItemKey(goodId, itemEventId) : null;
+                    itemTransferLogger.Log($"RECEIVE mapped key={key} fullId={gameItemFullId} good={goodId} qty={count} event={itemEventId} singleton={isSingleton} singletonKey={singletonKey ?? ""}");
+
+                    if (KeyItemTracker.CheckItem(goodId))
+                    {
+                        if (State != null)
+                        {
+                            State.CheckedKeyItems.Add(gameItemFullId);
+                            await stateStorage.SaveAsync(State);
+                        }
+                    }
+
+                    if (alreadyDelivered)
+                    {
+                        itemTransferLogger.Log($"RECEIVE skip_already_delivered key={key} fullId={gameItemFullId} good={goodId}");
+                        if (singletonKey != null)
+                            localItemsStore.TryMark(singletonKey);
+
+                        continue;
+                    }
+
+                    if (!isCheatConsole && singletonKey != null && localItemsStore.Has(singletonKey))
+                    {
+                        LogText += $"[AP] Skipped duplicate singleton item: {item.ItemName} goodId={goodId} eventId={itemEventId} from={item.Player.Name} location={item.LocationName}\r\n";
+                        itemTransferLogger.Log($"RECEIVE skip_duplicate_singleton key={key} singletonKey={singletonKey} good={goodId} event={itemEventId}");
+                        localItemsStore.MarkDelivered(key);
+                        localItemsStore.Save();
+                        continue;
+                    }
+
+                    if (count > 1 && isSingleton)
+                    {
+                        LogText += $"[AP] Clamped singleton item quantity to 1: {item.ItemName} goodId={goodId} originalQty={count} from={item.Player.Name} location={item.LocationName}\r\n";
+                        itemTransferLogger.Log($"RECEIVE clamp_singleton key={key} good={goodId} originalQty={count}");
+                        count = 1;
+                    }
+
+                    SendTrackedItemToGame(gameItemFullId, goodId, count, itemEventId);
+
+                    if (!isCheatConsole)
+                    {
+                        localItemsStore.TryMark(key);
+                        if (singletonKey != null)
+                            localItemsStore.TryMark(singletonKey);
+                        localItemsStore.Save();
+                        itemTransferLogger.Log($"RECEIVE stored_delivered key={key} fullId={gameItemFullId} good={goodId} qty={count} event={itemEventId}");
+                    }
+
+                }
+                else
+                {
+                    if (alreadyDelivered)
+                        continue;
+
+                    LogText += $"[AP][ITEM-MAP-MISSING] Cannot deliver AP Item ID {item.ItemId} ({item.ItemName}) from {item.Player.Name} at {item.LocationName}. Leaving it pending.\r\n";
+                    itemTransferLogger.Log($"RECEIVE map_missing key={key} itemId={item.ItemId} item='{item.ItemName}' locationId={item.LocationId} location='{item.LocationName}' from='{item.Player.Name}'");
+                }
+
+                await Task.Yield();
+            }
+            localItemsStore.Save();
+        }
+        finally
+        {
+            _receivedItemsLock.Release();
+        }
+    }
+
+    private void SendTrackedItemToGame(int fullId, int goodId, int count, int itemEventId)
+    {
+        itemTransferLogger.Log($"DELIVER_TO_GAME queue fullId={fullId} good={goodId} qty={count} event={itemEventId} connected={pipeServer.IsConnected} worldLoaded={pipeServer.IsWorldLoaded}");
         if (itemEventId > 0)
         {
-            pipeServer.SendSpawnItem(fullId, count, itemEventId, deliveryFlagId);
+            pipeServer.SendSpawnItem(fullId, count, itemEventId);
         }
         else
         {
-            pipeServer.SendSpawnItem(fullId, count, deliveryFlagId: deliveryFlagId);
+            pipeServer.SendSpawnItem(fullId, count);
         }
 
         if (IsMechanicalBarrelItem(goodId))
         {
             int eventFlagId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(goodId);
+            itemTransferLogger.Log($"DELIVER_TO_GAME set_permanent_flag good={goodId} flag={eventFlagId}");
             pipeServer.SendSetEventFlagId(eventFlagId, 1);
         }
 
         if (IsSekiroMemoryItem(goodId))
         {
+            itemTransferLogger.Log($"DELIVER_TO_GAME extra_memory_counter good={goodId}");
             pipeServer.SendSpawnItem(0x40000000 + 5400, 1);
         }
     }
 
-    private async void PipeServer_WorldStateChanged(bool isLoaded)
+    private void PipeServer_WorldStateChanged(bool isLoaded)
     {
-        if (isLoaded)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(10));
-            if (_receivedItemsCts.IsCancellationRequested)
-                return;
-
-            await RetryPendingItemDeliveriesAsync();
-        }
-    }
-
-    private async Task RetryPendingItemDeliveriesAsync()
-    {
-        if (!pipeServer.IsConnected || !pipeServer.IsWorldLoaded)
+        if (!IsActiveRoomViewModel)
             return;
-
-        var pending = localItemsStore.GetPendingDeliveries();
-        if (pending.Count == 0)
-            return;
-
-        LogText += $"[AP] Checking {pending.Count} pending in-game item deliveries\r\n";
-
-        foreach (var record in pending)
-        {
-            bool? delivered = await pipeServer.SendGetEventFlagIdAsync(record.DeliveryFlagId);
-            if (delivered == true)
-            {
-                localItemsStore.MarkDeliveredByFlagId(record.DeliveryFlagId);
-                continue;
-            }
-
-            LogText += $"[AP] Retrying pending item delivery: {record.ItemName ?? record.Key} flag={record.DeliveryFlagId}\r\n";
-            SendTrackedItemToGame(record.FullId, record.GoodId, record.Quantity, record.EventId, record.DeliveryFlagId);
-            await Task.Delay(50);
-        }
-
-        localItemsStore.Save();
-    }
-
-    private void PipeServer_ItemGrantDelivered(int deliveryFlagId, bool delivered)
-    {
-        if (deliveryFlagId <= 0)
-            return;
-
-        if (delivered && localItemsStore.MarkDeliveredByFlagId(deliveryFlagId))
-        {
-            localItemsStore.Save();
-            LogText += $"[AP] Confirmed in-game item delivery flag {deliveryFlagId}\r\n";
-        }
-        else if (!delivered)
-        {
-            LogText += $"[AP] In-game item delivery failed for flag {deliveryFlagId}; it will be retried later\r\n";
-        }
     }
 
     static string MakeSingletonItemKey(int goodId, int itemEventId)
@@ -930,7 +1011,7 @@ public partial class RoomViewModel : MyBaseViewModel
 
     async Task TryReconnectAgain()
     {
-        if (IsReconnecting)
+        if (IsReconnecting || !IsActiveRoomViewModel)
             return;
 
         IsReconnecting = true;
@@ -938,7 +1019,7 @@ public partial class RoomViewModel : MyBaseViewModel
         await pipeServer.ShowConnectedToServerAsync("Connection lost. Attempting to reconnect...");
         var token = _reconnectCts.Token;
 
-        while (!token.IsCancellationRequested)
+        while (!token.IsCancellationRequested && IsActiveRoomViewModel)
         {
             try
             {
@@ -953,8 +1034,13 @@ public partial class RoomViewModel : MyBaseViewModel
                     {
                         await App.Current.Dispatcher.Invoke(async () =>
                         {
+                            if (!IsActiveRoomViewModel || token.IsCancellationRequested)
+                                return;
+
+                            _receivedItemProcessingReady = false;
                             RemoveEventHandlers();
                             CurrentSession = newSession;
+                            await LoadApItemMappingAsync(CurrentSession);
                             AddEventHandlers();
                             if (State?.RoomRandomizerOptions.DeathLink == true)
                             {
@@ -963,6 +1049,7 @@ public partial class RoomViewModel : MyBaseViewModel
                                 deathLinkService.OnDeathLinkReceived += DeathLinkService_OnDeathLinkReceived;
                             }
                             await ShowConnectedToArchipelagoHintAsync(force: true);
+                            _receivedItemProcessingReady = true;
                             if (CurrentSession.Items.Any())
                             {
                                 await RecieveItems(CurrentSession.Items, _receivedItemsCts.Token);
@@ -1014,6 +1101,15 @@ public partial class RoomViewModel : MyBaseViewModel
     private static bool IsMechanicalBarrelItem(int goodId)
     {
         return goodId == 2910;
+    }
+
+    private static bool IsEndingMatchingGoal(string endingType, int goalOption)
+    {
+        return goalOption switch
+        {
+            1 => string.Equals(endingType, "shura", StringComparison.OrdinalIgnoreCase),
+            _ => string.Equals(endingType, "immortal", StringComparison.OrdinalIgnoreCase),
+        };
     }
 
 

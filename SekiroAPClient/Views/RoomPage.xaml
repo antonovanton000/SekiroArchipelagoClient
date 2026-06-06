@@ -10,12 +10,10 @@
       xmlns:icnt="clr-namespace:InjustUILibrary.Controls"
       xmlns:c="clr-namespace:SekiroAPClient.Controls"
       mc:Ignorable="d" 
-      d:DesignHeight="500" d:DesignWidth="900"      
+      d:DesignHeight="800" d:DesignWidth="900" 
+      d:DataContext="{d:DesignData Type=vm:RoomViewModel}"
       x:Name="page"      
       Title="RoomInfoPage">
-    <Page.DataContext>
-        <vm:RoomViewModel/>
-    </Page.DataContext>
     <Page.Resources>
         <Storyboard x:Key="showNotification">
             <ObjectAnimationUsingKeyFrames BeginTime="0:0:0" Storyboard.TargetName="notification" Storyboard.TargetProperty="(UIElement.Visibility)">
@@ -139,9 +137,15 @@
                                                                  Visibility="{Binding State.RoomRandomizerOptions.DeathLink, Converter={StaticResource BoolToVisConverter}}"/>
                                     <c:RandoDisplayOptionControl Text="Carpsanity" IsChecked="{Binding State.RoomRandomizerOptions.Carpsanity}"
                                                                  Description="Shuffle treasure carp drops with other items" Margin="30,0,0,0"/>
+                                    <c:RandoDisplayOptionControl Text="Additional Region Locks" IsChecked="{Binding State.RoomRandomizerOptions.AdditionalRegionLock}"
+                                                                 Description="Use extra region blockers and their related key items" Margin="30,0,0,0"/>
 
                                     <TextBlock Style="{StaticResource SubHeaderTextBlockBlockStyle}" Margin="50,10,0,10" FontSize="16">
-                                        Challenge Run: <Run Text="{Binding State.RoomRandomizerOptions.PresetName}" TextDecorations="Underline"/>
+                                        Goal: <Run Text="{Binding State.RoomRandomizerOptions.GoalOptionText, Mode=OneWay}" TextDecorations="Underline"/>
+                                    </TextBlock>
+
+                                    <TextBlock Style="{StaticResource SubHeaderTextBlockBlockStyle}" Margin="50,10,0,10" FontSize="16">
+                                        Challenge Run: <Run Text="{Binding State.RoomRandomizerOptions.PresetName, Mode=OneWay}" TextDecorations="Underline"/>
                                     </TextBlock>
 
                                 </StackPanel>

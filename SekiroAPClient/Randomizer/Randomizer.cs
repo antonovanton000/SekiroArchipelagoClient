@@ -38,7 +38,7 @@ namespace RandomizerCommon
                 modDir = modDirInfo.FullName;
                 if (new DirectoryInfo(outPath).FullName == modDir) throw new Exception($"Can't merge mods: already running from 'mods' directory");
             }
-            GameData game = new GameData(distDir, type);
+            GameData game = new GameData(distDir, type, type == FromGame.SDT && options["additional_region_locks"]);
             game.Load(modDir);
             if (modDir != null) Console.WriteLine();
 
