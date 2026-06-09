@@ -1,0 +1,153 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "SekiroAPClient/1.1.4": {
+        "dependencies": {
+          "Archipelago.MultiClient.Net": "6.7.0",
+          "CommunityToolkit.Mvvm": "8.4.0",
+          "Microsoft.Xaml.Behaviors.Wpf": "1.1.135",
+          "NLog": "6.0.7",
+          "Newtonsoft.Json": "13.0.4",
+          "Pidgin": "3.5.1",
+          "SemanticVersioning": "3.0.0",
+          "YamlDotNet": "16.3.0"
+        },
+        "runtime": {
+          "SekiroAPClient.dll": {}
+        }
+      },
+      "Archipelago.MultiClient.Net/6.7.0": {
+        "runtime": {
+          "lib/net6.0/Archipelago.MultiClient.Net.dll": {
+            "assemblyVersion": "6.7.0.0",
+            "fileVersion": "6.7.0.0"
+          }
+        }
+      },
+      "CommunityToolkit.Mvvm/8.4.0": {
+        "runtime": {
+          "lib/net8.0/CommunityToolkit.Mvvm.dll": {
+            "assemblyVersion": "8.4.0.0",
+            "fileVersion": "8.4.0.1"
+          }
+        }
+      },
+      "Microsoft.Xaml.Behaviors.Wpf/1.1.135": {
+        "runtime": {
+          "lib/net6.0-windows7.0/Microsoft.Xaml.Behaviors.dll": {
+            "assemblyVersion": "1.1.0.0",
+            "fileVersion": "1.1.135.29210"
+          }
+        }
+      },
+      "Newtonsoft.Json/13.0.4": {
+        "runtime": {
+          "lib/net6.0/Newtonsoft.Json.dll": {
+            "assemblyVersion": "13.0.0.0",
+            "fileVersion": "13.0.4.30916"
+          }
+        }
+      },
+      "NLog/6.0.7": {
+        "runtime": {
+          "lib/netstandard2.1/NLog.dll": {
+            "assemblyVersion": "6.0.0.0",
+            "fileVersion": "6.0.7.4784"
+          }
+        }
+      },
+      "Pidgin/3.5.1": {
+        "runtime": {
+          "lib/net7.0/Pidgin.dll": {
+            "assemblyVersion": "3.5.1.0",
+            "fileVersion": "3.5.1.0"
+          }
+        }
+      },
+      "SemanticVersioning/3.0.0": {
+        "runtime": {
+          "lib/netstandard2.0/SemanticVersioning.dll": {
+            "assemblyVersion": "3.0.0.0",
+            "fileVersion": "3.0.0.0"
+          }
+        }
+      },
+      "YamlDotNet/16.3.0": {
+        "runtime": {
+          "lib/net8.0/YamlDotNet.dll": {
+            "assemblyVersion": "16.0.0.0",
+            "fileVersion": "16.3.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "SekiroAPClient/1.1.4": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Archipelago.MultiClient.Net/6.7.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-fsK7kx3dC4EwvEA7kMTUwbP+kYeanYVWHyTXOjYKxl6zj4elHMj42YCjvOYqHee+V2NrRm0f0pljhWEY+BI72g==",
+      "path": "archipelago.multiclient.net/6.7.0",
+      "hashPath": "archipelago.multiclient.net.6.7.0.nupkg.sha512"
+    },
+    "CommunityToolkit.Mvvm/8.4.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-tqVU8yc/ADO9oiTRyTnwhFN68hCwvkliMierptWOudIAvWY1mWCh5VFh+guwHJmpMwfg0J0rY+yyd5Oy7ty9Uw==",
+      "path": "communitytoolkit.mvvm/8.4.0",
+      "hashPath": "communitytoolkit.mvvm.8.4.0.nupkg.sha512"
+    },
+    "Microsoft.Xaml.Behaviors.Wpf/1.1.135": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-r8qBEXmQfORso2+MVHnt8PSH4761zJ0SIxgQTSEDVLU97EN2FZdG6/ZCYUPhQy+OrPKgnpYBCAs3PS6Bs7wRsg==",
+      "path": "microsoft.xaml.behaviors.wpf/1.1.135",
+      "hashPath": "microsoft.xaml.behaviors.wpf.1.1.135.nupkg.sha512"
+    },
+    "Newtonsoft.Json/13.0.4": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-pdgNNMai3zv51W5aq268sujXUyx7SNdE2bj1wZcWjAQrKMFZV260lbqYop1d2GM67JI1huLRwxo9ZqnfF/lC6A==",
+      "path": "newtonsoft.json/13.0.4",
+      "hashPath": "newtonsoft.json.13.0.4.nupkg.sha512"
+    },
+    "NLog/6.0.7": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-16kwDY6+/TCBToyXekpcl5mxprUWuXqltdOK26w44E0rTQTiRCjXv1VVLDtSbgMCR1RirVvr+V/9T+76cwuqnw==",
+      "path": "nlog/6.0.7",
+      "hashPath": "nlog.6.0.7.nupkg.sha512"
+    },
+    "Pidgin/3.5.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-zU7tkXlF3D6d2GLTjJDomAL3nnl4AwfZvSgSz8D4b+Ry21/clqedYlxBnEAkAU/bkGfEv6uRR7QCdWZUpKrB/g==",
+      "path": "pidgin/3.5.1",
+      "hashPath": "pidgin.3.5.1.nupkg.sha512"
+    },
+    "SemanticVersioning/3.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-RR+8GbPQ/gjDqov/1QN1OPoUlbUruNwcL3WjWCeLw+MY7+od/ENhnkYxCfAC6rQLIu3QifaJt3kPYyP3RumqMQ==",
+      "path": "semanticversioning/3.0.0",
+      "hashPath": "semanticversioning.3.0.0.nupkg.sha512"
+    },
+    "YamlDotNet/16.3.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-SgMOdxbz8X65z8hraIs6hOEdnkH6hESTAIUa7viEngHOYaH+6q5XJmwr1+yb9vJpNQ19hCQY69xbFsLtXpobQA==",
+      "path": "yamldotnet/16.3.0",
+      "hashPath": "yamldotnet.16.3.0.nupkg.sha512"
+    }
+  }
+}

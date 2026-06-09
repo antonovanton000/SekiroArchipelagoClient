@@ -1439,15 +1439,23 @@ public class PermutationWriter
 
             var replaceInts = new Dictionary<int, int>();
             var machines = new HashSet<int>();
+            int tearsMachine = -1;
 
             foreach (ItemTemplate template in spec.ItemTemplate)
             {
+                var templateMachines = new List<int>();
                 foreach (string machineStr in phraseRe.Split(template.Machine))
                 {
                     int machine = parseMachineName(machineStr, out int machineId)
                         ? machineId
                         : throw new Exception($"Unknown machine id {template.Machine} of {esdName}");
                     machines.Add(machine);
+                    templateMachines.Add(machine);
+                }
+
+                if (template.Type == "tears" && templateMachines.Count > 0)
+                {
+                    tearsMachine = templateMachines[0];
                 }
 
                 if (template.EventFlag == null)
@@ -1463,9 +1471,13 @@ public class PermutationWriter
                 {
                     replaceInts[flag] = int.Parse(template.Replace);
                 }
+                else if (template.Type == "extraitems")
+                {
+                    replaceInts[flag] = int.Parse(template.Replace);
+                }
             }
 
-            if (replaceInts.Count == 0)
+            if (replaceInts.Count == 0 && tearsMachine == -1)
                 continue;
 
             void rewriteExpr(byte[] bytes)
@@ -1492,6 +1504,48 @@ public class PermutationWriter
                     state.EntryCommands.ForEach(c => rewriteCommand(c, rewriteExpr));
                     state.ExitCommands.ForEach(c => rewriteCommand(c, rewriteExpr));
                     state.WhileCommands.ForEach(c => rewriteCommand(c, rewriteExpr));
+
+                    if ((int)machine.Key == tearsMachine)
+                    {
+                        byte[] tearsHave = new byte[] { 0x6f, 0x43, 0x82, 0x28, 0x23, 0x00, 0x00, 0x42, 0x40, 0x40, 0x89, 0x41, 0x95, 0xa1 };
+                        byte[] tearsLack = new byte[] { 0x6f, 0x43, 0x82, 0x28, 0x23, 0x00, 0x00, 0x42, 0x40, 0x40, 0x89, 0x40, 0x95, 0xa1 };
+                        bool madeEdit = false;
+
+                        foreach (ESD.CommandCall cmd in state.EntryCommands)
+                        {
+                            if (cmd.CommandID != 19)
+                                continue;
+
+                            if (cmd.CommandBank == 1)
+                            {
+                                cmd.CommandBank = 5;
+                                cmd.Arguments.Insert(0, tearsHave);
+                            }
+                            else
+                            {
+                                List<byte> cond = cmd.Arguments[0].Where(b => b != 0xa1).ToList();
+                                cond.AddRange(tearsHave.Where(b => b != 0xa1));
+                                cond.Add(0x98);
+                                cond.Add(0xa1);
+                                cmd.Arguments[0] = cond.ToArray();
+                            }
+
+                            madeEdit = true;
+                            esdRewrites++;
+                        }
+
+                        if (madeEdit)
+                        {
+                            state.EntryCommands.Add(new ESD.CommandCall(
+                                5,
+                                19,
+                                tearsLack,
+                                new byte[] { 0x48, 0xa1 },
+                                new byte[] { 0x82, 0x2a, 0x01, 0xd6, 0x00, 0xa1 },
+                                new byte[] { 0x3f, 0xa1 }));
+                            esdRewrites++;
+                        }
+                    }
                 }
             }
         }

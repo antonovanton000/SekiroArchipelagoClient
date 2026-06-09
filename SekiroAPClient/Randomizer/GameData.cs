@@ -324,6 +324,7 @@ namespace RandomizerCommon
             CopySfx(outPath, $@"{Dir}\Base\sfx");
             CopyScripts(outPath, $@"{Dir}\Base\script");
             CopyAdditionalRegionLockMapFiles(outPath);
+            CopyAdditionalRegionLockObjFiles(outPath);
             foreach (KeyValuePair<string, IMsb> entry in Maps)
             {
                 if (!Locations.ContainsKey(entry.Key)) continue;
@@ -435,6 +436,18 @@ namespace RandomizerCommon
             if (!Directory.Exists(basePath)) return;
 
             string destPath = Path.Combine(outPath, "map");
+            Directory.CreateDirectory(destPath);
+            CopyFilesRecursively(new DirectoryInfo(basePath), new DirectoryInfo(destPath), overwrite: true);
+        }
+
+        void CopyAdditionalRegionLockObjFiles(string outPath)
+        {
+            if (!Sekiro || !useAdditionalRegionLocks) return;
+
+            string basePath = Path.Combine(Dir, "Base", "blockers", "obj");
+            if (!Directory.Exists(basePath)) return;
+
+            string destPath = Path.Combine(outPath, "obj");
             Directory.CreateDirectory(destPath);
             CopyFilesRecursively(new DirectoryInfo(basePath), new DirectoryInfo(destPath), overwrite: true);
         }
@@ -608,7 +621,7 @@ namespace RandomizerCommon
             Events events = new Events($@"{Dir}\Base\sekiro-common.emedf.json");
             PatchAshinaCastleBlockers(events);
             PatchAshinaReservoirBlockers(events);
-            PatchSunkenValleyBlockers(events);
+            PatchAbandonedDungeonBlockers(events);
             PatchSenpouBlockers(events);
         }
 
@@ -626,7 +639,7 @@ namespace RandomizerCommon
             AddEventIfMissing(emevd, events, 11110998, EMEVD.Event.RestBehaviorType.Restart, BuildDoorLockEvent(
                 objectId: 1121799,
                 objActParamId: 999976,
-                openedFlag: 61120711,
+                openedFlag: 61110989,
                 requiredGoodId: 9407,
                 actionButtonId: 9610,
                 successDialogId: 10010155,
@@ -654,18 +667,11 @@ namespace RandomizerCommon
                 failureDialogId: 10010187));
         }
 
-        private void PatchSunkenValleyBlockers(Events events)
+        private void PatchAbandonedDungeonBlockers(Events events)
         {
-            EMEVD emevd = RequireEmevd("m17_00_00_00");
-            AddInitializeEventIfMissing(RequireEvent(emevd, 0), 11795202);
-            AddEventIfMissing(emevd, events, 11795202, EMEVD.Event.RestBehaviorType.Restart, BuildDoorLockEvent(
-                objectId: 1791550,
-                objActParamId: 999941,
-                openedFlag: 61700555,
-                requiredGoodId: 9408,
-                actionButtonId: 9610,
-                successDialogId: 10010156,
-                failureDialogId: 10010188));
+            EMEVD emevd = RequireEmevd("m13_00_00_00");
+            AddInitializeEventIfMissing(RequireEvent(emevd, 0), 11309999);
+            AddEventIfMissing(emevd, events, 11309999, EMEVD.Event.RestBehaviorType.Restart, BuildAbandonedDungeonBlockerEvent());
         }
 
         private void PatchSenpouBlockers(Events events)
@@ -781,6 +787,40 @@ namespace RandomizerCommon
                 $"Display Generic Dialog ({failureDialogId}, 0, 1, {objectId}, 3)",
                 "WAIT Fixed Time (Seconds) (3)",
                 "END Unconditionally (1)",
+            };
+        }
+
+        private static IEnumerable<string> BuildAbandonedDungeonBlockerEvent()
+        {
+            return new[]
+            {
+                "GOTO IF Event Flag (1, 1, 0, 61301991)",
+                "(De)activate Object (1300985, 1)",
+                "(De)activate Object (1300986, 0)",
+                "IF Action Button (0, 1000671, 1300985)",
+                "IF Player Has/Doesn't Have Item (1, 3, 9408, 1)",
+                "GOTO IF Condition Group State (Uncompiled) (0, 0, 1)",
+                "Force Use ObjAct (10000, 1300985, 109951, 0)",
+                "Display Generic Dialog (10010156, 0, 1, 1791550, 3)",
+                "WAIT Fixed Time (Seconds) (1.5)",
+                "Set Menu Fade (1, 0.5)",
+                "WAIT Fixed Time (Seconds) (0.5)",
+                "(De)activate Object (1300985, 0)",
+                "(De)activate Object (1300986, 1)",
+                "Set Event Flag (61301991, 1)",
+                "WAIT Fixed Time (Seconds) (1.5)",
+                "Set Menu Fade (0, 0.5)",
+                "WAIT Fixed Time (Seconds) (0.5)",
+                "WAIT Fixed Time (Seconds) (1)",
+                "END Unconditionally (1)",
+                "Label 0 ()",
+                "Display Generic Dialog (10010188, 0, 1, 1791550, 3)",
+                "WAIT Fixed Time (Seconds) (3)",
+                "END Unconditionally (1)",
+                "Label 1 ()",
+                "(De)activate Object (1300985, 0)",
+                "(De)activate Object (1300986, 1)",
+                "END Unconditionally (0)",
             };
         }
 

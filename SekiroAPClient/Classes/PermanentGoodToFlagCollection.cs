@@ -9,6 +9,7 @@ namespace SekiroAPClient.Classes
         private static Dictionary<int,int> permanentGoodToFlag = new Dictionary<int, int>
         {
             { 2910, 6740 }, // Mechanical Barrel
+            { 2502, 8411 }, // Aromatic Branch
             { 9790, 6509 }, // Slender Finger
             //{ 9402, 51110984 }, // Gatehouse Key
             //{ 2110, 6746 }, // Puppeteer Ninjutsu

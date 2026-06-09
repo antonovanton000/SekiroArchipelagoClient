@@ -6,7 +6,7 @@ using System.Text;
 
 namespace SekiroAPClient.Models;
 
-public class ApRandomizationState
+public partial class ApRandomizationState : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
 {
     public string ServerAddress { get; set; } = "";
     public string RoomName { get; set; } = "";
@@ -17,6 +17,9 @@ public class ApRandomizationState
     public List<ApLotEntry> ApLotMap { get; set; } = new();
     public List<int> CheckedKeyItems { get; set; } = new();
     public RoomRandomizerOptions RoomRandomizerOptions { get; set; } = new();
+
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
+    int deathCounter;
 }
 
 public class ApLotEntry

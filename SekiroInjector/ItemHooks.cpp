@@ -39,7 +39,7 @@ static std::atomic<int> g_ItemOperationState{ 0 };
 static std::atomic<ULONGLONG> g_LastGameplayItemOperationEndMs{ 0 };
 static constexpr ULONGLONG AP_GRANT_QUIET_PERIOD_MS = 250;
 static constexpr ULONGLONG FOREIGN_REMOVE_DELAY_MS = 1000;
-static constexpr ULONGLONG FOREIGN_REWARD_REMOVE_DELAY_MS = 3000;
+static constexpr ULONGLONG FOREIGN_REWARD_REMOVE_DELAY_MS = 5000;
 
 using RemoveItem_t = void(__fastcall*)(
 	uintptr_t luaEventMan,

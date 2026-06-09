@@ -11,7 +11,7 @@
       xmlns:c="clr-namespace:SekiroAPClient.Controls"
       mc:Ignorable="d" 
       d:DesignHeight="800" d:DesignWidth="900" 
-      d:DataContext="{d:DesignData Type=vm:RoomViewModel}"
+      d:DataContext="{d:DesignInstance Type=vm:RoomViewModel, IsDesignTimeCreatable=False}"
       x:Name="page"      
       Title="RoomInfoPage">
     <Page.Resources>
@@ -54,12 +54,19 @@
                     <RowDefinition Height="1*"/>
                 </Grid.RowDefinitions>
                 <Grid>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left" MaxWidth="450">
                         <TextBlock Text="Player: " Style="{StaticResource HeaderTextBlockBlockStyle}" />
-                        <TextBlock Text="{Binding CurrentSession.Players.ActivePlayer.Name}" Style="{StaticResource HeaderTextBlockBlockStyle}"/>
+                        <TextBlock Text="{Binding CurrentSession.Players.ActivePlayer.Name}" Style="{StaticResource HeaderTextBlockBlockStyle}"
+                                   TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <icnt:Switch Text="Notifications"
+                                     IsChecked="{Binding ShowNotifications, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     HorizontalAlignment="Right"
+                                     VerticalAlignment="Center"
+                                     Margin="0,0,10,0"
+                                     ChangeStateCommand="{Binding ChangeNotificationStateCommand}" />
                         <Button Content="Item Tracker" Style="{StaticResource FlatButtonStylePrimaryNoArrow}" Width="120"
                                 Command="{Binding OpenItemTrackerCommand}" Margin="0,0,10,0"
                                 Visibility="{Binding IsDebug, Converter={StaticResource BoolToVisConverter}}" />
@@ -263,8 +270,14 @@
                             </Grid>
                         </TabItem>
                     </TabControl>
-                    <icnt:Switch Text="Notifications" IsChecked="{Binding ShowNotifications, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"  HorizontalAlignment="Right" VerticalAlignment="Top"
-                                 Margin="0,12,0,0" ChangeStateCommand="{Binding ChangeNotificationStateCommand}"/>
+                    <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,12,15,0" Orientation="Horizontal">
+                        <TextBlock Text="Death Counter: "
+                                   Style="{StaticResource HeaderTextBlockBlockStyle}" />
+                        <TextBlock Text="{Binding State.DeathCounter}"
+                                   Style="{StaticResource HeaderTextBlockBlockStyle}"
+                                   TextTrimming="CharacterEllipsis"
+                                   TextWrapping="NoWrap" />
+                    </StackPanel>
                 </Grid>
 
                 <ItemsControl ItemsSource="{Binding Notifications}" HorizontalAlignment="Center" VerticalAlignment="Top" Grid.RowSpan="2">

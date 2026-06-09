@@ -605,6 +605,14 @@ public partial class RoomViewModel : MyBaseViewModel
                     pipeServer.SendSetEventFlagId(eventFlagId, 1);
                 }
 
+                if (IsAromaticBranchItem(obj.GoodId))
+                {
+                    int eventFlagId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(obj.GoodId);
+                    await Task.Delay(20);
+                    itemTransferLogger.Log($"LOCAL_PICKUP set_permanent_flag good={obj.GoodId} flag={eventFlagId} lot={obj.LotId}");
+                    pipeServer.SendSetEventFlagId(eventFlagId, 1);
+                }
+
                 if (KeyItemTracker.CheckItem(obj.GoodId))
                 {
                     if (State != null)
@@ -623,10 +631,23 @@ public partial class RoomViewModel : MyBaseViewModel
         }
     }
 
-    private void PipeServer_PlayerDeath(bool isRealDeath)
+    private async void PipeServer_PlayerDeath(bool isRealDeath)
     {
         if (!IsActiveRoomViewModel)
             return;
+
+        if (State != null)
+        {
+            try
+            {
+                await App.Current.Dispatcher.InvokeAsync(() => State.DeathCounter++);
+                await stateStorage.SaveAsync(State);
+            }
+            catch (Exception ex)
+            {
+                await App.Current.Dispatcher.InvokeAsync(() => LogText += $"[AP] Failed to save death counter: {ex.Message}\r\n");
+            }
+        }
 
         deathLinkService?.SendDeathLink(new DeathLink(CurrentSession.Players.ActivePlayer.Name, DeathLinkReasonHelper.GetRandomDeathLinkReason()));
     }
@@ -982,7 +1003,7 @@ public partial class RoomViewModel : MyBaseViewModel
             pipeServer.SendSpawnItem(fullId, count);
         }
 
-        if (IsMechanicalBarrelItem(goodId))
+        if (IsMechanicalBarrelItem(goodId) || IsAromaticBranchItem(goodId))
         {
             int eventFlagId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(goodId);
             itemTransferLogger.Log($"DELIVER_TO_GAME set_permanent_flag good={goodId} flag={eventFlagId}");
@@ -1101,6 +1122,11 @@ public partial class RoomViewModel : MyBaseViewModel
     private static bool IsMechanicalBarrelItem(int goodId)
     {
         return goodId == 2910;
+    }
+
+    private static bool IsAromaticBranchItem(int goodId)
+    {
+        return goodId == 2502;
     }
 
     private static bool IsEndingMatchingGoal(string endingType, int goalOption)
