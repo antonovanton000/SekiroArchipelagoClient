@@ -17,7 +17,7 @@
         </Border.Background>
         <Grid>
             <TextBlock Text="" Foreground="White" FontSize="22" FontFamily="Segoe UI Light" 
-                       HorizontalAlignment="Center"
+                       HorizontalAlignment="Center" TextWrapping="Wrap" Margin="10,0" TextAlignment="Center"
                        VerticalAlignment="Center" x:Name="tbl"/>
             <ProgressBar IsIndeterminate="True" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="20,60,20,0"
                          BorderThickness="0" Background="Transparent" Foreground="{StaticResource AccentBrush}" Height="3" x:Name="progress"/>

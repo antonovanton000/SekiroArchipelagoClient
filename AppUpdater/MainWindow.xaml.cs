@@ -64,8 +64,24 @@ namespace AppUpdater
                 var url = stable.DownloadUrl;
                 var version = stable.Version.ToString();
 
+                string exePath = "SekiroAPClient.exe";
+                FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(exePath);
+                string fileVersion = fileVersionInfo.FileVersion;
+
+                if (assemblyVersionLessThan(fileVersion, version))
+                {
+                    tbl.Text = $"New version {version} available!";
+                }
+                else
+                {
+                    tbl.Text = $"You are already using the latest version ({version}).";
+                    await Task.Delay(2000);
+                    App.Current.Shutdown();
+                    return;
+                }
+
                 tbl.Text = "Downloading update...";
-                progress.IsIndeterminate = false;                
+                progress.IsIndeterminate = false;
                 var pr = new Progress<double>(p =>
                 {
                     progress.Value = p;                 // ProgressBar: Minimum=0 Maximum=100
@@ -81,9 +97,9 @@ namespace AppUpdater
                 {
                     var name = item.FullName.Replace("randomizerAP/", "");
 
-                    if (name == "" || name == "AppUpdater.exe" || name == "AppUpdater.dll.config") 
+                    if (name == "" || name == "AppUpdater.exe" || name == "AppUpdater.dll.config")
                         continue;
-                    
+
                     if (name.Contains(@"/"))
                     {
                         var folderName = System.IO.Path.GetDirectoryName(name);
@@ -106,7 +122,7 @@ namespace AppUpdater
                 progress.Value = 0;
                 tbl.Text = "Done!";
                 await Task.Delay(1000);
-                App.Current.Shutdown();                
+                App.Current.Shutdown();
 
             }
             catch (Exception ex)
@@ -114,9 +130,9 @@ namespace AppUpdater
                 await Task.Delay(1000);
                 if (File.Exists(archiveName))
                     File.Delete(archiveName);
-                
+
                 if (!(ex is TaskCanceledException))
-                    File.WriteAllText("update_errors.log", ex.Message); 
+                    File.WriteAllText("update_errors.log", ex.Message);
 
                 App.Current.Shutdown();
             }
@@ -125,12 +141,26 @@ namespace AppUpdater
 
         private async void Cancel_Click(object sender, RoutedEventArgs e)
         {
-            cancellationTokenSource.Cancel();           
+            cancellationTokenSource.Cancel();
         }
 
         private void Button_GiveFeedback(object sender, GiveFeedbackEventArgs e)
         {
 
+        }
+
+        bool assemblyVersionLessThan(string v1, string v2)
+        {
+            try
+            {
+                var version1 = new Version(v1);
+                var version2 = new Version(v2);
+                return version1 < version2;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

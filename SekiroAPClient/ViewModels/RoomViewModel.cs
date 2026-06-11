@@ -879,7 +879,14 @@ public partial class RoomViewModel : MyBaseViewModel
             !string.Equals(loaded.Seed, session.RoomState.Seed, StringComparison.Ordinal) ||
             loaded.LocalSeed != (RandomizerHelper.HashStringToInt(session.RoomState.Seed) + session.ConnectionInfo.Slot))
         {
-            return null;
+            if (!string.Equals(loaded.ServerAddress, session.Socket.Uri.ToString(), StringComparison.Ordinal) && string.Equals(loaded.Seed, session.RoomState.Seed, StringComparison.Ordinal))
+            {
+                var userResult = await MainWindow.ShowYesNoMessageAsync("Local Room state with same seed found. \r\nDo you want to save state and connect again?");
+                if (!userResult)
+                    return null;
+            }
+            else
+                return null;
         }
         return loaded;
     }

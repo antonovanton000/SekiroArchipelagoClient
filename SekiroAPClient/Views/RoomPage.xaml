@@ -172,6 +172,10 @@
                                                                  Description="Removes the slow movement effect applied by Headless enemies" Margin="30,0,0,0"/>
                                     <c:RandoDisplayOptionControl Text="Shuffle Skills and Prosthetics Upgades" IsChecked="{Binding State.RoomRandomizerOptions.RandomSkills}"
                                                                  Description="Shuffle all skills within every Esoteric Text" Margin="30,0,0,0"/>
+                                    <c:RandoDisplayOptionControl Text="Replace Esoteric Texts with direct sill drops"
+                                                                 IsChecked="{Binding State.RoomRandomizerOptions.IsSkillsAsDrops}"
+                                                                 Description="Esoteric Texts are replaced with direct skill unlocks."
+                                                                 Margin="30,0,0,0" />
 
                                     <Button Style="{StaticResource FlatTextButtonStyleNoArrow}" Content="Rerandomize run" Foreground="{StaticResource Danger}"
                                             Margin="50,20,0,0" HorizontalAlignment="Center" Command="{Binding ReRandomizeRunCommand}"/>

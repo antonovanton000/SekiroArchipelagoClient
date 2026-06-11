@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using Newtonsoft.Json;
 using SekiroAPClient.Classes;
 using System;
 using System.Collections.Generic;
@@ -6,7 +7,7 @@ using System.Text;
 
 namespace SekiroAPClient.Models;
 
-public partial class ApRandomizationState : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
+public partial class ApRandomizationState : ObservableObject
 {
     public string ServerAddress { get; set; } = "";
     public string RoomName { get; set; } = "";
@@ -18,7 +19,7 @@ public partial class ApRandomizationState : CommunityToolkit.Mvvm.ComponentModel
     public List<int> CheckedKeyItems { get; set; } = new();
     public RoomRandomizerOptions RoomRandomizerOptions { get; set; } = new();
 
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
+    [ObservableProperty]
     int deathCounter;
 }
 

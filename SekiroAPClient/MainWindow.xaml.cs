@@ -222,6 +222,21 @@ namespace SekiroAPClient
             instance.NotificationGrid.Visibility = Visibility.Visible;
         }
 
+        public static Task<bool> ShowYesNoMessageAsync(string message)
+        {
+            var tcs = new TaskCompletionSource<bool>();
+
+            ShowMessage(
+                message,
+                MessageNotificationType.YesNo,
+                () => tcs.SetResult(true),
+                () => tcs.SetResult(false));
+
+            return tcs.Task;
+        }
+
+
+
         private void Notification_Yes_Click(object sender, RoutedEventArgs e)
         {
             NotificationGrid.Visibility = Visibility.Collapsed;

@@ -98,7 +98,7 @@ public partial class ConnectViewModel : MyBaseViewModel
                 }
                 App.SetActiveSession(_currentSession);
                 SaveSettings();
-                ConnectModel.PropertyChanged -= ConnectModel_PropertyChanged;
+                ConnectModel.PropertyChanged -= ConnectModel_PropertyChanged;                
                 MainWindow.NavigateTo(new RoomPage() { DataContext = new RoomViewModel(_currentSession) });
 
             }

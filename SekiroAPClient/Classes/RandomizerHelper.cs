@@ -214,6 +214,14 @@ public partial class RandomizerHelper : ObservableObject
                 LocationData data = scraper.FindItems(game);
                 AnnotationData anns = new AnnotationData(game, data);
                 anns.Load(Options);
+
+                //Randomize skills if option enabled. 
+                SkillSplitter.Assignment split = null;
+                if (!Options["norandom_skills"] && Options["splitskills"])
+                {
+                    split = new SkillSplitter(game, data, anns, events).SplitAll();
+                }
+
                 var mapping = ArchipelagoMappingSekiro.ArchipelagoSlotsSekiro(apIdsToKeys, anns, data, locations);
                 var apLocationToSlotKey = mapping.LocationToSlot;
                 var apLocationToLotIds = mapping.LocationToLotIds;
@@ -228,6 +236,10 @@ public partial class RandomizerHelper : ObservableObject
                 var apLotMap = new List<ApLotEntry>();
                 foreach (var info in locations)
                 {
+                    if (info.LocationDisplayName == "AC/I: Aromatic Branch - boss arena, boss drop")
+                        info.ToString();
+
+
                     var quantity = itemCounts.TryGetValue(info.ItemId, out var q) ? q : 1;
 
                     if (!apLocationToSlotKey.TryGetValue(info.LocationId, out var targetSlotKey))
@@ -449,9 +461,6 @@ public partial class RandomizerHelper : ObservableObject
                     mfs.Close();
                 }
 
-
-
-
                 //------------------------------
                 //Randomize NON - AP shop slots
                 // ------------------------------
@@ -569,12 +578,7 @@ public partial class RandomizerHelper : ObservableObject
                 Console.WriteLine($"[SHOP RNG] Skipped AP: {skippedApRows}");
                 Console.WriteLine($"[SHOP RNG] Skipped not whitelisted: {skippedNotWhitelisted}");
 
-                //Randomize skills if option enabled. 
-                SkillSplitter.Assignment split = null;
-                if (!Options["norandom_skills"] && Options["splitskills"])
-                {
-                    split = new SkillSplitter(game, data, anns, events).SplitAll();
-                }
+
 
                 // Create permutation strictly for Archipelago
                 var perm = new Permutation(game, data, anns, explain: true);
@@ -1030,7 +1034,7 @@ public partial class RandomizerHelper : ObservableObject
         opt["death_link_full"] = archiOptions["death_link"] == 1;
         opt["norandom_skills"] = archiOptions["randomize_skills_and_prosthetics"] == 0;
         opt["headlesswalk"] = archiOptions["remove_headless_slow_walk"] == 1;
-        opt["splitskills"] = false;//FOR NOW ITS OFF
+        opt["splitskills"] = archiOptions["replace_esoteric_texts_with_skills"] == 1;
         opt["openstart"] = false;
         opt["additional_region_locks"] = archiOptions["additional_region_locks"] == 1;
         return opt;
@@ -1077,6 +1081,7 @@ public partial class RandomizerHelper : ObservableObject
         state.RoomRandomizerOptions.AdditionalRegionLock = Options["additional_region_locks"];
         state.RoomRandomizerOptions.PresetName = SelectedPreset?.DisplayName ?? "None";
         state.RoomRandomizerOptions.GoalOption = GoalOption;
+        state.RoomRandomizerOptions.IsSkillsAsDrops = Options["splitskills"];
     }
 
     private static int GetIntOption(IReadOnlyDictionary<string, int> options, string name, int fallback)

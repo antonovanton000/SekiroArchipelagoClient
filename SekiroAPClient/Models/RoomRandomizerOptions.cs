@@ -43,7 +43,8 @@ public partial class RoomRandomizerOptions: ObservableObject
     string presetName = default!;
     [ObservableProperty]
     int goalOption;
-
+    [ObservableProperty]
+    bool isSkillsAsDrops;
     public string GoalOptionText => GoalOption switch
     {
         1 => "Shura",
