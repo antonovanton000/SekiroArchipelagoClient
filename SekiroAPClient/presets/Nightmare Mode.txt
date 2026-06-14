@@ -8,14 +8,14 @@ Boss:
 - Weight: 75
   Pool: Demon of Hatred; Headless Ape; Isshin Ashina; Sword Saint Isshin; True Monk; Owl (Father)
 - Weight: 25
-  Pool: Great Shinobi Owl; Genichiro, Way of Tomoe (Mortal Blade); Guardian Ape; Corrupted Monk; Emma; Divine Dragon
+  Pool: Great Shinobi Owl; Genichiro, Way of Tomoe (Mortal Blade); Guardian Ape; Corrupted Monk; Emma
 
 # Minibosses are bosses
 Miniboss:
 - Weight: 70
   Pool: Demon of Hatred; Headless Ape; Isshin Ashina; Sword Saint Isshin; True Monk; Owl (Father)
 - Weight: 20
-  Pool: Great Shinobi Owl; Genichiro, Way of Tomoe (Mortal Blade); Guardian Ape; Corrupted Monk; Emma
+  Pool: Great Shinobi Owl; Genichiro, Way of Tomoe (Mortal Blade); Guardian Ape; Corrupted Monk; Emma; Shigekichi of the Red Guard
 - Weight: 10
   Pool: Headless
 
@@ -26,7 +26,7 @@ Basic:
 - Weight: 30
   Pool: Bosses; True Monk
 - Weight: 70
-  Pool: Assassin (Senpou) 1120426; Blue Palace Noble; Blue Palace Noble; Blue Palace Noble; Grabbing Mibu Villager; Nightjar Ninja; Exploding Nightjar Ninja; Kite Nightjar Ninja; Sniper Sunken Valley Clan; Spear Adept; Taro Troop (Mibu) 1500485; Terror Valley Monkey; Elder Valley Monkey; Lone Shadow; Red Guard; Okami Leader Shizu; Armored Warrior; Ashina Elite Ujinari Mizuo; Centipede Boss; Chained Ogre 1110610; Headless; Headless; Lone Shadow Masanaga the Spear-Bearer (Hirata); O'Rin; Seven Ashina Spears 2; Shichimen Warrior 1300200; Shura Samurai; Snake Eyes Shirafuji
+  Pool: Assassin (Senpou) 1120426; Blue Palace Noble; Blue Palace Noble; Blue Palace Noble; Grabbing Mibu Villager; Nightjar Ninja; Exploding Nightjar Ninja; Kite Nightjar Ninja; Sniper Sunken Valley Clan; Spear Adept; Taro Troop (Mibu) 1500485; Terror Valley Monkey; Elder Valley Monkey; Lone Shadow; Red Guard; Okami Leader Shizu; Armored Warrior; Ashina Elite Ujinari Mizuo; Centipede Boss; Chained Ogre 1110610; Headless; Headless; Lone Shadow Masanaga the Spear-Bearer (Hirata); O'Rin; Seven Ashina Spears 2; Shichimen Warrior 1300200; Shura Samurai; Snake Eyes Shirafuji; Tokujiro the Glutton; Shigekichi of the Red Guard
   RandomByType: true
 
 # Adds are basic enemies but mostly without multiphase ones. Just combine all reasonable enemies into one pool.
@@ -40,6 +40,6 @@ FoldingMonkey:
 - Weight: 70
   Pool: Demon of Hatred; Headless Ape; Isshin Ashina; Sword Saint Isshin; True Monk; Owl (Father)
 - Weight: 20
-  Pool: Great Shinobi Owl; Genichiro, Way of Tomoe (Mortal Blade); Guardian Ape; Corrupted Monk; Emma
+  Pool: Great Shinobi Owl; Genichiro, Way of Tomoe (Mortal Blade); Guardian Ape; Corrupted Monk; Emma; Shigekichi of the Red Guard
 - Weight: 10
   Pool: Headless

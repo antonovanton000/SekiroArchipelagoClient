@@ -54,6 +54,7 @@ struct QueuedApGrant
 	uint32_t goodsId;
 	uint32_t quantity;
 	uint32_t deliveryFlagId;
+	uint32_t grantRequestId;
 };
 
 static std::mutex g_ApGrantQueueMutex;
@@ -847,14 +848,14 @@ bool SekiroGame_GrantItemWithEvent(uint32_t eventId, uint32_t goodsId, uint32_t 
 	return granted;
 }
 
-void SekiroGame_QueueGrantItem(uint32_t eventId, uint32_t goodsId, uint32_t count, uint32_t deliveryFlagId)
+void SekiroGame_QueueGrantItem(uint32_t eventId, uint32_t goodsId, uint32_t count, uint32_t deliveryFlagId, uint32_t grantRequestId)
 {
 	{
 		std::lock_guard<std::mutex> lock(g_ApGrantQueueMutex);
-		g_ApGrantQueue.push_back({ eventId, goodsId, count, deliveryFlagId });
+		g_ApGrantQueue.push_back({ eventId, goodsId, count, deliveryFlagId, grantRequestId });
 	}
 
-	Logf("[GrantQueue] queued goods=%u x%u eventId=%u deliveryFlagId=%u", goodsId, count, eventId, deliveryFlagId);
+	Logf("[GrantQueue] queued goods=%u x%u eventId=%u deliveryFlagId=%u grantRequestId=%u", goodsId, count, eventId, deliveryFlagId, grantRequestId);
 }
 
 void SekiroGame_ProcessPendingGrants()
@@ -896,7 +897,7 @@ void SekiroGame_ProcessPendingGrants()
 		g_ApGrantQueue.pop_front();
 	}
 
-	Logf("[GrantQueue] dispatch goods=%u x%u eventId=%u deliveryFlagId=%u", grant.goodsId, grant.quantity, grant.eventId, grant.deliveryFlagId);
+	Logf("[GrantQueue] dispatch goods=%u x%u eventId=%u deliveryFlagId=%u grantRequestId=%u", grant.goodsId, grant.quantity, grant.eventId, grant.deliveryFlagId, grant.grantRequestId);
 	g_ApGrantWaitLogged = false;
 
 	bool delivered = false;
@@ -918,11 +919,15 @@ void SekiroGame_ProcessPendingGrants()
 		{
 			SetEventFlagSafe(grant.deliveryFlagId, true);
 		}
+	}
 
+	if (grant.deliveryFlagId != 0 || grant.grantRequestId != 0)
+	{
 		char response[192];
 		sprintf_s(response,
-			"{ \"type\":\"grant_item_ack\", \"delivery_flag_id\":%u, \"delivered\":%s }",
+			"{ \"type\":\"grant_item_ack\", \"delivery_flag_id\":%u, \"grant_request_id\":%u, \"delivered\":%s }",
 			grant.deliveryFlagId,
+			grant.grantRequestId,
 			delivered ? "true" : "false");
 		g_Pipe.SendJson(std::string(response));
 	}

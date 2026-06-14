@@ -192,6 +192,8 @@ namespace SekiroAPClient
             instance.windowTop.Visibility = Visibility.Visible;
         }
 
+        //public static void 
+
         #region NotificationStuff
         private Action? _yesCallback;
         private Action? _noCallback;

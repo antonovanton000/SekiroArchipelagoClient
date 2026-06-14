@@ -17,7 +17,7 @@
         </Grid.RowDefinitions>
 
         <TextBlock Text="Steam Launch Options"
-                   FontFamily="{StaticResource LondrinaSolidRegular}"
+                   FontFamily="{StaticResource Londrina-Regular}"
                    FontSize="28"
                    Foreground="{DynamicResource PrimaryTextBrush}"/>
 

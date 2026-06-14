@@ -53,7 +53,7 @@ string previewPath = Path.Combine(options.OutputDir, $"{mapId}.preview.html");
 if (!options.OutlineOnly)
 {
     File.WriteAllText(atlasPath, JsonSerializer.Serialize(atlas, jsonOptions), Encoding.UTF8);
-    File.WriteAllText(previewPath, PreviewWriter.Write(atlas), Encoding.UTF8);
+    File.WriteAllText(previewPath, PreviewWriter.Write(atlas, options.OutputDir), Encoding.UTF8);
 }
 
 if (!string.IsNullOrWhiteSpace(options.PieceName))
@@ -271,8 +271,11 @@ static class AtlasBuilder
         foreach (MSBS.Part.Object obj in msb.Parts.Objects.Where(obj => obj.EntityID > 0))
             markers.Add(Marker("object", obj.Name, "object", obj.Position, obj.EntityID, obj.ModelName, null));
 
-        WorldBounds bounds = BoundsFromPositions(parts.Select(part => part.Position).Concat(markers.Select(marker => marker.World)));
-        bounds = bounds.Pad(Math.Max(bounds.Width, bounds.Depth) * 0.04f + 5f);
+        IEnumerable<Vec3> boundsPositions = markers.Count > 0
+            ? markers.Select(marker => marker.World)
+            : parts.Select(part => part.Position);
+        WorldBounds bounds = BoundsFromPositions(boundsPositions);
+        bounds = bounds.Pad(Math.Max(bounds.Width, bounds.Depth) * 0.12f + 10f);
 
         List<AtlasMarker> projected = markers
             .Select(marker => marker with { Image = Project(marker.World, bounds, imageWidth, imageHeight) })
@@ -407,7 +410,7 @@ static class PieceOutlineBuilder
         Matrix4x4 transform = BuildTransform(part.Position, part.Rotation, part.Scale);
 
         List<Vec2> projectedVertices = [];
-        List<PieceTriangle> triangles = [];
+        BoundaryBuilder boundaryBuilder = new(0.03f);
         WorldBounds meshWorldBounds = EmptyBounds();
         foreach (FLVER2.Mesh mesh in flver.Meshes)
         {
@@ -423,14 +426,14 @@ static class PieceOutlineBuilder
                 Vector3 a = Vector3.Transform(face[0].Position, transform);
                 Vector3 b = Vector3.Transform(face[1].Position, transform);
                 Vector3 c = Vector3.Transform(face[2].Position, transform);
-                triangles.Add(new PieceTriangle(
-                    new Vec3(a.X, a.Y, a.Z),
-                    new Vec3(b.X, b.Y, b.Z),
-                    new Vec3(c.X, c.Y, c.Z)));
+                boundaryBuilder.AddTriangle(a, b, c);
             }
         }
 
         List<Vec2> hull = ConvexHull(projectedVertices);
+        List<List<Vec2>> boundaryLoops = boundaryBuilder.BuildLoops()
+            .OrderByDescending(loop => Math.Abs(SignedArea(loop)))
+            .ToList();
 
         return new PieceOutlineDocument(
             PieceName: part.Name,
@@ -443,7 +446,7 @@ static class PieceOutlineBuilder
             Scale: new Vec3(part.Scale.X, part.Scale.Y, part.Scale.Z),
             MeshWorldBounds: meshWorldBounds,
             ImageHull: hull,
-            Triangles: triangles,
+            BoundaryLoops: boundaryLoops,
             SvgPath: ToSvgPath(hull));
     }
 
@@ -523,13 +526,193 @@ static class PieceOutlineBuilder
             + string.Join(" ", points.Skip(1).Select(point => $"L {point.X:0.###} {point.Y:0.###}"))
             + " Z";
     }
+
+    private static float SignedArea(List<Vec2> points)
+    {
+        if (points.Count < 3)
+            return 0;
+
+        double area = 0;
+        for (int i = 0; i < points.Count; i++)
+        {
+            Vec2 a = points[i];
+            Vec2 b = points[(i + 1) % points.Count];
+            area += a.X * b.Y - b.X * a.Y;
+        }
+
+        return (float)(area / 2);
+    }
+
+    private sealed class BoundaryBuilder(float tolerance)
+    {
+        private readonly Dictionary<VertexKey, Vec2> vertices = [];
+        private readonly Dictionary<EdgeKey, BoundaryEdge> edges = [];
+
+        public void AddTriangle(Vector3 a, Vector3 b, Vector3 c)
+        {
+            VertexKey ak = AddVertex(a);
+            VertexKey bk = AddVertex(b);
+            VertexKey ck = AddVertex(c);
+
+            AddEdge(ak, bk);
+            AddEdge(bk, ck);
+            AddEdge(ck, ak);
+        }
+
+        public List<List<Vec2>> BuildLoops()
+        {
+            Dictionary<VertexKey, List<VertexKey>> adjacency = [];
+            foreach (BoundaryEdge edge in edges.Values.Where(edge => edge.Count == 1))
+            {
+                AddAdjacent(adjacency, edge.A, edge.B);
+                AddAdjacent(adjacency, edge.B, edge.A);
+            }
+
+            List<List<Vec2>> loops = [];
+            HashSet<EdgeKey> visited = [];
+
+            foreach (BoundaryEdge startEdge in edges.Values.Where(edge => edge.Count == 1))
+            {
+                EdgeKey startKey = EdgeKey.Create(startEdge.A, startEdge.B);
+                if (visited.Contains(startKey))
+                    continue;
+
+                List<Vec2> loop = [];
+                VertexKey start = startEdge.A;
+                VertexKey current = startEdge.A;
+                VertexKey next = startEdge.B;
+                VertexKey? previous = null;
+
+                for (int guard = 0; guard < adjacency.Count + 8; guard++)
+                {
+                    visited.Add(EdgeKey.Create(current, next));
+                    loop.Add(vertices[current]);
+
+                    previous = current;
+                    current = next;
+
+                    if (current.Equals(start))
+                        break;
+
+                    if (!adjacency.TryGetValue(current, out List<VertexKey>? neighbors))
+                        break;
+
+                    VertexKey? candidate = null;
+                    foreach (VertexKey neighbor in neighbors)
+                    {
+                        if (!neighbor.Equals(previous) && !visited.Contains(EdgeKey.Create(current, neighbor)))
+                        {
+                            candidate = neighbor;
+                            break;
+                        }
+                    }
+
+                    if (candidate is null)
+                        break;
+
+                    next = candidate.Value;
+                }
+
+                if (loop.Count >= 3)
+                    loops.Add(Simplify(loop, tolerance * 1.5f));
+            }
+
+            return loops;
+        }
+
+        private VertexKey AddVertex(Vector3 value)
+        {
+            VertexKey key = new(
+                (int)MathF.Round(value.X / tolerance),
+                (int)MathF.Round(value.Z / tolerance));
+
+            vertices.TryAdd(key, new Vec2(key.X * tolerance, key.Z * tolerance));
+            return key;
+        }
+
+        private void AddEdge(VertexKey a, VertexKey b)
+        {
+            if (a.Equals(b))
+                return;
+
+            EdgeKey key = EdgeKey.Create(a, b);
+            if (edges.TryGetValue(key, out BoundaryEdge? edge))
+                edge.Count++;
+            else
+                edges[key] = new BoundaryEdge(a, b);
+        }
+
+        private static void AddAdjacent(Dictionary<VertexKey, List<VertexKey>> adjacency, VertexKey a, VertexKey b)
+        {
+            if (!adjacency.TryGetValue(a, out List<VertexKey>? neighbors))
+            {
+                neighbors = [];
+                adjacency[a] = neighbors;
+            }
+
+            if (!neighbors.Contains(b))
+                neighbors.Add(b);
+        }
+
+        private static List<Vec2> Simplify(List<Vec2> points, float epsilon)
+        {
+            if (points.Count <= 3)
+                return points;
+
+            List<Vec2> simplified = [];
+            for (int i = 0; i < points.Count; i++)
+            {
+                Vec2 previous = points[(i - 1 + points.Count) % points.Count];
+                Vec2 current = points[i];
+                Vec2 next = points[(i + 1) % points.Count];
+                if (DistanceToLine(current, previous, next) > epsilon)
+                    simplified.Add(current);
+            }
+
+            return simplified.Count >= 3 ? simplified : points;
+        }
+
+        private static float DistanceToLine(Vec2 point, Vec2 a, Vec2 b)
+        {
+            float dx = b.X - a.X;
+            float dy = b.Y - a.Y;
+            float lengthSquared = dx * dx + dy * dy;
+            if (lengthSquared <= 0.000001f)
+                return MathF.Sqrt((point.X - a.X) * (point.X - a.X) + (point.Y - a.Y) * (point.Y - a.Y));
+
+            return MathF.Abs(dy * point.X - dx * point.Y + b.X * a.Y - b.Y * a.X) / MathF.Sqrt(lengthSquared);
+        }
+    }
+
+    private readonly record struct VertexKey(int X, int Z);
+
+    private readonly record struct EdgeKey(VertexKey A, VertexKey B)
+    {
+        public static EdgeKey Create(VertexKey a, VertexKey b)
+            => Compare(a, b) <= 0 ? new EdgeKey(a, b) : new EdgeKey(b, a);
+
+        private static int Compare(VertexKey a, VertexKey b)
+        {
+            int x = a.X.CompareTo(b.X);
+            return x != 0 ? x : a.Z.CompareTo(b.Z);
+        }
+    }
+
+    private sealed class BoundaryEdge(VertexKey a, VertexKey b)
+    {
+        public VertexKey A { get; } = a;
+        public VertexKey B { get; } = b;
+        public int Count { get; set; } = 1;
+    }
 }
 
 static class PreviewWriter
 {
-    public static string Write(AtlasDocument atlas)
+    public static string Write(AtlasDocument atlas, string outputDir)
     {
         AtlasLayer layer = atlas.Layers[0];
+        List<PreviewPieceOutline> pieceOutlines = LoadPieceOutlines(outputDir, layer);
+        List<ManualContour> manualContours = LoadManualContours(outputDir);
         string json = JsonSerializer.Serialize(atlas, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -568,9 +751,12 @@ static class PreviewWriter
             svg { display: block; background: #211d16; box-shadow: 0 0 0 1px #4a3a29 inset; }
             .piece { fill: rgba(214, 203, 178, .12); stroke: rgba(238, 225, 196, .28); stroke-width: 1; vector-effect: non-scaling-stroke; }
             .piece.collision { fill: rgba(78, 117, 122, .08); stroke: rgba(114, 163, 168, .16); }
+            .piece-outline { fill: rgba(221, 211, 182, .26); stroke: rgba(245, 229, 190, .62); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+            .piece-outline:hover { fill: rgba(135, 219, 140, .28); stroke: rgba(135, 219, 140, .9); }
             .piece.excluded { opacity: .18; stroke: rgba(240, 92, 76, .85); stroke-width: 2; }
-            .piece.hidden-by-filter { display: none; }
-            .piece.hidden-by-exclusion { display: none; }
+            .hidden-by-filter { display: none; }
+            .hidden-by-exclusion { display: none; }
+            .saved-contour { fill: rgba(103, 218, 118, .16); stroke: rgba(112, 220, 122, .92); stroke-width: 2.5; vector-effect: non-scaling-stroke; pointer-events: none; }
             .marker { cursor: pointer; opacity: .88; transition: opacity .12s ease; }
             .marker:hover { opacity: 1; }
             .marker circle { stroke: #17120d; stroke-width: 2; filter: drop-shadow(0 1px 5px rgba(0,0,0,.65)); }
@@ -610,6 +796,8 @@ static class PreviewWriter
         sb.AppendLine("<label class=\"filter\"><input type=\"checkbox\" data-filter=\"enemy\"> Enemies</label>");
         sb.AppendLine("<label class=\"filter\"><input type=\"checkbox\" data-filter=\"object\"> Objects</label>");
         sb.AppendLine("<label class=\"filter\"><input type=\"checkbox\" id=\"showMapPieces\" checked> Map Pieces</label>");
+        sb.AppendLine("<label class=\"filter\"><input type=\"checkbox\" id=\"showOutlines\" checked> Auto outlines</label>");
+        sb.AppendLine("<label class=\"filter\"><input type=\"checkbox\" id=\"showContours\" checked> Manual contours</label>");
         sb.AppendLine("<label class=\"filter\"><input type=\"checkbox\" id=\"showCollisions\"> Collisions</label>");
         sb.AppendLine("<label class=\"filter\"><input type=\"checkbox\" id=\"hideExcludedPieces\" checked> Hide excluded pieces</label>");
         sb.AppendLine("</div>");
@@ -623,11 +811,23 @@ static class PreviewWriter
         sb.AppendLine("<main id=\"viewport\" class=\"viewport\">");
         sb.AppendLine("<div id=\"map\" class=\"map\">");
         sb.AppendLine($"<svg id=\"svg\" width=\"{layer.ImageWidth}\" height=\"{layer.ImageHeight}\" viewBox=\"0 0 {layer.ImageWidth} {layer.ImageHeight}\" xmlns=\"http://www.w3.org/2000/svg\">");
-        sb.AppendLine("<defs><pattern id=\"grid\" width=\"80\" height=\"80\" patternUnits=\"userSpaceOnUse\"><path d=\"M 80 0 L 0 0 0 80\" fill=\"none\" stroke=\"rgba(238,225,196,.08)\" stroke-width=\"1\"/></pattern></defs>");
+        sb.AppendLine("<defs><pattern id=\"grid\" width=\"24\" height=\"24\" patternUnits=\"userSpaceOnUse\"><path d=\"M 24 0 L 0 0 0 24\" fill=\"none\" stroke=\"rgba(238,225,196,.07)\" stroke-width=\"1\"/></pattern></defs>");
         sb.AppendLine($"<rect width=\"{layer.ImageWidth}\" height=\"{layer.ImageHeight}\" fill=\"url(#grid)\"/>");
+
+        foreach (PreviewPieceOutline outline in pieceOutlines)
+        {
+            foreach (string path in outline.Paths)
+                sb.AppendLine($"<path class=\"piece-outline\" data-piece-name=\"{Escape(outline.PieceName)}\" data-piece-type=\"map_piece\" d=\"{Escape(path)}\"><title>{Escape(outline.PieceName)} geometry</title></path>");
+        }
+
+        foreach (ManualContour contour in manualContours)
+            sb.AppendLine($"<path class=\"saved-contour\" data-contour-name=\"{Escape(contour.Name)}\" d=\"{Escape(contour.Path)}\"><title>{Escape(contour.Name)} contour</title></path>");
 
         foreach (AtlasPart part in layer.Parts.Where(part => part.Type is "map_piece" or "collision"))
         {
+            if (part.Type == "map_piece" && pieceOutlines.Any(outline => string.Equals(outline.PieceName, part.Name, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
             Vec2 pos = Project(part.Position, layer.WorldBounds, layer.ImageWidth, layer.ImageHeight);
             string css = part.Type == "collision" ? "piece collision" : "piece";
             sb.AppendLine($"<rect class=\"{css}\" data-piece-name=\"{Escape(part.Name)}\" data-piece-type=\"{Escape(part.Type)}\" x=\"{pos.X - 3:0.###}\" y=\"{pos.Y - 3:0.###}\" width=\"6\" height=\"6\"><title>{Escape(part.Name)} ({part.Type})</title></rect>");
@@ -673,6 +873,7 @@ static class PreviewWriter
             let lastY = 0;
             let markerNodes = [];
             let pieceNodes = [];
+            let savedContourNodes = [];
             let contourPoints = [];
             const excludedPieces = new Set(JSON.parse(localStorage.getItem('atlasExcludedPieces') || '[]'));
 
@@ -707,7 +908,7 @@ static class PreviewWriter
 
             viewport.addEventListener('pointerdown', event => {
               if (editPieces) {
-                const piece = event.target.closest?.('.piece');
+                const piece = event.target.closest?.('[data-piece-type]');
                 if (piece && piece.dataset.pieceType === 'map_piece') {
                   const name = piece.dataset.pieceName;
                   if (excludedPieces.has(name)) excludedPieces.delete(name);
@@ -771,16 +972,25 @@ static class PreviewWriter
 
             function applyPieceVisibility() {
               const showMapPieces = document.getElementById('showMapPieces').checked;
+              const showOutlines = document.getElementById('showOutlines').checked;
               const showCollisions = document.getElementById('showCollisions').checked;
               const hideExcluded = document.getElementById('hideExcludedPieces').checked;
 
               pieceNodes.forEach(node => {
                 const isMapPiece = node.dataset.pieceType === 'map_piece';
                 const isCollision = node.dataset.pieceType === 'collision';
+                const isOutline = node.classList.contains('piece-outline');
                 const isExcluded = excludedPieces.has(node.dataset.pieceName);
                 node.classList.toggle('excluded', isExcluded);
-                node.classList.toggle('hidden-by-filter', (isMapPiece && !showMapPieces) || (isCollision && !showCollisions));
+                node.classList.toggle('hidden-by-filter', (isOutline && !showOutlines) || (!isOutline && isMapPiece && !showMapPieces) || (isCollision && !showCollisions));
                 node.classList.toggle('hidden-by-exclusion', isMapPiece && isExcluded && hideExcluded);
+              });
+            }
+
+            function applyContourVisibility() {
+              const showContours = document.getElementById('showContours').checked;
+              savedContourNodes.forEach(node => {
+                node.classList.toggle('hidden-by-filter', !showContours);
               });
             }
 
@@ -832,6 +1042,8 @@ static class PreviewWriter
             });
 
             document.getElementById('showMapPieces').addEventListener('change', applyPieceVisibility);
+            document.getElementById('showOutlines').addEventListener('change', applyPieceVisibility);
+            document.getElementById('showContours').addEventListener('change', applyContourVisibility);
             document.getElementById('showCollisions').addEventListener('change', applyPieceVisibility);
             document.getElementById('hideExcludedPieces').addEventListener('change', applyPieceVisibility);
             document.getElementById('editPieces').addEventListener('click', event => {
@@ -874,7 +1086,8 @@ static class PreviewWriter
             });
 
             markerNodes = [...document.querySelectorAll('.marker')];
-            pieceNodes = [...document.querySelectorAll('.piece')];
+            pieceNodes = [...document.querySelectorAll('[data-piece-type]')];
+            savedContourNodes = [...document.querySelectorAll('.saved-contour')];
             markerNodes.forEach(node => {
               node.addEventListener('click', event => {
                 event.stopPropagation();
@@ -891,6 +1104,7 @@ static class PreviewWriter
             applyFilters();
             saveExcluded();
             applyPieceVisibility();
+            applyContourVisibility();
             apply();
             """);
         sb.AppendLine("</script>");
@@ -899,11 +1113,182 @@ static class PreviewWriter
         return sb.ToString();
     }
 
+    private static List<PreviewPieceOutline> LoadPieceOutlines(string outputDir, AtlasLayer layer)
+    {
+        string outlineDir = Path.Combine(outputDir, "map_pieces_outlines");
+        if (!Directory.Exists(outlineDir))
+            outlineDir = Path.Combine(outputDir, "map_piece_outlines");
+        if (!Directory.Exists(outlineDir))
+            return [];
+
+        JsonSerializerOptions options = new()
+        {
+            PropertyNameCaseInsensitive = true,
+        };
+
+        List<PreviewPieceOutline> outlines = [];
+        foreach (string path in Directory.EnumerateFiles(outlineDir, "*.outline.json").OrderBy(path => path, StringComparer.Ordinal))
+        {
+            try
+            {
+                PieceOutlineDocument? document = JsonSerializer.Deserialize<PieceOutlineDocument>(File.ReadAllText(path), options);
+                if (document is null || document.BoundaryLoops.Count == 0)
+                    continue;
+
+                List<Vec2> displayContour = BuildDisplayContour(document.BoundaryLoops);
+                List<string> paths = displayContour.Count >= 3
+                    ? [ToSvgPath(displayContour.Select(point => ProjectWorldXZ(point, layer.WorldBounds, layer.ImageWidth, layer.ImageHeight)).ToList())]
+                    : [];
+
+                if (paths.Count > 0)
+                    outlines.Add(new PreviewPieceOutline(document.PieceName, paths));
+            }
+            catch
+            {
+                // Keep preview generation resilient while outline files are experimental.
+            }
+        }
+
+        return outlines;
+    }
+
+    private static List<ManualContour> LoadManualContours(string outputDir)
+    {
+        string contourDir = Path.Combine(outputDir, "contours");
+        if (!Directory.Exists(contourDir))
+            return [];
+
+        JsonSerializerOptions options = new()
+        {
+            PropertyNameCaseInsensitive = true,
+        };
+
+        List<ManualContour> contours = [];
+        foreach (string path in Directory.EnumerateFiles(contourDir, "*.txt").OrderBy(path => path, StringComparer.Ordinal))
+        {
+            try
+            {
+                List<Vec2>? points = JsonSerializer.Deserialize<List<Vec2>>(File.ReadAllText(path), options);
+                if (points is null || points.Count < 3)
+                    continue;
+
+                string name = Path.GetFileNameWithoutExtension(path);
+                contours.Add(new ManualContour(name, ToSvgPath(points)));
+            }
+            catch
+            {
+                // Hand-authored contour files are optional; skip malformed drafts.
+            }
+        }
+
+        return contours;
+    }
+
+    private static List<Vec2> BuildDisplayContour(List<List<Vec2>> loops)
+    {
+        List<Vec2>? outer = loops
+            .Where(loop => loop.Count >= 3)
+            .OrderByDescending(loop => Math.Abs(SignedArea(loop)))
+            .FirstOrDefault();
+
+        if (outer is null)
+            return [];
+
+        List<Vec2> simplified = SimplifyClosedLoop(outer, 0.25f);
+        return SmoothClosedLoop(simplified, 1);
+    }
+
+    private static List<Vec2> SimplifyClosedLoop(List<Vec2> points, float epsilon)
+    {
+        if (points.Count <= 8)
+            return points;
+
+        List<Vec2> simplified = [];
+        for (int i = 0; i < points.Count; i++)
+        {
+            Vec2 previous = points[(i - 1 + points.Count) % points.Count];
+            Vec2 current = points[i];
+            Vec2 next = points[(i + 1) % points.Count];
+            if (DistanceToLine(current, previous, next) > epsilon)
+                simplified.Add(current);
+        }
+
+        return simplified.Count >= 3 ? simplified : points;
+    }
+
+    private static List<Vec2> SmoothClosedLoop(List<Vec2> points, int iterations)
+    {
+        List<Vec2> current = points;
+        for (int iteration = 0; iteration < iterations; iteration++)
+        {
+            if (current.Count < 3)
+                return current;
+
+            List<Vec2> next = [];
+            for (int i = 0; i < current.Count; i++)
+            {
+                Vec2 a = current[i];
+                Vec2 b = current[(i + 1) % current.Count];
+                next.Add(new Vec2(a.X * 0.75f + b.X * 0.25f, a.Y * 0.75f + b.Y * 0.25f));
+                next.Add(new Vec2(a.X * 0.25f + b.X * 0.75f, a.Y * 0.25f + b.Y * 0.75f));
+            }
+
+            current = next;
+        }
+
+        return current;
+    }
+
+    private static float DistanceToLine(Vec2 point, Vec2 a, Vec2 b)
+    {
+        float dx = b.X - a.X;
+        float dy = b.Y - a.Y;
+        float lengthSquared = dx * dx + dy * dy;
+        if (lengthSquared <= 0.000001f)
+            return MathF.Sqrt((point.X - a.X) * (point.X - a.X) + (point.Y - a.Y) * (point.Y - a.Y));
+
+        return MathF.Abs(dy * point.X - dx * point.Y + b.X * a.Y - b.Y * a.X) / MathF.Sqrt(lengthSquared);
+    }
+
     private static Vec2 Project(Vec3 world, WorldBounds bounds, int width, int height)
     {
         float x = (world.X - bounds.MinX) / bounds.Width * width;
         float y = (bounds.MaxZ - world.Z) / bounds.Depth * height;
         return new Vec2(x, y);
+    }
+
+    private static Vec2 ProjectWorldXZ(Vec2 worldXZ, WorldBounds bounds, int width, int height)
+    {
+        float x = (worldXZ.X - bounds.MinX) / bounds.Width * width;
+        float y = (bounds.MaxZ - worldXZ.Y) / bounds.Depth * height;
+        return new Vec2(x, y);
+    }
+
+    private static float SignedArea(List<Vec2> points)
+    {
+        if (points.Count < 3)
+            return 0;
+
+        double area = 0;
+        for (int i = 0; i < points.Count; i++)
+        {
+            Vec2 a = points[i];
+            Vec2 b = points[(i + 1) % points.Count];
+            area += a.X * b.Y - b.X * a.Y;
+        }
+
+        return (float)(area / 2);
+    }
+
+    private static string ToSvgPath(List<Vec2> points)
+    {
+        if (points.Count == 0)
+            return "";
+
+        Vec2 first = points[0];
+        return $"M {first.X:0.###} {first.Y:0.###} "
+            + string.Join(" ", points.Skip(1).Select(point => $"L {point.X:0.###} {point.Y:0.###}"))
+            + " Z";
     }
 
     private static string ShortName(string value)
@@ -926,7 +1311,9 @@ static class PieceOutlinePreviewWriter
     public static string Write(PieceOutlineDocument outline)
     {
         WorldBounds bounds = outline.MeshWorldBounds.Pad(Math.Max(outline.MeshWorldBounds.Width, outline.MeshWorldBounds.Depth) * 0.08f + 1f);
-        List<Vec2> hull = ConvexHull(outline.Triangles.SelectMany(triangle => new[] { triangle.A, triangle.B, triangle.C }).Select(point => Project(point, bounds)).ToList());
+        List<Vec2> hull = outline.BoundaryLoops.Count > 0
+            ? ConvexHull(outline.BoundaryLoops.SelectMany(loop => loop).Select(point => ProjectWorldXZ(point, bounds)).ToList())
+            : [];
         string hullPath = ToSvgPath(hull);
 
         StringBuilder sb = new();
@@ -966,7 +1353,8 @@ static class PieceOutlinePreviewWriter
         sb.AppendLine($"<h1>{Escape(outline.PieceName)}</h1>");
         sb.AppendLine($"<div class=\"sub\">Model <code>{Escape(outline.ModelName)}</code><br>{Escape(outline.MapBndPath)}</div>");
         sb.AppendLine($"<div class=\"stat\"><span>Vertices</span><strong>{outline.VertexCount}</strong></div>");
-        sb.AppendLine($"<div class=\"stat\"><span>Triangles</span><strong>{outline.Triangles.Count}</strong></div>");
+        sb.AppendLine($"<div class=\"stat\"><span>Boundary loops</span><strong>{outline.BoundaryLoops.Count}</strong></div>");
+        sb.AppendLine($"<div class=\"stat\"><span>Boundary points</span><strong>{outline.BoundaryLoops.Sum(loop => loop.Count)}</strong></div>");
         sb.AppendLine($"<div class=\"stat\"><span>Hull points</span><strong>{outline.HullPointCount}</strong></div>");
         sb.AppendLine($"<div class=\"stat\"><span>Position</span><strong>{outline.Position.X:0.###}, {outline.Position.Y:0.###}, {outline.Position.Z:0.###}</strong></div>");
         sb.AppendLine($"<div class=\"stat\"><span>Rotation</span><strong>{outline.Rotation.X:0.###}, {outline.Rotation.Y:0.###}, {outline.Rotation.Z:0.###}</strong></div>");
@@ -976,12 +1364,10 @@ static class PieceOutlinePreviewWriter
         sb.AppendLine("<div id=\"map\" class=\"map\">");
         sb.AppendLine($"<svg width=\"{CanvasWidth}\" height=\"{CanvasHeight}\" viewBox=\"0 0 {CanvasWidth} {CanvasHeight}\" xmlns=\"http://www.w3.org/2000/svg\">");
 
-        foreach (PieceTriangle triangle in outline.Triangles)
+        foreach (List<Vec2> loop in outline.BoundaryLoops)
         {
-            Vec2 a = Project(triangle.A, bounds);
-            Vec2 b = Project(triangle.B, bounds);
-            Vec2 c = Project(triangle.C, bounds);
-            sb.AppendLine($"<path class=\"triangle\" d=\"M {a.X:0.###} {a.Y:0.###} L {b.X:0.###} {b.Y:0.###} L {c.X:0.###} {c.Y:0.###} Z\"/>");
+            string path = ToSvgPath(loop.Select(point => ProjectWorldXZ(point, bounds)).ToList());
+            sb.AppendLine($"<path class=\"triangle\" d=\"{Escape(path)}\"/>");
         }
 
         sb.AppendLine($"<path class=\"outline\" d=\"{Escape(hullPath)}\"/>");
@@ -1076,6 +1462,13 @@ static class PieceOutlinePreviewWriter
     {
         float x = (world.X - bounds.MinX) / bounds.Width * CanvasWidth;
         float y = (bounds.MaxZ - world.Z) / bounds.Depth * CanvasHeight;
+        return new Vec2(x, y);
+    }
+
+    private static Vec2 ProjectWorldXZ(Vec2 worldXZ, WorldBounds bounds)
+    {
+        float x = (worldXZ.X - bounds.MinX) / bounds.Width * CanvasWidth;
+        float y = (bounds.MaxZ - worldXZ.Y) / bounds.Depth * CanvasHeight;
         return new Vec2(x, y);
     }
 
@@ -1179,10 +1572,12 @@ sealed record PieceOutlineDocument(
     Vec3 Scale,
     WorldBounds MeshWorldBounds,
     List<Vec2> ImageHull,
-    List<PieceTriangle> Triangles,
+    List<List<Vec2>> BoundaryLoops,
     string SvgPath);
 
-sealed record PieceTriangle(Vec3 A, Vec3 B, Vec3 C);
+sealed record PreviewPieceOutline(string PieceName, List<string> Paths);
+
+sealed record ManualContour(string Name, string Path);
 
 readonly record struct Vec2(float X, float Y);
 

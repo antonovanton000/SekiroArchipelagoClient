@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -24,8 +24,8 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <Version>1.1.6</Version>
-    <AssemblyVersion>1.1.6</AssemblyVersion>
+    <Version>1.1.9</Version>
+    <AssemblyVersion>1.1.9</AssemblyVersion>
  </PropertyGroup>
 
 	

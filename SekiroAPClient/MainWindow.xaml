@@ -290,7 +290,8 @@
 
                             <StackPanel Orientation="Horizontal"
                                         x:Name="btnSettingsGrid"
-                                        Visibility="Collapsed">
+                                        Visibility="Collapsed"
+                                        d:Visibility="Visible">
                                 <Grid Visibility="Collapsed">
                                     <Button Style="{StaticResource IconButtonStyle}"
                                             Foreground="{DynamicResource AccentBrush}"

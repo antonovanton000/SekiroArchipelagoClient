@@ -36,7 +36,9 @@ public class PipeServer : IDisposable
     private readonly ConcurrentQueue<string> _sendQueue = new();
     private readonly AutoResetEvent _sendEvent = new(false);
     private readonly ConcurrentDictionary<int, TaskCompletionSource<bool?>> _eventFlagRequests = new();
+    private readonly ConcurrentDictionary<int, TaskCompletionSource<bool>> _grantItemRequests = new();
     private int _eventFlagRequestId;
+    private int _grantItemRequestId;
     public bool IsStarted { get; private set; }
 
     public bool IsConnected => _transportKind == TransportKind.Tcp
@@ -290,6 +292,59 @@ public class PipeServer : IDisposable
         SendSpawnItemNow(request);
     }
 
+    public async Task<bool> SendSpawnItemReliableAsync(
+        int goodsId,
+        int quantity,
+        int eventId = 0,
+        int timeoutMs = 120_000,
+        CancellationToken cancellationToken = default)
+    {
+        if (_cts.IsCancellationRequested || cancellationToken.IsCancellationRequested)
+            return false;
+
+        int requestId = Interlocked.Increment(ref _grantItemRequestId);
+        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _grantItemRequests[requestId] = completion;
+
+        var request = new SpawnItemRequest
+        {
+            GoodsId = goodsId,
+            Quantity = quantity,
+            EventId = eventId,
+            GrantRequestId = requestId
+        };
+
+        if (!IsWorldLoaded)
+        {
+            lock (_spawnQueueLock)
+            {
+                _spawnQueue.Enqueue(request);
+            }
+        }
+        else
+        {
+            SendSpawnItemNow(request);
+        }
+
+        try
+        {
+            var timeout = Task.Delay(timeoutMs, cancellationToken);
+            var completed = await Task.WhenAny(completion.Task, timeout).ConfigureAwait(false);
+            if (completed == completion.Task)
+                return await completion.Task.ConfigureAwait(false);
+
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        finally
+        {
+            _grantItemRequests.TryRemove(requestId, out _);
+        }
+    }
+
     private void SendSpawnItemNow(SpawnItemRequest req)
     {
         var payload = new
@@ -298,7 +353,8 @@ public class PipeServer : IDisposable
             goods_id = req.GoodsId,
             quantity = req.Quantity,
             event_id = req.EventId,
-            delivery_flag_id = req.DeliveryFlagId
+            delivery_flag_id = req.DeliveryFlagId,
+            grant_request_id = req.GrantRequestId
         };
 
         string json = JsonSerializer.Serialize(payload, JsonOptsRelaxed);
@@ -514,7 +570,11 @@ public class PipeServer : IDisposable
                 else if (jobj.Value<string>("type") == "grant_item_ack")
                 {
                     int deliveryFlagId = jobj.Value<int?>("delivery_flag_id") ?? 0;
+                    int grantRequestId = jobj.Value<int?>("grant_request_id") ?? 0;
                     bool delivered = jobj.Value<bool?>("delivered") ?? false;
+                    if (grantRequestId > 0 && _grantItemRequests.TryRemove(grantRequestId, out var completion))
+                        completion.TrySetResult(delivered);
+
                     if (deliveryFlagId > 0)
                         ItemGrantDelivered?.Invoke(deliveryFlagId, delivered);
                 }
@@ -664,6 +724,7 @@ public class PipeServer : IDisposable
         public int Quantity { get; init; }
         public int EventId { get; init; }
         public int DeliveryFlagId { get; init; }
+        public int GrantRequestId { get; init; }
     }
 
     private void ScheduleSpawnQueueFlush()
@@ -705,6 +766,9 @@ public class PipeServer : IDisposable
 
         foreach (var req in pending)
         {
+            if (req.GrantRequestId > 0 && !_grantItemRequests.ContainsKey(req.GrantRequestId))
+                continue;
+
             SendSpawnItemNow(req);
             await Task.Delay(50);
         }

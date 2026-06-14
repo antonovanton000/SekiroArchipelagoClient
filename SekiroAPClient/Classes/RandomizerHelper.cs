@@ -301,6 +301,10 @@ public partial class RandomizerHelper : ObservableObject
                             .ToList();
                     }
 
+                    shopKeys = shopKeys
+                        .Where(k => !IsDragonTallyBoardInfiniteShop(k.ID))
+                        .ToList();
+
                     int sharedShopEventFlag = GetSharedShopEventFlag(game, shopKeys);
 
                     // If the location has neither LOT nor SHOP keys, skip it
@@ -484,6 +488,7 @@ public partial class RandomizerHelper : ObservableObject
                 int skippedLinkedApTargets = 0;
                 int skippedApRows = 0;
                 int skippedNotWhitelisted = 0;
+                int skippedDragonTallyBoardInfinite = 0;
 
                 // For each group (regular + discounted) we store the selected filler item
                 var shopGroupItems = new Dictionary<int, ItemKey>();
@@ -494,6 +499,12 @@ public partial class RandomizerHelper : ObservableObject
                     foreach (var shopKey in locEntry.Keys.Where(k => k.Type == LocationKey.LocationType.SHOP))
                     {
                         int shopId = shopKey.ID;
+                        if (IsDragonTallyBoardInfiniteShop(shopId))
+                        {
+                            skippedDragonTallyBoardInfinite++;
+                            continue;
+                        }
+
                         int merchantId = GetShopMerchantId(shopId);
                         apShopGoodsByMerchant.TryGetValue(merchantId, out var reservedApGoods);
                         var sourceShopRow = shopParam[shopId];
@@ -577,6 +588,7 @@ public partial class RandomizerHelper : ObservableObject
                 Console.WriteLine($"[SHOP RNG] Skipped linked AP targets: {skippedLinkedApTargets}");
                 Console.WriteLine($"[SHOP RNG] Skipped AP: {skippedApRows}");
                 Console.WriteLine($"[SHOP RNG] Skipped not whitelisted: {skippedNotWhitelisted}");
+                Console.WriteLine($"[SHOP RNG] Skipped Dragon's Tally Board infinite rows: {skippedDragonTallyBoardInfinite}");
 
 
 
@@ -905,6 +917,20 @@ public partial class RandomizerHelper : ObservableObject
         ShopDiscountPairs
             .SelectMany(p => new[] { p.full, p.discount })
             .ToHashSet();
+
+    private static readonly HashSet<int> DragonTallyBoardInfiniteShopIds = new()
+    {
+        1100005, 1100055, 1100107, 1100157, 1100216, 1100266, 1100412, 1100462, 1110008, 1110058, 1111405, 1111455, 1500008, 1500058, 1700006, 1700056, 2000009, 2000059,
+        1100006, 1100056, 1100108, 1100158, 1100217, 1100267, 1100413, 1100463, 1110009, 1110059, 1111406, 1111456, 1500009, 1500059, 1700007, 1700057, 2000010, 2000060,
+        1100007, 1100057, 1100109, 1100159, 1100218, 1100268, 1100414, 1100464, 1110010, 1110060, 1111407, 1111457, 1500010, 1500060, 1700008, 1700058, 2000011, 2000061,
+        1100008, 1100058, 1100110, 1100160, 1100205, 1100255, 1100415, 1100465, 1110011, 1110061, 1111408, 1111458, 1500011, 1500061, 1700009, 1700059, 2000012, 2000062,
+        1100009, 1100059, 1100111, 1100161, 1100206, 1100256, 1100416, 1100466, 1110012, 1110062, 1111409, 1111459, 1500012, 1500062, 1700010, 1700060, 2000013, 2000063,
+    };
+
+    private static bool IsDragonTallyBoardInfiniteShop(int shopId)
+    {
+        return DragonTallyBoardInfiniteShopIds.Contains(shopId);
+    }
 
     private static int GetShopGroupId(int shopId)
     {

@@ -20,15 +20,6 @@ public partial class RandomizerOptionsViewModel : MyBaseViewModel
     }
 
     [ObservableProperty]
-    bool deathLinkOnFullDeath = Properties.Settings.Default.DeathLinkOnFullDeath;
-
-    [ObservableProperty]
-    bool removeHeadlessSlowWalk = Properties.Settings.Default.RemoveHeadlessSlowWalk;
-
-    [ObservableProperty]
-    bool openBellDemonDoor = Properties.Settings.Default.OpenBellDemonDoor;
-
-    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsOopsAll))]
     string selectedPreset = string.IsNullOrEmpty(Properties.Settings.Default.SelectedPreset) ? "None" : Properties.Settings.Default.SelectedPreset;
 
@@ -63,10 +54,7 @@ public partial class RandomizerOptionsViewModel : MyBaseViewModel
     }
     
     void SaveSettings()
-    {
-        Properties.Settings.Default.DeathLinkOnFullDeath = DeathLinkOnFullDeath;
-        Properties.Settings.Default.RemoveHeadlessSlowWalk = RemoveHeadlessSlowWalk;
-        Properties.Settings.Default.OpenBellDemonDoor = OpenBellDemonDoor;
+    {     
         Properties.Settings.Default.SelectedPreset = SelectedPreset == "None" ? "" : SelectedPreset;
         Properties.Settings.Default.SelectedEnemy = SelectedPreset == "Oops All" ? SelectedEnemy : "";
         Properties.Settings.Default.Save();

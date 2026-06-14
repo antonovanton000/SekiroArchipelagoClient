@@ -54,8 +54,6 @@ namespace RandomizerCommon
             PARAM.Row baseGood = game.Params["EquipParamGoods"][2470];
             int baseId = 6405;
 
-            FMG itemName = game.ItemFMGs["アイテム名"];
-            FMG itemDesc = game.ItemFMGs["アイテム説明"];
             FMG weaponName = game.ItemFMGs["武器名"];
             FMG weaponDesc = game.ItemFMGs["武器説明"];
             SortedDictionary<ItemKey, string> gameNames = game.Names();
@@ -85,8 +83,11 @@ namespace RandomizerCommon
                 newSkills[skillId] = goodKey;
 
                 gameNames[goodKey] = weaponName[descItem];
-                itemName[good] = weaponName[descItem];
-                itemDesc[good] = weaponDesc[descItem];
+                AddSkillItemText(game.ItemFMGs, good, descItem, weaponName[descItem], weaponDesc[descItem]);
+                foreach (Dictionary<string, FMG> langFmgs in game.OtherItemFMGs.Values)
+                {
+                    AddSkillItemText(langFmgs, good, descItem, weaponName[descItem], weaponDesc[descItem]);
+                }
 
                 newGood["sortId"].Value = sortId;
                 newGood["iconId"].Value = iconId;
@@ -164,6 +165,31 @@ namespace RandomizerCommon
             // Also in this mode, acquire skills option is removed from Sculptor's Idols, in case it has been there from previous runs. Done in PermutationWriter.
 
             return ret;
+        }
+
+        private static void AddSkillItemText(
+            Dictionary<string, FMG> itemFmgs,
+            int goodId,
+            int skillWeaponId,
+            string fallbackName,
+            string fallbackDescription)
+        {
+            string name = fallbackName;
+            if (itemFmgs.TryGetValue("武器名", out FMG weaponNames) && !string.IsNullOrEmpty(weaponNames[skillWeaponId]))
+                name = weaponNames[skillWeaponId];
+
+            string description = fallbackDescription;
+            if (itemFmgs.TryGetValue("武器説明", out FMG weaponDescriptions) && !string.IsNullOrEmpty(weaponDescriptions[skillWeaponId]))
+                description = weaponDescriptions[skillWeaponId];
+
+            if (itemFmgs.TryGetValue("アイテム名", out FMG itemNames))
+                itemNames[goodId] = name;
+
+            if (itemFmgs.TryGetValue("アイテム説明", out FMG itemDescriptions))
+                itemDescriptions[goodId] = description;
+
+            if (itemFmgs.TryGetValue("アイテムうんちく", out FMG itemLongDescriptions))
+                itemLongDescriptions[goodId] = description;
         }
 
         public class Assignment
