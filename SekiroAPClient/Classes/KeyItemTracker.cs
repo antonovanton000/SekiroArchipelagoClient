@@ -43,6 +43,37 @@ namespace SekiroAPClient.Classes
                 CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/mortal_blade.png", UriKind.RelativeOrAbsolute)),
                 UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/mortal_blade_no.png", UriKind.RelativeOrAbsolute)),
             });
+            if (withApItems)
+            {
+                KeyItems.Add(new KeyItemTrackModel
+                {
+                    Name = "Senpou Temple Key",
+                    GoodId = 9406,
+                    CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/senpou_key.png", UriKind.RelativeOrAbsolute)),
+                    UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/senpou_key_no.png", UriKind.RelativeOrAbsolute)),
+                });
+                KeyItems.Add(new KeyItemTrackModel
+                {
+                    Name = "Abandoned Dungeon Key",
+                    GoodId = 9407,
+                    CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/dungeon_key.png", UriKind.RelativeOrAbsolute)),
+                    UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/dungeon_key_no.png", UriKind.RelativeOrAbsolute)),
+                });
+                KeyItems.Add(new KeyItemTrackModel
+                {
+                    Name = "Ashina Depths Key",
+                    GoodId = 9408,
+                    CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/depths_key.png", UriKind.RelativeOrAbsolute)),
+                    UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/depths_key_no.png", UriKind.RelativeOrAbsolute)),
+                });
+                KeyItems.Add(new KeyItemTrackModel
+                {
+                    Name = "Bell of Dispelling",
+                    GoodId = 9409,
+                    CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/disbell.png", UriKind.RelativeOrAbsolute)),
+                    UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/disbell_no.png", UriKind.RelativeOrAbsolute)),
+                });
+            }
             KeyItems.Add(new KeyItemTrackModel
             {
                 Name = "Gun Fort Shrine Key",
@@ -99,37 +130,6 @@ namespace SekiroAPClient.Classes
                 CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/dragon_tears.png", UriKind.RelativeOrAbsolute)),
                 UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/dragon_tears_no.png", UriKind.RelativeOrAbsolute)),
             });
-            if (withApItems)
-            {
-                KeyItems.Add(new KeyItemTrackModel
-                {
-                    Name = "Senpou Temple Key",
-                    GoodId = 9406,
-                    CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/senpou_key.png", UriKind.RelativeOrAbsolute)),
-                    UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/senpou_key_no.png", UriKind.RelativeOrAbsolute)),
-                });
-                KeyItems.Add(new KeyItemTrackModel
-                {
-                    Name = "Abandoned Dungeon Key",
-                    GoodId = 9407,
-                    CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/dungeon_key.png", UriKind.RelativeOrAbsolute)),
-                    UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/dungeon_key_no.png", UriKind.RelativeOrAbsolute)),
-                });
-                KeyItems.Add(new KeyItemTrackModel
-                {
-                    Name = "Ashina Depths Key",
-                    GoodId = 9408,
-                    CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/depths_key.png", UriKind.RelativeOrAbsolute)),
-                    UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/depths_key_no.png", UriKind.RelativeOrAbsolute)),
-                });
-                KeyItems.Add(new KeyItemTrackModel
-                {
-                    Name = "Bell of Dispelling",
-                    GoodId = 9409,
-                    CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/disbell.png", UriKind.RelativeOrAbsolute)),
-                    UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/disbell_no.png", UriKind.RelativeOrAbsolute)),
-                });
-            }
         }
 
         public bool CheckItem(int goodId)

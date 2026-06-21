@@ -20,6 +20,7 @@ namespace SekiroAPClient
         public static SemanticVersioning.Version CompatibleApWorldVersion = new SemanticVersioning.Version("3.0.0");
         public static Logger Logger = default!;
         public static PipeServer PipeServer = default!;
+        public static bool IsDeveloperMode { get; private set; }
 #if DEBUG
         public static string Location => System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 #else
@@ -28,6 +29,10 @@ namespace SekiroAPClient
         public static ArchipelagoSession? CurrentSession { get; private set; }
         public App()
         {
+            IsDeveloperMode = Environment.GetCommandLineArgs()
+                .Skip(1)
+                .Any(arg => string.Equals(arg, "--developer-mode", StringComparison.OrdinalIgnoreCase));
+
             var assembly = Assembly.GetExecutingAssembly();
             var attribute = assembly.GetCustomAttribute<AssemblyFileVersionAttribute>();
             AppVersion = attribute.Version.ToString();
@@ -56,11 +61,6 @@ namespace SekiroAPClient
             var config = new NLog.Config.LoggingConfiguration();
             // Targets where to log to: File and Console
             var logfile = new NLog.Targets.FileTarget("logfile") { FileName = $"errorlog_{DateTime.Now:yyyyMMdd}.log" };
-            if (Settings.Default.IsDebug)
-            {
-                config.AddRule(LogLevel.Info, LogLevel.Info, logfile);
-                config.AddRule(LogLevel.Warn, LogLevel.Warn, logfile);
-            }
             config.AddRule(LogLevel.Error, LogLevel.Error, logfile);
             config.AddRule(LogLevel.Fatal, LogLevel.Fatal, logfile);
 
@@ -72,7 +72,7 @@ namespace SekiroAPClient
         private void InitializePipeServer()
         {
             PipeServer = new PipeServer("SekiroAP");            
-            PipeServer.ShowDebugLog = true;
+            PipeServer.ShowDebugLog = IsDeveloperMode;
             PipeServer.Start();            
         }
 

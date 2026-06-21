@@ -36,20 +36,19 @@
         </TextBlock>
         <StackPanel x:Name="content" Margin="20,20,20,0">
             <TextBlock Style="{StaticResource HeaderTextBlockBlockStyle}" FontSize="20" Text="Settings" Margin="0,0,0,20"/>
+            <icnt:Switch Text="Debug"
+                         IsChecked="{Binding IsDebug, Mode=TwoWay}" />
             <TextBlock TextWrapping="Wrap"
                        Style="{StaticResource FlatTextBlockStyle}"
                        Opacity="0.9"
                        FontSize="12"
                        FontWeight="Light"
-                       Margin="0,0,0,15"
+                       Margin="0,15,0,15"
                        LineHeight="18">
                 <Run>
-                    After enabling Debug, debugging features will become available. Don’t be alarmed if various log files start appearing after generation — they are intended to help identify the root cause of issues more easily. The Debug page also allows you to grant various items and enable/disable EventFlags in the game, making it easier to test the game’s behavior in specific scenarios.
+                    After enabling Debug, debugging features will become available. Don’t be alarmed if various log files start appearing after generation — they are intended to help identify the root cause of issues more easily.
                 </Run>
             </TextBlock>
-            <icnt:Switch Text="Debug" IsChecked="{Binding IsDebug, Mode=TwoWay}" />
-                
-                
         </StackPanel>
     </Grid>
 </Page>

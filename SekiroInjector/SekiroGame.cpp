@@ -343,6 +343,11 @@ void UpdatePlayerDeathState()
 	if (!IsWorldLoaded())
 	{	
 		g_LifeState = PlayerLifeState::Unknown;
+		if (g_DeathFromDeathlink)
+		{
+			Log("[Player] Reset DeathLink death suppression because world is not loaded");
+			g_DeathFromDeathlink = false;
+		}
 		return;
 	}
 
@@ -364,6 +369,15 @@ void UpdatePlayerDeathState()
 		isDeath = (playerHp == 0);
 	}
 
+	if (g_DeathFromDeathlink && !isDeath)
+	{
+		int playerHp = GetPlayerHp();
+		if (playerHp > 0)
+		{
+			Log("[Player] Reset DeathLink death suppression because player is alive again");
+			g_DeathFromDeathlink = false;
+		}
+	}
 	
 	PlayerLifeState lifeState = isDeath ? PlayerLifeState::Dead : PlayerLifeState::Alive;
 
@@ -379,6 +393,11 @@ void UpdatePlayerDeathState()
 		}				
 		g_DeathFromDeathlink = false;			
 		
+	}
+	else if (lifeState == PlayerLifeState::Dead && g_DeathFromDeathlink)
+	{
+		Log("[Player] Suppressed DeathLink death while already dead");
+		g_DeathFromDeathlink = false;
 	}
 	g_LifeState = lifeState;
 }
@@ -406,11 +425,11 @@ void SekiroGame_KillPlayer()
 	if (!SafeReadPtr(p1 + 0x1FF8, p2) || !p2) return;
 	if (!SafeReadPtr(p2 + 0x18, p3) || !p3) return;
 
-	g_DeathFromDeathlink = true;
 	// 4) Write HP = 0
 	if (!SafeWriteInt(p3 + 0x130, 0))
 		return;
 
+	g_DeathFromDeathlink = true;
 	Logf("[SekiroGame] KillPlayer: HP set to 0");
 }
 

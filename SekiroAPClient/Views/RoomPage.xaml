@@ -271,7 +271,7 @@
                         </TabItem>
                         <TabItem Header="Debug"
                                  d:Visibility="Visible"
-                                 Visibility="{Binding IsDebug, Converter={StaticResource BoolToVisConverter}}"
+                                 Visibility="{Binding IsDeveloperMode, Converter={StaticResource BoolToVisConverter}}"
                                  Style="{StaticResource FlatUnderlineTabItemStyle}">
                             <StackPanel Margin="0,20,0,0">
                                 <TextBlock Text="Inspect randomized item locations, verify progression, and create reports for misplaced or incorrect item placements." Style="{StaticResource FlatTextBlockStyle}"

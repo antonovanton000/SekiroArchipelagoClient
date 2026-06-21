@@ -39,8 +39,7 @@ public partial class ConnectViewModel : MyBaseViewModel
     [ObservableProperty]
     string? notificationStatus;
 
-    [ObservableProperty]
-    bool isDebug;
+    public bool IsDeveloperMode => App.IsDeveloperMode;
 
     [ObservableProperty]
     bool showUpdateNotification;
@@ -57,7 +56,6 @@ public partial class ConnectViewModel : MyBaseViewModel
     {
         Version = App.AppVersion;
         MainWindow.ShowTopButtons();
-        IsDebug = Settings.Default.IsDebug;
 
         await CheckForUpdate();
     }
@@ -67,7 +65,13 @@ public partial class ConnectViewModel : MyBaseViewModel
     #region Commands
 
     [RelayCommand]
-    void GoToDebugPage() => MainWindow.NavigateTo(new DebugPage() { DataContext = new DebugViewModel() });
+    void GoToDebugPage()
+    {
+        if (!App.IsDeveloperMode)
+            return;
+
+        MainWindow.NavigateTo(new DebugPage() { DataContext = new DebugViewModel() });
+    }
 
 
     [RelayCommand]

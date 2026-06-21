@@ -74,7 +74,7 @@
                     </icnt:ValidationForm>
                     <Button Content="Connect" Style="{StaticResource FlatButtonStylePrimary}" Width="140" Command="{Binding ElementName=form, Path=ButtonSubmitCommand}" Margin="0,0,0,0"/>
                     <Button Content="Debug Page" Style="{StaticResource FlatTextButtonStyle}" Width="140" Command="{Binding GoToDebugPageCommand}" Margin="0,20,0,0"
-                            Visibility="{Binding IsDebug, Converter={StaticResource BoolToVisConverter}}"/>
+                            Visibility="{Binding IsDeveloperMode, Converter={StaticResource BoolToVisConverter}}"/>
                 </StackPanel>
                 <TextBlock Text="{Binding Version}" FontFamily="{StaticResource Londrina-Black}" Style="{StaticResource FlatTextBlockStyle}"
                            HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,5" Grid.Row="1"/>

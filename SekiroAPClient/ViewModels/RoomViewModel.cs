@@ -31,6 +31,7 @@ public partial class RoomViewModel : MyBaseViewModel
         pipeServer = App.PipeServer;
         stateStorage = new StateStorage<ApRandomizationState>(Path.Combine(App.Location, "ap_randomization_state.json"));
         itemTransferLogger = CreateItemTransferLogger();
+        pendingLocationChecks = CreatePendingLocationCheckStore();
         hintItemNames = LoadHintItemNames();
         UpdateGameLaunchUi();
 
@@ -43,6 +44,7 @@ public partial class RoomViewModel : MyBaseViewModel
         pipeServer = App.PipeServer;
         stateStorage = new StateStorage<ApRandomizationState>(Path.Combine(App.Location, "ap_randomization_state.json"));
         itemTransferLogger = CreateItemTransferLogger();
+        pendingLocationChecks = CreatePendingLocationCheckStore();
         hintItemNames = LoadHintItemNames();
         UpdateGameLaunchUi();
     }
@@ -114,8 +116,7 @@ public partial class RoomViewModel : MyBaseViewModel
 
     DeathLinkService? deathLinkService;
 
-    [ObservableProperty]
-    bool isDebug;
+    public bool IsDeveloperMode => App.IsDeveloperMode;
 
     private CancellationTokenSource? _reconnectCts;
     private readonly CancellationTokenSource _receivedItemsCts = new();
@@ -131,6 +132,7 @@ public partial class RoomViewModel : MyBaseViewModel
     bool isReconnecting = false;
 
     ReceivedItemStore localItemsStore = null!;
+    PendingLocationCheckStore pendingLocationChecks;
     ItemTransferLogger itemTransferLogger;
 
     List<string> consoleCommands = [];
@@ -142,11 +144,17 @@ public partial class RoomViewModel : MyBaseViewModel
     private static string KeyItemTrackerStatePath
         => Path.Combine(App.Location, "randomizer\\keyitemtracker_state.json");
 
+    private static string PendingLocationChecksPath
+        => Path.Combine(App.Location, "randomizer\\pending_location_checks.json");
+
     private static ReceivedItemStore CreateLocalItemsStore()
         => new(LocalItemsStorePath);
 
+    private static PendingLocationCheckStore CreatePendingLocationCheckStore()
+        => new(PendingLocationChecksPath);
+
     private ItemTransferLogger CreateItemTransferLogger()
-        => new(Path.Combine(App.Location, "ap_item_transfer_log.txt"), () => IsDebug);
+        => new(Path.Combine(App.Location, "ap_item_transfer_log.txt"), () => IsDeveloperMode);
 
     private bool IsActiveRoomViewModel => Volatile.Read(ref _activeRoomViewModelId) == _roomViewModelId;
 
@@ -167,7 +175,6 @@ public partial class RoomViewModel : MyBaseViewModel
         Volatile.Write(ref _activeRoomViewModelId, _roomViewModelId);
         _receivedItemProcessingReady = false;
         MainWindow.HideTopButtons();
-        IsDebug = Settings.Default.IsDebug;
         ShowNotifications = Settings.Default.ShowNotifications;
         itemTransferLogger.Log($"SESSION START server={CurrentSession.Socket.Uri} slot={CurrentSession.ConnectionInfo.Slot} player={CurrentSession.Players.ActivePlayer.Name}");
         AddEventHandlers();
@@ -181,6 +188,7 @@ public partial class RoomViewModel : MyBaseViewModel
         {
             DeleteLocalItemsStoreForNewRoom();
             DeleteKeyItemTrackerStateForNewRoom();
+            DeletePendingLocationChecksForNewRoom();
         }
 
         localItemsStore = CreateLocalItemsStore();
@@ -209,7 +217,7 @@ public partial class RoomViewModel : MyBaseViewModel
             if (pipeServer.IsConnected)
             {
                 LogText += $"Successfully connected to Game!\r\n";
-                if (IsDebug)
+                if (IsDeveloperMode)
                 {
                     pipeServer.ChangeDebugState(true);
                     await Task.Delay(100);
@@ -229,6 +237,7 @@ public partial class RoomViewModel : MyBaseViewModel
             {
                 await RecieveItems(CurrentSession.Items, _receivedItemsCts.Token);
             }
+            await FlushPendingLocationChecksAsync();
         }
 
     }
@@ -237,7 +246,13 @@ public partial class RoomViewModel : MyBaseViewModel
 
     #region Commands
     [RelayCommand]
-    void GoToDebugPage() => MainWindow.NavigateTo(new DebugPage() { DataContext = new DebugViewModel() });
+    void GoToDebugPage()
+    {
+        if (!App.IsDeveloperMode)
+            return;
+
+        MainWindow.NavigateTo(new DebugPage() { DataContext = new DebugViewModel() });
+    }
 
     [RelayCommand]
     void SendCommand()
@@ -342,7 +357,7 @@ public partial class RoomViewModel : MyBaseViewModel
     [RelayCommand]
     void OpenItemTracker()
     {
-        if (State == null)
+        if (!App.IsDeveloperMode || State == null)
             return;
 
         var window = new ItemTrackerWindow
@@ -356,6 +371,9 @@ public partial class RoomViewModel : MyBaseViewModel
     [RelayCommand]
     void OpenDebugPage()
     {
+        if (!App.IsDeveloperMode)
+            return;
+
         var newWindow = new DebugWindow();        
         newWindow.Show();
     }
@@ -517,7 +535,7 @@ public partial class RoomViewModel : MyBaseViewModel
         {
             IsConnectedToGame = true;
             LogText += $"Successfully connected to Game!\r\n";
-            if (IsDebug)
+            if (IsDeveloperMode)
             {
                 await Task.Delay(500);
                 pipeServer.ChangeDebugState(true);
@@ -618,18 +636,9 @@ public partial class RoomViewModel : MyBaseViewModel
             if (lotMaps.Count() > 0)
             {
                 var locationIds = lotMaps.Select(i => i.LocationId).ToArray();
-                LogText += $"[AP] Sending location check(s): {string.Join(", ", locationIds)} lot={obj.LotId} good={obj.GoodId} shop={obj.IsFromShop}\r\n";
-                itemTransferLogger.Log($"SEND_CHECK start locations={string.Join(",", locationIds)} lot={obj.LotId} good={obj.GoodId} qty={obj.Quantity} shop={obj.IsFromShop}");
-                try
-                {
-                    await CurrentSession.Locations.CompleteLocationChecksAsync(locationIds);                    
-                    itemTransferLogger.Log($"SEND_CHECK ok locations={string.Join(",", locationIds)} lot={obj.LotId} good={obj.GoodId} qty={obj.Quantity} shop={obj.IsFromShop}");
-                }
-                catch (Exception ex)
-                {
-                    itemTransferLogger.Log($"SEND_CHECK error locations={string.Join(",", locationIds)} lot={obj.LotId} good={obj.GoodId} qty={obj.Quantity} shop={obj.IsFromShop} error={ex.Message}");
-                    throw;
-                }
+                QueuePendingLocationChecks(locationIds, obj);
+                await FlushPendingLocationChecksAsync();
+
                 if (IsSekiroMemoryItem(obj.GoodId))
                 {
                     itemTransferLogger.Log($"LOCAL_PICKUP extra_memory_counter good={obj.GoodId} lot={obj.LotId}");
@@ -899,6 +908,66 @@ public partial class RoomViewModel : MyBaseViewModel
         {
             LogText += $"[AP] Failed to delete local item store for a new room: {ex.Message}\r\n";
             itemTransferLogger.Log($"LOCAL_STORE delete_failed path='{LocalItemsStorePath}' error='{ex.Message}'");
+        }
+    }
+
+    void DeletePendingLocationChecksForNewRoom()
+    {
+        try
+        {
+            if (!File.Exists(PendingLocationChecksPath))
+                return;
+
+            File.Delete(PendingLocationChecksPath);
+            pendingLocationChecks = CreatePendingLocationCheckStore();
+            itemTransferLogger.Log($"LOCATION_CHECK_QUEUE deleted reason=new_room path='{PendingLocationChecksPath}'");
+        }
+        catch (Exception ex)
+        {
+            LogText += $"[AP] Failed to delete pending location checks for a new room: {ex.Message}\r\n";
+            itemTransferLogger.Log($"LOCATION_CHECK_QUEUE delete_failed path='{PendingLocationChecksPath}' error='{ex.Message}'");
+        }
+    }
+
+    void QueuePendingLocationChecks(IReadOnlyCollection<long> locationIds, ItemRecievedArgs item)
+    {
+        if (locationIds.Count == 0)
+            return;
+
+        pendingLocationChecks.Add(locationIds, item.LotId, item.GoodId, item.Quantity, item.IsFromShop);
+        LogText += $"[AP] Queued location check(s): {string.Join(", ", locationIds)} lot={item.LotId} good={item.GoodId} shop={item.IsFromShop}\r\n";
+        itemTransferLogger.Log($"SEND_CHECK queued locations={string.Join(",", locationIds)} lot={item.LotId} good={item.GoodId} qty={item.Quantity} shop={item.IsFromShop}");
+    }
+
+    async Task FlushPendingLocationChecksAsync()
+    {
+        if (CurrentSession?.Socket?.Connected != true)
+        {
+            var pending = pendingLocationChecks.Snapshot();
+            if (pending.Count > 0)
+                itemTransferLogger.Log($"SEND_CHECK flush_skipped_no_connection pending={pending.Count}");
+
+            return;
+        }
+
+        var records = pendingLocationChecks.Snapshot();
+        if (records.Count == 0)
+            return;
+
+        var locationIds = records.Select(record => record.LocationId).Distinct().OrderBy(id => id).ToArray();
+        LogText += $"[AP] Sending pending location check(s): {string.Join(", ", locationIds)}\r\n";
+        itemTransferLogger.Log($"SEND_CHECK flush_start locations={string.Join(",", locationIds)} pending={records.Count}");
+
+        try
+        {
+            await CurrentSession.Locations.CompleteLocationChecksAsync(locationIds);
+            pendingLocationChecks.Remove(locationIds);
+            itemTransferLogger.Log($"SEND_CHECK flush_ok locations={string.Join(",", locationIds)}");
+        }
+        catch (Exception ex)
+        {
+            itemTransferLogger.Log($"SEND_CHECK flush_error locations={string.Join(",", locationIds)} error={ex.Message}");
+            LogText += $"[AP] Failed to send pending location checks. They will be retried after reconnect. Error: {ex.Message}\r\n";
         }
     }
 
@@ -1211,6 +1280,7 @@ public partial class RoomViewModel : MyBaseViewModel
                             {
                                 await RecieveItems(CurrentSession.Items, _receivedItemsCts.Token);
                             }
+                            await FlushPendingLocationChecksAsync();
                         });
                         break;
                     }

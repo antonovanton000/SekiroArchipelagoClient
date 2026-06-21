@@ -24,12 +24,12 @@
     </Window.Resources>
     <Grid Background="#01000000" MouseDown="Grid_MouseDown">
         <Viewbox Stretch="Uniform" x:Name="mainViewBox">
-            <Grid Background="#01000000" MinHeight="600" MinWidth="550">
+            <Grid Background="#01000000" MinHeight="600" MinWidth="500">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="1*" />
                     <RowDefinition Height="50" />
                 </Grid.RowDefinitions>
-                <Grid Width="550">
+                <Grid Width="500">
                     <ItemsControl ItemsSource="{Binding KeyItemTracker.KeyItems}"
                                   Margin="0,40,0,0"
                                   ScrollViewer.CanContentScroll="False"
@@ -91,7 +91,8 @@
                 <Grid Grid.Row="1">
                     <StackPanel HorizontalAlignment="Left"
                                 VerticalAlignment="Center"                               
-                                Orientation="Horizontal">
+                                Orientation="Horizontal"
+                                Margin="30,0,0,0">
                         <TextBlock Text="Death Counter: "
                                    Style="{StaticResource HeaderTextBlockBlockStyle}" />
                         <TextBlock Text="{Binding State.DeathCounter}"
