@@ -134,26 +134,7 @@ To enable it:
 3. Enable the `Debug` switch.
 4. Reconnect or regenerate the room as needed.
 
-When Debug mode is enabled, extra buttons appear in the app:
-
-- `Debug Page`
-- `Debug Window`
-- `Item Tracker`
-
-The `Debug Page` provides runtime test controls for a connected game:
-
-- Spawn a selected item and quantity.
-- Show small or full hint messages in-game.
-- Set an arbitrary Sekiro event flag to `True` or `False`.
-- `Activate Areas Idols`: turns on the area idol unlock flags used for quick
-  traversal during testing.
-- `Enemy AI Disabled`: toggles the Sekiro debug flag that stops enemy AI
-  updates.
-- `One Hit Kill`: toggles the Sekiro debug flag that lets the player kill
-  enemies in one hit.
-- `Kill Player`: immediately sets the player HP to zero.
-
-Debug mode also writes additional files near the client executable, including:
+Debug mode writes additional files near the client executable, including:
 
 ```text
 debug_apIdsToItemIds.json
@@ -178,82 +159,6 @@ The most important files are:
 The native DLL also emits pickup and reward logs while Debug mode is active.
 These logs are useful when checking whether a game pickup was detected by the
 runtime hooks.
-
-## Item Tracker
-
-The Item Tracker is a Debug mode tool for validating a full generated world
-against an Archipelago spoiler log.
-
-To use it:
-
-1. Enable `Debug` in `Settings`.
-2. Connect to the Archipelago room.
-3. Wait until randomization finishes.
-4. Open the room page.
-5. Click `Item Tracker`.
-6. Paste the Archipelago spoiler log URL.
-
-   Example:
-
-   ```text
-   https://archipelago.gg/dl_spoiler/...
-   ```
-
-7. Click `Load Spoiler`.
-
-The tracker reads the `Locations:` section of the spoiler log and shows only the
-locations that belong to the current player slot. Locations are grouped by
-Sekiro region, such as:
-
-- `T` - Tutorial
-- `DT` - Dilapidated Temple
-- `AO` - Ashina Outskirts
-- `AC` - Ashina Castle
-- `HE1` / `HE2` - Hirata Estate
-- `ST` - Senpou Temple
-- `SV` / `SVP` - Sunken Valley
-- `MV` - Mibu Village
-- `FP1` / `FP2` - Fountainhead Palace
-
-The left side of the tracker lists regions. Select a region to show only that
-region's checks. This keeps the window responsive and avoids rendering hundreds
-of rows at once.
-
-Each row shows:
-
-- AP location ID.
-- Location name.
-- Spoiler item expected at that location.
-- Sekiro lot/shop ID.
-- Good ID.
-- Quantity.
-- Event flag ID.
-- Current event flag state.
-- A `Report` button.
-
-When an item is picked up in-game:
-
-- The matching row is marked as checked.
-- The tracker selects the correct region.
-- The row scrolls into view.
-- The row flashes briefly.
-- The row remains green afterward.
-- The status bar at the bottom shows the latest pickup information.
-
-Use `Check Flags` to refresh event flag states from the running game. Rows with
-flag state `ON` are shown in green.
-
-Use `Report` when a location looks wrong. The tracker writes a JSON report into:
-
-```text
-ItemIssuesReports/
-```
-
-These reports include the AP location, expected item, generated Sekiro lot, event
-flag, runtime pickup information, and other data useful for debugging mapping or
-event flag issues.
-
-Tracker progress is saved so long testing sessions can be continued later.
 
 ## Troubleshooting
 
