@@ -633,7 +633,9 @@ namespace RandomizerCommon
             AddInitializeEventIfMissing(init, 11110999);
             AddInitializeEventIfMissing(init, 11110998);
             AddInitializeEventIfMissing(init, 11110997);
+            AddInitializeEventIfMissing(init, 11110996);
             AddInstructionIfMissing(init, events.ParseAdd("Initialize Common Event (20005610, 1100030, 1121399, 12000003, 12000004)"));
+            AddInstructionIfMissing(init, events.ParseAdd("Initialize Common Event (20005610, 1100030, 1121318, 12000005, 12000006)"));
 
             AddEventIfMissing(emevd, events, 11110999, EMEVD.Event.RestBehaviorType.Restart, BuildAshinaCastleSfxEvent());
             AddEventIfMissing(emevd, events, 11110998, EMEVD.Event.RestBehaviorType.Restart, BuildDoorLockEvent(
@@ -646,11 +648,17 @@ namespace RandomizerCommon
                 failureDialogId: 10010187));
             AddEventIfMissing(emevd, events, 11110997, EMEVD.Event.RestBehaviorType.Default, new[]
             {
-                "IF Character Has SpEffect (0, 10000, 3995, 1, 0, 1)",
+                "IF Character Has SpEffect (1, 10000, 3995, 1, 0, 1)",
+                "IF In/Outside Area (1, 1, 10000, 1129398, 1)",
+                "IF Condition Group (0, 1, 1)",
                 "WAIT Fixed Time (Seconds) (1)",
                 "Set Event Flag (1102999, 1)",
+                "WAIT Fixed Time (Seconds) (1)",
+                "Display Generic Dialog (12000008, 1, 1, 1129397, 3)",
                 "END Unconditionally (0)",
             });
+            AddEventIfMissing(emevd, events, 11110996, EMEVD.Event.RestBehaviorType.Restart, BuildBlazingBullCastleDoorEvent());
+            PatchBlazingBullVictoryEvents(emevd, events);
         }
 
         private void PatchAshinaReservoirBlockers(Events events)
@@ -727,6 +735,88 @@ namespace RandomizerCommon
             ev.Instructions.Add(instruction);
         }
 
+        private static void ReplaceInstruction(EMEVD.Event ev, Events events, string oldCommand, string newCommand)
+        {
+            EMEVD.Instruction oldInstruction = events.ParseAdd(oldCommand);
+            EMEVD.Instruction newInstruction = events.ParseAdd(newCommand);
+            int index = ev.Instructions.FindIndex(i => InstructionMatches(i, oldInstruction));
+            if (index == -1)
+            {
+                if (ev.Instructions.Any(i => InstructionMatches(i, newInstruction))) return;
+                throw new Exception($"Missing instruction required for additional_region_locks patch in event {ev.ID}: {oldCommand}");
+            }
+            ev.Instructions[index] = newInstruction;
+        }
+
+        private static void AddInstructionAfterLastIfMissing(EMEVD.Event ev, Events events, string afterCommand, string addCommand)
+        {
+            EMEVD.Instruction afterInstruction = events.ParseAdd(afterCommand);
+            EMEVD.Instruction addInstruction = events.ParseAdd(addCommand);
+            int index = ev.Instructions.FindLastIndex(i => InstructionMatches(i, afterInstruction));
+            if (index == -1)
+            {
+                throw new Exception($"Missing insertion point required for additional_region_locks patch in event {ev.ID}: {afterCommand}");
+            }
+            if (index + 1 < ev.Instructions.Count && InstructionMatches(ev.Instructions[index + 1], addInstruction)) return;
+            ev.Instructions.Insert(index + 1, addInstruction);
+        }
+
+        private static void ReplaceInstructionArgValue(EMEVD.Event ev, Events events, int oldValue, int newValue, int expectedCount)
+        {
+            List<(Events.Instr Instr, int ArgIndex, bool IsUInt)> matches = new List<(Events.Instr, int, bool)>();
+            foreach (EMEVD.Instruction instruction in ev.Instructions)
+            {
+                Events.Instr parsed = events.Parse(instruction);
+                for (int i = 0; i < parsed.Args.Count; i++)
+                {
+                    object arg = parsed.Args[i];
+                    if (arg is int intValue && intValue == oldValue)
+                    {
+                        matches.Add((parsed, i, false));
+                    }
+                    else if (arg is uint uintValue && uintValue == oldValue)
+                    {
+                        matches.Add((parsed, i, true));
+                    }
+                }
+            }
+
+            if (matches.Count == 0 && CountInstructionArgValue(ev, events, newValue) >= expectedCount) return;
+            if (matches.Count != expectedCount)
+            {
+                throw new Exception($"Expected to replace {expectedCount} reference(s) to {oldValue} in event {ev.ID}, but found {matches.Count}");
+            }
+
+            foreach ((Events.Instr instr, int argIndex, bool isUInt) in matches)
+            {
+                instr[argIndex] = isUInt ? (object)(uint)newValue : newValue;
+                instr.Save();
+            }
+        }
+
+        private static int CountInstructionArgValue(EMEVD.Event ev, Events events, int value)
+        {
+            int count = 0;
+            foreach (EMEVD.Instruction instruction in ev.Instructions)
+            {
+                Events.Instr parsed = events.Parse(instruction);
+                foreach (object arg in parsed.Args)
+                {
+                    if (ArgMatchesValue(arg, value))
+                    {
+                        count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        private static bool ArgMatchesValue(object arg, int value)
+        {
+            return arg is int intValue && intValue == value
+                || arg is uint uintValue && uintValue == value;
+        }
+
         private static bool InstructionMatches(EMEVD.Instruction left, EMEVD.Instruction right)
         {
             return left.Bank == right.Bank
@@ -736,23 +826,73 @@ namespace RandomizerCommon
 
         private static IEnumerable<string> BuildAshinaCastleSfxEvent()
         {
-            for (int objectId = 1121390; objectId <= 1121397; objectId++)
+            yield return "(De)activate Object (1129397, 1)";
+            yield return "Delete Object-following SFX (1129397, 1)";
+            yield return "WAIT Fixed Time (Frames) (1)";
+
+            for (int dummypolyId = 101; dummypolyId <= 139; dummypolyId++)
             {
-                yield return $"(De)activate Object ({objectId}, 1)";
-                yield return $"Delete Object-following SFX ({objectId}, 1)";
-                yield return "WAIT Fixed Time (Frames) (1)";
-                yield return $"Create Object-following SFX ({objectId}, 101, 11)";
+                if (dummypolyId == 120) continue;
+                yield return $"Create Object-following SFX (1129397, {dummypolyId}, 11)";
             }
 
             yield return "IF Event Flag (0, 1, 0, 1102999)";
-
-            for (int objectId = 1121390; objectId <= 1121397; objectId++)
-            {
-                yield return $"(De)activate Object ({objectId}, 0)";
-                yield return $"Delete Object-following SFX ({objectId}, 1)";
-            }
+            yield return "(De)activate Object (1129397, 0)";
+            yield return "Delete Object-following SFX (1129397, 1)";
 
             yield return "END Unconditionally (0)";
+        }
+
+        private static IEnumerable<string> BuildBlazingBullCastleDoorEvent()
+        {
+            return new[]
+            {
+                "(De)activate Object (1121398, 1)",
+                "GOTO IF Event Flag (1, 1, 0, 61110990)",
+                "IF Event Flag (0, 1, 0, 11110440)",
+                "Set ObjAct State (1111400, 999920, 1)",
+                "Set Object Interaction (1111400, 1, 0)",
+                "IF Action Button (0, 7102, 1111400)",
+                "IF Player Has/Doesn't Have Item (1, 3, 9410, 1)",
+                "GOTO IF Condition Group State (Uncompiled) (0, 0, 1)",
+                "Force Animation Playback (10000, 710900, 0, 0, 0, 0, 1)",
+                "WAIT Fixed Time (Seconds) (3)",
+                "Display Generic Dialog (10010157, 1, 1, 1111400, 3)",
+                "Set Event Flag (61110990, 1)",
+                "END Unconditionally (0)",
+                "Label 0 ()",
+                "Display Generic Dialog (10010189, 1, 1, 1111400, 3)",
+                "WAIT Fixed Time (Seconds) (3)",
+                "END Unconditionally (1)",
+                "Label 1 ()",
+                "Set ObjAct State (1111400, 999920, 0)",
+                "END Unconditionally (0)",
+            };
+        }
+
+        private static void PatchBlazingBullVictoryEvents(EMEVD emevd, Events events)
+        {
+            ReplaceInstruction(
+                RequireEvent(emevd, 11115200),
+                events,
+                "IF Event Flag (0, 1, 0, 11110440)",
+                "IF Event Flag (0, 1, 0, 61110990)");
+
+            EMEVD.Event event11115203 = RequireEvent(emevd, 11115203);
+            ReplaceInstructionArgValue(event11115203, events, 11110440, 61110990, 1);
+            ReplaceInstructionArgValue(event11115203, events, 11110441, 11110440, 1);
+
+            EMEVD.Event event11115205 = RequireEvent(emevd, 11115205);
+            ReplaceInstruction(
+                event11115205,
+                events,
+                "Force Animation Playback (1111442, 0, 0, 0, 0, 0, 1)",
+                "Reproduce Object Animation (1111442, 10)");
+            AddInstructionAfterLastIfMissing(
+                event11115205,
+                events,
+                "Delete Object-following SFX (1111440, 1)",
+                "Reproduce Object Animation (1111442, 10)");
         }
 
         private static IEnumerable<string> BuildDoorLockEvent(
@@ -780,11 +920,11 @@ namespace RandomizerCommon
                 "GOTO IF Condition Group State (Uncompiled) (0, 0, 1)",
                 $"Force Use ObjAct (10000, {objectId}, {objActParamId}, -1)",
                 "WAIT Fixed Time (Seconds) (0.5)",
-                $"Display Generic Dialog ({successDialogId}, 0, 1, {objectId}, 3)",
+                $"Display Generic Dialog ({successDialogId}, 1, 1, {objectId}, 3)",
                 $"Set Event Flag ({openedFlag}, 1)",
                 "END Unconditionally (0)",
                 "Label 0 ()",
-                $"Display Generic Dialog ({failureDialogId}, 0, 1, {objectId}, 3)",
+                $"Display Generic Dialog ({failureDialogId}, 1, 1, {objectId}, 3)",
                 "WAIT Fixed Time (Seconds) (3)",
                 "END Unconditionally (1)",
             };
@@ -801,7 +941,7 @@ namespace RandomizerCommon
                 "IF Player Has/Doesn't Have Item (1, 3, 9408, 1)",
                 "GOTO IF Condition Group State (Uncompiled) (0, 0, 1)",
                 "Force Use ObjAct (10000, 1300985, 109951, 0)",
-                "Display Generic Dialog (10010156, 0, 1, 1791550, 3)",
+                "Display Generic Dialog (10010156, 1, 1, 1791550, 3)",
                 "WAIT Fixed Time (Seconds) (1.5)",
                 "Set Menu Fade (1, 0.5)",
                 "WAIT Fixed Time (Seconds) (0.5)",
@@ -814,7 +954,7 @@ namespace RandomizerCommon
                 "WAIT Fixed Time (Seconds) (1)",
                 "END Unconditionally (1)",
                 "Label 0 ()",
-                "Display Generic Dialog (10010188, 0, 1, 1791550, 3)",
+                "Display Generic Dialog (10010188, 1, 1, 1791550, 3)",
                 "WAIT Fixed Time (Seconds) (3)",
                 "END Unconditionally (1)",
                 "Label 1 ()",

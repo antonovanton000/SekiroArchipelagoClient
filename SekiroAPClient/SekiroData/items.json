@@ -1186,5 +1186,10 @@
     "code": 9409,
     "name": "Bell of Dispelling (Sunken Valley Key)",
     "type": "archipelago"
+  },
+  {
+    "code": 9410,
+    "name": "Ashina Requisitions Whistle",
+    "type": "archipelago"
   }
 ]

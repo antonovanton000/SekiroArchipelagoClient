@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "SekiroAPClient": {
+      "commandName": "Project",
+      "commandLineArgs": "--developer-mode"
+    }
+  }
+}

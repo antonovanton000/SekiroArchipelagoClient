@@ -4,11 +4,11 @@ namespace SekiroAPClient.Classes;
 
 public sealed class ItemTransferLogger
 {
-    private readonly string _path;
-    private readonly Func<bool> _isEnabled;
-    private readonly object _lock = new();
+    private string _path;
+    private bool _isEnabled;
+    private object _lock = new();
 
-    public ItemTransferLogger(string path, Func<bool> isEnabled)
+    public ItemTransferLogger(string path, bool isEnabled)
     {
         _path = path;
         _isEnabled = isEnabled;
@@ -18,7 +18,7 @@ public sealed class ItemTransferLogger
 
     public void Log(string message)
     {
-        if (!_isEnabled())
+        if (!_isEnabled)
             return;
 
         try

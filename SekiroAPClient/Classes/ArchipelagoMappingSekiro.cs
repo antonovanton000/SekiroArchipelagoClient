@@ -5,14 +5,21 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using static RandomizerCommon.LocationData;
 
-public sealed class ArchipelagoMappingSekiroResult
+public class ArchipelagoMappingSekiroResult
 {
     public Dictionary<long, LocationData.SlotKey> LocationToSlot { get; } = new();
     public Dictionary<long, HashSet<int>> LocationToLotIds { get; } = new();
 }
 
+//This is the most complicated part of the AP integration
+//because we have to map the AP location names to the local randomizer annotation keys.
+//The AP location names are not guaranteed to match the annotation keya
+//so we have to use a combination of exact matches, overrides,
+//and fuzzy matching to find the best match for each location.
+
 public static class ArchipelagoMappingSekiro
 {
+    // Map of Archipelago location prefixes to the corresponding annotation area names.
     private static readonly Dictionary<string, string[]> AreaPrefixes = new(StringComparer.OrdinalIgnoreCase)
     {
         ["T"] = new[] { "ashinareservoir_start" },
@@ -37,6 +44,7 @@ public static class ArchipelagoMappingSekiro
         ["FP2"] = new[] { "fountainhead", "fountainhead_carp" },
     };
 
+    //It's a bit of a hack, but we don't want to match common words like "the" or "and" when scoring fallback candidates.
     private static readonly HashSet<string> StopWords = new(StringComparer.OrdinalIgnoreCase)
     {
         "a", "an", "and", "are", "at", "behind", "before", "below", "beside", "between",
@@ -45,59 +53,6 @@ public static class ArchipelagoMappingSekiro
         "upper", "with", "after", "area", "idol", "drop", "enemy", "miniboss", "boss",
         "corpse", "chest", "item", "group"
     };
-
-    //public static ArchipelagoMappingSekiroResult ArchipelagoSlotsSekiro(
-    //Dictionary<long, string> apIdsToKeys,
-    //AnnotationData ann,
-    //LocationData data,
-    //IReadOnlyList<ScoutedItemInfo> locations)
-    //{
-    //    var result = new ArchipelagoMappingSekiroResult();
-
-    //    foreach (var loc in locations)
-    //    {
-    //        if (!apIdsToKeys.TryGetValue(loc.LocationId, out var annKey))
-    //            continue;
-
-    //        if (!ann.SlotsByAnnotationsKey.TryGetValue(annKey, out var slotAnn))
-    //            continue;
-
-    //        var scope = slotAnn.LocationScope;
-
-    //        if (!data.Locations.TryGetValue(scope, out var allSlotsInScope) || allSlotsInScope.Count == 0)
-    //            continue;
-
-    //        var baseSlots = data.Location(scope);
-    //        if (baseSlots == null || baseSlots.Count == 0)
-    //        {
-    //            result.LocationToSlot[loc.LocationId] = allSlotsInScope[0];
-    //            continue;
-    //        }          
-            
-    //        if (baseSlots.Count == 1)
-    //        {
-    //            var baseSlot = baseSlots[0];               
-    //            result.LocationToSlot[loc.LocationId] = baseSlots[0];
-    //            continue;
-    //        }
-            
-    //        var eventId = ExtractEventIdFromAnnotationKey(annKey);
-
-    //        var matched = baseSlots.FirstOrDefault(s =>
-    //        {
-    //            var itemLoc = data.Location(s);
-    //            return itemLoc != null &&
-    //                   itemLoc.Scope.EventID == eventId;
-    //        });
-
-    //        if (matched != null)
-    //        {
-    //            result.LocationToSlot[loc.LocationId] = matched;
-    //        }
-    //    }
-
-    //    return result;
-    //}
 
     public static ArchipelagoMappingSekiroResult ArchipelagoSlotsSekiro(
      Dictionary<long, string> apIdsToKeys,
@@ -114,6 +69,7 @@ public static class ArchipelagoMappingSekiro
         int missingSlotCount = 0;
         var locationOverrides = LoadLocationOverrides();
         var archipelagoFallback = BuildArchipelagoFallback(ann);
+        var isDebug = SekiroAPClient.Properties.Settings.Default.IsDebug;
 
         foreach (var loc in locations)
         {
@@ -146,31 +102,36 @@ public static class ArchipelagoMappingSekiro
             if (annKey == null)
             {
                 missingKeyCount++;
-                Console.WriteLine($"[AP-MAP][NO-KEY] {loc.LocationId}: {loc.LocationName}");
+                if (isDebug)
+                    Console.WriteLine($"[AP-MAP][NO-KEY] {loc.LocationId}: {loc.LocationName}");
                 continue;
             }
 
             if (!ann.SlotsByAnnotationsKey.TryGetValue(annKey, out var slotAnn))
             {
                 missingSlotCount++;
-                Console.WriteLine($"[AP-MAP][NO-ANNOTATION] {loc.LocationId}: key={annKey} location={loc.LocationName}");
+                if (isDebug)
+                    Console.WriteLine($"[AP-MAP][NO-ANNOTATION] {loc.LocationId}: key={annKey} location={loc.LocationName}");
                 continue;
             }
 
             if (usedOverride)
             {
                 overrideKeyCount++;
-                Console.WriteLine($"[AP-MAP][OVERRIDE] {loc.LocationId}: {loc.LocationName} -> {annKey}");
+                if (isDebug)
+                    Console.WriteLine($"[AP-MAP][OVERRIDE] {loc.LocationId}: {loc.LocationName} -> {annKey}");
             }
             else if (usedFallback)
             {
                 fallbackKeyCount++;
-                Console.WriteLine($"[AP-MAP][FALLBACK] {loc.LocationId}: {loc.LocationName} -> {annKey}");
+                if (isDebug)
+                    Console.WriteLine($"[AP-MAP][FALLBACK] {loc.LocationId}: {loc.LocationName} -> {annKey}");
             }
             else if (usedFuzzyFallback)
             {
                 fuzzyFallbackKeyCount++;
-                Console.WriteLine($"[AP-MAP][FUZZY-FALLBACK] {loc.LocationId}: {loc.LocationName} -> {annKey}");
+                if (isDebug)
+                    Console.WriteLine($"[AP-MAP][FUZZY-FALLBACK] {loc.LocationId}: {loc.LocationName} -> {annKey}");
             }
             else
             {
@@ -181,7 +142,8 @@ public static class ArchipelagoMappingSekiro
 
             if (!data.Locations.TryGetValue(scope, out var allSlotsInScope) || allSlotsInScope.Count == 0)
             {
-                Console.WriteLine($"[AP-MAP][NO-SCOPE] {loc.LocationId}: key={annKey} scope={scope} location={loc.LocationName}");
+                if (isDebug)
+                    Console.WriteLine($"[AP-MAP][NO-SCOPE] {loc.LocationId}: key={annKey} scope={scope} location={loc.LocationName}");
                 continue;
             }
 
@@ -251,14 +213,18 @@ public static class ArchipelagoMappingSekiro
 
             if (matched == null)
             {
-                Console.WriteLine($"[AP-MAP][NO-LOT-MATCH] {loc.LocationId}: key={annKey} item={apItemName} ids={string.Join(",", ids)} location={loc.LocationName}");
+                if (isDebug)
+                    Console.WriteLine($"[AP-MAP][NO-LOT-MATCH] {loc.LocationId}: key={annKey} item={apItemName} ids={string.Join(",", ids)} location={loc.LocationName}");
                 continue;
             }
 
             result.LocationToSlot[loc.LocationId] = matched;
         }
-
-        Console.WriteLine($"[AP-MAP] exact={exactKeyCount}, override={overrideKeyCount}, fallback={fallbackKeyCount}, fuzzyFallback={fuzzyFallbackKeyCount}, noKey={missingKeyCount}, noAnnotation={missingSlotCount}, mapped={result.LocationToSlot.Count}/{locations.Count}");
+        
+        if (isDebug)
+            Console.WriteLine($"[AP-MAP] exact={exactKeyCount}, override={overrideKeyCount}, fallback={fallbackKeyCount}, fuzzyFallback={fuzzyFallbackKeyCount}, noKey={missingKeyCount}, noAnnotation={missingSlotCount}, mapped={result.LocationToSlot.Count}/{locations.Count}");
+        
+        
         return result;
     }
 

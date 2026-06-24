@@ -364,7 +364,6 @@ FodyWeavers.xsd
 /sekiro_apworld/sekiro
 /ParamsExport
 /x64
-/.codex/SaveInspect
 /ReleaseTool/ReleaseTool.csproj
 /ReleaseTool/Program.cs
 /.codex

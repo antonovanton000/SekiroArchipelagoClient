@@ -186,8 +186,7 @@ public partial class RandomizerHelper : ObservableObject
                 }
                 Console.WriteLine();
                 for (int i = 0; i < 50; i++) Console.WriteLine();
-                // Slightly different high-level algorithm for each game.
-
+                
                 Events events = new Events($@"{game.Dir}\Base\sekiro-common.emedf.json");
                 EventConfig eventConfig;
                 using (var reader = File.OpenText($@"{game.Dir}\Base\events.txt"))
@@ -236,9 +235,6 @@ public partial class RandomizerHelper : ObservableObject
                 var apLotMap = new List<ApLotEntry>();
                 foreach (var info in locations)
                 {
-                    if (info.LocationDisplayName == "AC/I: Aromatic Branch - boss arena, boss drop")
-                        info.ToString();
-
 
                     var quantity = itemCounts.TryGetValue(info.ItemId, out var q) ? q : 1;
 
@@ -305,8 +301,6 @@ public partial class RandomizerHelper : ObservableObject
                         .Where(k => !IsDragonTallyBoardInfiniteShop(k.ID))
                         .ToList();
 
-                    int sharedShopEventFlag = GetSharedShopEventFlag(game, shopKeys);
-
                     // If the location has neither LOT nor SHOP keys, skip it
                     if (lotKeys.Count == 0 && shopKeys.Count == 0)
                     {
@@ -365,6 +359,7 @@ public partial class RandomizerHelper : ObservableObject
                     }
 
                     data.Location(sourceSlotKey).ForcedQuantity = quantity;
+                    int sharedEventFlag = GetSharedOfferingBoxEventFlag(game, lotKeys, shopKeys, info.LocationId, expectedGoodId);
 
                     // -------------------------------------------------------
                     // LOT branch (regular pickups, boss drops, offering box)
@@ -373,8 +368,8 @@ public partial class RandomizerHelper : ObservableObject
                     {
                         int lotId = lk.ID;
                         int vanillaLotEventFlag = GetLotEventFlag(game, lotId, lk.BaseID, -1);
-                        int lotEventFlag = sharedShopEventFlag > 0
-                            ? sharedShopEventFlag
+                        int lotEventFlag = sharedEventFlag > 0
+                            ? sharedEventFlag
                             : GetForcedLotEventFlag(lotId, vanillaLotEventFlag, info.LocationId, expectedGoodId);
 
                         var targetLotSlotKey = FindSlotKeyByLotId(data, itemLoc.LocScope, lotId);
@@ -417,7 +412,7 @@ public partial class RandomizerHelper : ObservableObject
                     foreach (var shopKey in shopKeys)
                     {
                         int shopId = shopKey.ID;
-                        int shopEventFlag = sharedShopEventFlag > 0 ? sharedShopEventFlag : GetShopEventFlag(game, shopId);
+                        int shopEventFlag = sharedEventFlag > 0 ? sharedEventFlag : GetShopEventFlag(game, shopId);
 
                         var targetShopSlotKey = FindSlotKeyByShopId(data, itemLoc.LocScope, shopId);
                         if (targetShopSlotKey == null)
@@ -749,7 +744,7 @@ public partial class RandomizerHelper : ObservableObject
         }
         catch
         {
-            // See GetLotEventFlag.
+            //Same here
         }
 
         return -1;
@@ -775,6 +770,34 @@ public partial class RandomizerHelper : ObservableObject
         }
 
         return -1;
+    }
+
+    int GetSharedOfferingBoxEventFlag(
+        GameData game,
+        IReadOnlyCollection<LocationKey> lotKeys,
+        IReadOnlyCollection<LocationKey> shopKeys,
+        long archipelagoLocationId,
+        int goodId)
+    {
+        if (!shopKeys.Any(k => IsOfferingBoxShop(k.ID)))
+            return GetSharedShopEventFlag(game, shopKeys);
+
+        foreach (var shopKey in shopKeys.Where(k => !IsOfferingBoxShop(k.ID)))
+        {
+            int flag = GetShopEventFlag(game, shopKey.ID);
+            if (flag > 0)
+                return flag;
+        }
+
+        foreach (var lotKey in lotKeys)
+        {
+            int vanillaLotEventFlag = GetLotEventFlag(game, lotKey.ID, lotKey.BaseID, -1);
+            int flag = GetForcedLotEventFlag(lotKey.ID, vanillaLotEventFlag, archipelagoLocationId, goodId);
+            if (flag > 0)
+                return flag;
+        }
+
+        return GetSharedShopEventFlag(game, shopKeys);
     }
 
     static bool IsOfferingBoxShop(int shopId)

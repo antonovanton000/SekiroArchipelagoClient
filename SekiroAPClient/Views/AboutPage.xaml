@@ -15,15 +15,13 @@
     <Grid >
         <Grid.Background>
             <ImageBrush ImageSource="{DynamicResource GrassBackgroundImage}"
-                TileMode="Tile"
-                Viewport="0,0,512,512"
-                ViewportUnits="Absolute"
-                Stretch="Fill"
-                AlignmentX="Left"
-                AlignmentY="Top" />
+                        TileMode="Tile"
+                        Viewport="0,0,512,512"
+                        ViewportUnits="Absolute"
+                        Stretch="Fill"
+                        AlignmentX="Left"
+                        AlignmentY="Top" />
         </Grid.Background>
-        <Image Source="/Images/Wolf.png"  HorizontalAlignment="Right" VerticalAlignment="Bottom" 
-               Height="250" Margin="10"/>
         <TextBlock Style="{StaticResource FlatTextBlockStyle}" HorizontalAlignment="Right" Margin="0,34,40,0">
             <Run Text="AppVersion:"/>
             <Run x:Name="runVersion" Text="" FontWeight="Bold"/>

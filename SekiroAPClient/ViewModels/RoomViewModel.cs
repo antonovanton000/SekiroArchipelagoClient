@@ -30,8 +30,8 @@ public partial class RoomViewModel : MyBaseViewModel
         RandomizerHelper = new();
         pipeServer = App.PipeServer;
         stateStorage = new StateStorage<ApRandomizationState>(Path.Combine(App.Location, "ap_randomization_state.json"));
-        itemTransferLogger = CreateItemTransferLogger();
-        pendingLocationChecks = CreatePendingLocationCheckStore();
+        itemTransferLogger = new ItemTransferLogger(Path.Combine(App.Location, "ap_item_transfer_log.txt"), App.IsDeveloperMode);
+        pendingLocationChecks = new PendingLocationCheckStore(PendingLocationChecksPath);
         hintItemNames = LoadHintItemNames();
         UpdateGameLaunchUi();
 
@@ -43,15 +43,15 @@ public partial class RoomViewModel : MyBaseViewModel
         RandomizerHelper = new();
         pipeServer = App.PipeServer;
         stateStorage = new StateStorage<ApRandomizationState>(Path.Combine(App.Location, "ap_randomization_state.json"));
-        itemTransferLogger = CreateItemTransferLogger();
-        pendingLocationChecks = CreatePendingLocationCheckStore();
+        itemTransferLogger = new ItemTransferLogger(Path.Combine(App.Location, "ap_item_transfer_log.txt"), App.IsDeveloperMode);
+        pendingLocationChecks = new PendingLocationCheckStore(PendingLocationChecksPath);
         hintItemNames = LoadHintItemNames();
         UpdateGameLaunchUi();
     }
     #endregion
 
     #region Fields and Properties
-    
+
     private OverlayWindow? overlayWindow = null;
     bool isGoBackEnabled = false;
     bool isClosingEnabled = false;
@@ -116,8 +116,6 @@ public partial class RoomViewModel : MyBaseViewModel
 
     DeathLinkService? deathLinkService;
 
-    public bool IsDeveloperMode => App.IsDeveloperMode;
-
     private CancellationTokenSource? _reconnectCts;
     private readonly CancellationTokenSource _receivedItemsCts = new();
     private readonly SemaphoreSlim _receivedItemsLock = new(1, 1);
@@ -147,24 +145,16 @@ public partial class RoomViewModel : MyBaseViewModel
     private static string PendingLocationChecksPath
         => Path.Combine(App.Location, "randomizer\\pending_location_checks.json");
 
-    private static ReceivedItemStore CreateLocalItemsStore()
-        => new(LocalItemsStorePath);
-
-    private static PendingLocationCheckStore CreatePendingLocationCheckStore()
-        => new(PendingLocationChecksPath);
-
-    private ItemTransferLogger CreateItemTransferLogger()
-        => new(Path.Combine(App.Location, "ap_item_transfer_log.txt"), () => IsDeveloperMode);
-
     private bool IsActiveRoomViewModel => Volatile.Read(ref _activeRoomViewModelId) == _roomViewModelId;
 
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(OverlayButtonText))]
     bool isExternalWindowOpened = false;
-    
+
     public string OverlayButtonText => IsExternalWindowOpened ? "Close Overlay" : "Show Overlay";
 
+    public bool IsDeveloperMode => App.IsDeveloperMode;
     #endregion
 
     #region Appearing
@@ -191,7 +181,7 @@ public partial class RoomViewModel : MyBaseViewModel
             DeletePendingLocationChecksForNewRoom();
         }
 
-        localItemsStore = CreateLocalItemsStore();
+        localItemsStore = new ReceivedItemStore(LocalItemsStorePath);
 
         if (savedState != null)
         {
@@ -217,7 +207,7 @@ public partial class RoomViewModel : MyBaseViewModel
             if (pipeServer.IsConnected)
             {
                 LogText += $"Successfully connected to Game!\r\n";
-                if (IsDeveloperMode)
+                if (App.IsDeveloperMode)
                 {
                     pipeServer.ChangeDebugState(true);
                     await Task.Delay(100);
@@ -374,7 +364,7 @@ public partial class RoomViewModel : MyBaseViewModel
         if (!App.IsDeveloperMode)
             return;
 
-        var newWindow = new DebugWindow();        
+        var newWindow = new DebugWindow();
         newWindow.Show();
     }
 
@@ -534,8 +524,10 @@ public partial class RoomViewModel : MyBaseViewModel
         if (state == "connected")
         {
             IsConnectedToGame = true;
-            LogText += $"Successfully connected to Game!\r\n";
-            if (IsDeveloperMode)
+            if (Properties.Settings.Default.IsDebug)
+                LogText += $"Successfully connected to Game!\r\n";
+
+            if (App.IsDeveloperMode)
             {
                 await Task.Delay(500);
                 pipeServer.ChangeDebugState(true);
@@ -551,7 +543,8 @@ public partial class RoomViewModel : MyBaseViewModel
         else if (state == "disconnected")
         {
             IsConnectedToGame = false;
-            LogText += $"Disconnected from Game!\r\n";
+            if (Properties.Settings.Default.IsDebug)
+                LogText += $"Disconnected from Game!\r\n";
         }
     }
 
@@ -588,7 +581,7 @@ public partial class RoomViewModel : MyBaseViewModel
             return;
 
         if (message is ItemSendLogMessage itemMessage)
-        {            
+        {
             if (ShowNotifications)
             {
                 if (itemMessage.IsSenderTheActivePlayer || itemMessage.IsReceiverTheActivePlayer)
@@ -604,7 +597,7 @@ public partial class RoomViewModel : MyBaseViewModel
             }
         }
         else if (message is TagsChangedLogMessage logMessage)
-        {            
+        {
             if (ShowNotifications)
             {
                 await PushNotificationAsync(new ServerNotification()
@@ -641,24 +634,19 @@ public partial class RoomViewModel : MyBaseViewModel
 
                 if (IsSekiroMemoryItem(obj.GoodId))
                 {
-                    itemTransferLogger.Log($"LOCAL_PICKUP extra_memory_counter good={obj.GoodId} lot={obj.LotId}");
                     pipeServer.SendSpawnItem(0x40000000 + 5400, 1);
+                    
+                    if (Properties.Settings.Default.IsDebug)
+                        itemTransferLogger.Log($"LOCAL_PICKUP extra_memory_counter good={obj.GoodId} lot={obj.LotId}");
                 }
 
                 if (IsMechanicalBarrelItem(obj.GoodId))
                 {
                     int eventFlagId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(obj.GoodId);
                     await Task.Delay(20);
-                    itemTransferLogger.Log($"LOCAL_PICKUP set_permanent_flag good={obj.GoodId} flag={eventFlagId} lot={obj.LotId}");
                     pipeServer.SendSetEventFlagId(eventFlagId, 1);
-                }
-
-                if (IsAromaticBranchItem(obj.GoodId))
-                {
-                    int eventFlagId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(obj.GoodId);
-                    await Task.Delay(20);
-                    itemTransferLogger.Log($"LOCAL_PICKUP set_permanent_flag good={obj.GoodId} flag={eventFlagId} lot={obj.LotId}");
-                    pipeServer.SendSetEventFlagId(eventFlagId, 1);
+                    if (Properties.Settings.Default.IsDebug)
+                        itemTransferLogger.Log($"LOCAL_PICKUP set_permanent_flag good={obj.GoodId} flag={eventFlagId} lot={obj.LotId}");
                 }
 
                 if (KeyItemTracker.CheckItem(obj.GoodId))
@@ -669,8 +657,11 @@ public partial class RoomViewModel : MyBaseViewModel
             }
             else
             {
-                LogText += $"[AP][LOT-MAP-MISSING] No AP location for lot={obj.LotId} good={obj.GoodId} shop={obj.IsFromShop}\r\n";
-                itemTransferLogger.Log($"SEND_CHECK missing_lot_map lot={obj.LotId} good={obj.GoodId} qty={obj.Quantity} shop={obj.IsFromShop}");
+                if (Properties.Settings.Default.IsDebug)
+                {
+                    LogText += $"[AP][LOT-MAP-MISSING] No AP location for lot={obj.LotId} good={obj.GoodId} shop={obj.IsFromShop}\r\n";
+                    itemTransferLogger.Log($"SEND_CHECK missing_lot_map lot={obj.LotId} good={obj.GoodId} qty={obj.Quantity} shop={obj.IsFromShop}");
+                }
             }
         }
     }
@@ -689,7 +680,8 @@ public partial class RoomViewModel : MyBaseViewModel
             }
             catch (Exception ex)
             {
-                await App.Current.Dispatcher.InvokeAsync(() => LogText += $"[AP] Failed to save death counter: {ex.Message}\r\n");
+                if (Properties.Settings.Default.IsDebug)
+                    await App.Current.Dispatcher.InvokeAsync(() => LogText += $"[AP] Failed to save death counter: {ex.Message}\r\n");
             }
         }
 
@@ -782,12 +774,14 @@ public partial class RoomViewModel : MyBaseViewModel
 
         if (IsEndingMatchingGoal(endingType, State?.RoomRandomizerOptions.GoalOption ?? 0))
         {
-            LogText += $"[AP] Goal ending detected: {endingType}. Sending goal achieved.\r\n";
+            if (Properties.Settings.Default.IsDebug)
+                LogText += $"[AP] Goal ending detected: {endingType}. Sending goal achieved.\r\n";
+
             CurrentSession.SetGoalAchieved();
             return;
         }
-
-        LogText += $"[AP] Ending detected: {endingType}, but current goal is {State?.RoomRandomizerOptions.GoalOptionText ?? "Full Game"}. Goal not sent.\r\n";
+        if (Properties.Settings.Default.IsDebug)
+            LogText += $"[AP] Ending detected: {endingType}, but current goal is {State?.RoomRandomizerOptions.GoalOptionText ?? "Full Game"}. Goal not sent.\r\n";
     }
 
     #endregion
@@ -901,13 +895,15 @@ public partial class RoomViewModel : MyBaseViewModel
             if (!File.Exists(LocalItemsStorePath))
                 return;
 
-            File.Delete(LocalItemsStorePath);
-            itemTransferLogger.Log($"LOCAL_STORE deleted reason=state_mismatch_or_missing path='{LocalItemsStorePath}'");
+            File.Delete(LocalItemsStorePath);            
         }
         catch (Exception ex)
         {
-            LogText += $"[AP] Failed to delete local item store for a new room: {ex.Message}\r\n";
-            itemTransferLogger.Log($"LOCAL_STORE delete_failed path='{LocalItemsStorePath}' error='{ex.Message}'");
+            if (Properties.Settings.Default.IsDebug)
+            {
+                LogText += $"[AP] Failed to delete local item store: {ex.Message}\r\n";
+                itemTransferLogger.Log($"LOCAL_STORE delete_failed path='{LocalItemsStorePath}' error='{ex.Message}'");
+            }
         }
     }
 
@@ -919,13 +915,15 @@ public partial class RoomViewModel : MyBaseViewModel
                 return;
 
             File.Delete(PendingLocationChecksPath);
-            pendingLocationChecks = CreatePendingLocationCheckStore();
-            itemTransferLogger.Log($"LOCATION_CHECK_QUEUE deleted reason=new_room path='{PendingLocationChecksPath}'");
+            pendingLocationChecks = new PendingLocationCheckStore(PendingLocationChecksPath);           
         }
         catch (Exception ex)
         {
-            LogText += $"[AP] Failed to delete pending location checks for a new room: {ex.Message}\r\n";
-            itemTransferLogger.Log($"LOCATION_CHECK_QUEUE delete_failed path='{PendingLocationChecksPath}' error='{ex.Message}'");
+            if (Properties.Settings.Default.IsDebug)
+            {
+                LogText += $"[AP] Failed to delete pending location checs: {ex.Message}\r\n";
+                itemTransferLogger.Log($"LOCATION_CHECK_QUEUE delete_failed path='{PendingLocationChecksPath}' error='{ex.Message}'");
+            }
         }
     }
 
@@ -935,8 +933,11 @@ public partial class RoomViewModel : MyBaseViewModel
             return;
 
         pendingLocationChecks.Add(locationIds, item.LotId, item.GoodId, item.Quantity, item.IsFromShop);
-        LogText += $"[AP] Queued location check(s): {string.Join(", ", locationIds)} lot={item.LotId} good={item.GoodId} shop={item.IsFromShop}\r\n";
-        itemTransferLogger.Log($"SEND_CHECK queued locations={string.Join(",", locationIds)} lot={item.LotId} good={item.GoodId} qty={item.Quantity} shop={item.IsFromShop}");
+        if (Properties.Settings.Default.IsDebug)
+        {
+            LogText += $"[AP] Queued location check(s): {string.Join(", ", locationIds)} lot={item.LotId} good={item.GoodId} shop={item.IsFromShop}\r\n";
+            itemTransferLogger.Log($"SEND_CHECK queued locations={string.Join(",", locationIds)} lot={item.LotId} good={item.GoodId} qty={item.Quantity} shop={item.IsFromShop}");
+        }
     }
 
     async Task FlushPendingLocationChecksAsync()
@@ -944,30 +945,27 @@ public partial class RoomViewModel : MyBaseViewModel
         if (CurrentSession?.Socket?.Connected != true)
         {
             var pending = pendingLocationChecks.Snapshot();
-            if (pending.Count > 0)
-                itemTransferLogger.Log($"SEND_CHECK flush_skipped_no_connection pending={pending.Count}");
-
-            return;
+            if (pending.Count > 0)                
+                return;
         }
 
         var records = pendingLocationChecks.Snapshot();
         if (records.Count == 0)
             return;
 
-        var locationIds = records.Select(record => record.LocationId).Distinct().OrderBy(id => id).ToArray();
-        LogText += $"[AP] Sending pending location check(s): {string.Join(", ", locationIds)}\r\n";
-        itemTransferLogger.Log($"SEND_CHECK flush_start locations={string.Join(",", locationIds)} pending={records.Count}");
-
+        var locationIds = records.Select(record => record.LocationId).Distinct().OrderBy(id => id).ToArray();        
         try
         {
             await CurrentSession.Locations.CompleteLocationChecksAsync(locationIds);
-            pendingLocationChecks.Remove(locationIds);
-            itemTransferLogger.Log($"SEND_CHECK flush_ok locations={string.Join(",", locationIds)}");
+            pendingLocationChecks.Remove(locationIds);            
         }
         catch (Exception ex)
         {
-            itemTransferLogger.Log($"SEND_CHECK flush_error locations={string.Join(",", locationIds)} error={ex.Message}");
-            LogText += $"[AP] Failed to send pending location checks. They will be retried after reconnect. Error: {ex.Message}\r\n";
+            if (Properties.Settings.Default.IsDebug)
+            {
+                itemTransferLogger.Log($"SEND_CHECK flush_error locations={string.Join(",", locationIds)} error={ex.Message}");
+                LogText += $"[AP] Failed to send pending location checks. They will be retried after reconnect. Error: {ex.Message}\r\n";
+            }
         }
     }
 
@@ -978,13 +976,15 @@ public partial class RoomViewModel : MyBaseViewModel
             if (!File.Exists(KeyItemTrackerStatePath))
                 return;
 
-            File.Delete(KeyItemTrackerStatePath);
-            itemTransferLogger.Log($"KEY_TRACKER_STATE deleted reason=new_room path='{KeyItemTrackerStatePath}'");
+            File.Delete(KeyItemTrackerStatePath);           
         }
         catch (Exception ex)
         {
-            LogText += $"[AP] Failed to delete key item tracker state for a new room: {ex.Message}\r\n";
-            itemTransferLogger.Log($"KEY_TRACKER_STATE delete_failed path='{KeyItemTrackerStatePath}' error='{ex.Message}'");
+            if (Properties.Settings.Default.IsDebug)
+            {
+                LogText += $"[AP] Failed to delete key item tracker state for a new room: {ex.Message}\r\n";
+                itemTransferLogger.Log($"KEY_TRACKER_STATE delete_failed path='{KeyItemTrackerStatePath}' error='{ex.Message}'");
+            }
         }
     }
 
@@ -1009,7 +1009,8 @@ public partial class RoomViewModel : MyBaseViewModel
         }
         catch (Exception ex)
         {
-            itemTransferLogger.Log($"KEY_TRACKER_STATE load_failed path='{KeyItemTrackerStatePath}' error='{ex.Message}'");
+            if (Properties.Settings.Default.IsDebug)
+                itemTransferLogger.Log($"KEY_TRACKER_STATE load_failed path='{KeyItemTrackerStatePath}' error='{ex.Message}'");
         }
 
         foreach (var goodId in checkedGoodIds)
@@ -1041,8 +1042,7 @@ public partial class RoomViewModel : MyBaseViewModel
 
         Directory.CreateDirectory(Path.GetDirectoryName(KeyItemTrackerStatePath)!);
         var json = System.Text.Json.JsonSerializer.Serialize(checkedGoodIds, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(KeyItemTrackerStatePath, json);
-        itemTransferLogger.Log($"KEY_TRACKER_STATE saved count={checkedGoodIds.Count} path='{KeyItemTrackerStatePath}'");
+        await File.WriteAllTextAsync(KeyItemTrackerStatePath, json);        
     }
 
     static int NormalizeGoodId(int id)
@@ -1118,7 +1118,8 @@ public partial class RoomViewModel : MyBaseViewModel
                 var key = ReceivedItemStore.MakeKey(item.ItemId, item.LocationId, item.Player.Slot);
                 var alreadyDelivered = !isCheatConsole && localItemsStore.Has(key);
 
-                itemTransferLogger.Log($"RECEIVE dequeued key={key} itemId={item.ItemId} item='{item.ItemName}' locationId={item.LocationId} location='{item.LocationName}' from='{item.Player.Name}' fromSlot={item.Player.Slot} cheat={isCheatConsole} storeDelivered={alreadyDelivered}");
+                if (Properties.Settings.Default.IsDebug)
+                    itemTransferLogger.Log($"RECEIVE dequeued key={key} itemId={item.ItemId} item='{item.ItemName}' locationId={item.LocationId} location='{item.LocationName}' from='{item.Player.Name}' fromSlot={item.Player.Slot} cheat={isCheatConsole} storeDelivered={alreadyDelivered}");
 
                 var gameItemFullId = ApIdsToItemIds.ContainsKey(item.ItemId) ? ApIdsToItemIds[item.ItemId] : -1;
                 if (gameItemFullId != -1)
@@ -1128,7 +1129,9 @@ public partial class RoomViewModel : MyBaseViewModel
                     var itemEventId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(goodId);
                     var isSingleton = SingletonItemPolicy.ShouldClampToOne(goodId);
                     var singletonKey = isSingleton ? MakeSingletonItemKey(goodId, itemEventId) : null;
-                    itemTransferLogger.Log($"RECEIVE mapped key={key} fullId={gameItemFullId} good={goodId} qty={count} event={itemEventId} singleton={isSingleton} singletonKey={singletonKey ?? ""}");
+
+                    if (Properties.Settings.Default.IsDebug)
+                        itemTransferLogger.Log($"RECEIVE mapped key={key} fullId={gameItemFullId} good={goodId} qty={count} event={itemEventId} singleton={isSingleton} singletonKey={singletonKey ?? ""}");
 
                     if (KeyItemTracker.CheckItem(goodId))
                     {
@@ -1137,9 +1140,12 @@ public partial class RoomViewModel : MyBaseViewModel
 
                     if (alreadyDelivered)
                     {
-                        itemTransferLogger.Log($"RECEIVE skip_already_delivered key={key} fullId={gameItemFullId} good={goodId}");
+                        if (Properties.Settings.Default.IsDebug)
+                        {
+                            itemTransferLogger.Log($"RECEIVE skip_already_delivered key={key} fullId={gameItemFullId} good={goodId}");
+                        }
                         if (singletonKey != null)
-                            localItemsStore.TryMark(singletonKey);                    
+                            localItemsStore.TryMark(singletonKey);
 
                         continue;
                     }
@@ -1147,8 +1153,11 @@ public partial class RoomViewModel : MyBaseViewModel
 
                     if (!isCheatConsole && singletonKey != null && localItemsStore.Has(singletonKey))
                     {
-                        LogText += $"[AP] Skipped duplicate singleton item: {item.ItemName} goodId={goodId} eventId={itemEventId} from={item.Player.Name} location={item.LocationName}\r\n";
-                        itemTransferLogger.Log($"RECEIVE skip_duplicate_singleton key={key} singletonKey={singletonKey} good={goodId} event={itemEventId}");
+                        if (Properties.Settings.Default.IsDebug)
+                        {
+                            LogText += $"[AP] Skipped duplicate singleton item: {item.ItemName} goodId={goodId} eventId={itemEventId} from={item.Player.Name} location={item.LocationName}\r\n";
+                            itemTransferLogger.Log($"RECEIVE skip_duplicate_singleton key={key} singletonKey={singletonKey} good={goodId} event={itemEventId}");
+                        }
                         localItemsStore.MarkDelivered(key);
                         localItemsStore.Save();
                         continue;
@@ -1164,8 +1173,11 @@ public partial class RoomViewModel : MyBaseViewModel
                     bool delivered = await SendTrackedItemToGameAsync(gameItemFullId, goodId, count, itemEventId, cancellationToken);
                     if (!delivered)
                     {
-                        LogText += $"[AP] Item delivery was not confirmed by the game and will be retried on reconnect: {item.ItemName} from {item.Player.Name} at {item.LocationName}\r\n";
-                        itemTransferLogger.Log($"RECEIVE delivery_failed_not_stored key={key} fullId={gameItemFullId} good={goodId} qty={count} event={itemEventId}");
+                        if (Properties.Settings.Default.IsDebug)
+                        {
+                            LogText += $"[AP] Item delivery was not confirmed by the game and will be retried on reconnect: {item.ItemName} from {item.Player.Name} at {item.LocationName}\r\n";
+                            itemTransferLogger.Log($"RECEIVE delivery_failed_not_stored key={key} fullId={gameItemFullId} good={goodId} qty={count} event={itemEventId}");
+                        }
                         continue;
                     }
 
@@ -1184,10 +1196,12 @@ public partial class RoomViewModel : MyBaseViewModel
                 {
                     if (alreadyDelivered)
                         continue;
-
-                    LogText += $"[AP][ITEM-MAP-MISSING] Cannot deliver AP Item ID {item.ItemId} ({item.ItemName}) from {item.Player.Name} at {item.LocationName}. Leaving it pending.\r\n";
-                    itemTransferLogger.Log($"RECEIVE map_missing key={key} itemId={item.ItemId} item='{item.ItemName}' locationId={item.LocationId} location='{item.LocationName}' from='{item.Player.Name}'");
-                }                
+                    if (Properties.Settings.Default.IsDebug)
+                    {
+                        LogText += $"[AP][ITEM-MAP-MISSING] Cannot deliver AP Item ID {item.ItemId} ({item.ItemName}) from {item.Player.Name} at {item.LocationName}. Leaving it pending.\r\n";
+                        itemTransferLogger.Log($"RECEIVE map_missing key={key} itemId={item.ItemId} item='{item.ItemName}' locationId={item.LocationId} location='{item.LocationName}' from='{item.Player.Name}'");
+                    }
+                }
                 await Task.Yield();
             }
             localItemsStore.Save();
@@ -1200,22 +1214,31 @@ public partial class RoomViewModel : MyBaseViewModel
 
     private async Task<bool> SendTrackedItemToGameAsync(int fullId, int goodId, int count, int itemEventId, CancellationToken cancellationToken)
     {
-        itemTransferLogger.Log($"DELIVER_TO_GAME queue fullId={fullId} good={goodId} qty={count} event={itemEventId} connected={pipeServer.IsConnected} worldLoaded={pipeServer.IsWorldLoaded}");
+        if (Properties.Settings.Default.IsDebug)
+            itemTransferLogger.Log($"DELIVER_TO_GAME queue fullId={fullId} good={goodId} qty={count} event={itemEventId} connected={pipeServer.IsConnected} worldLoaded={pipeServer.IsWorldLoaded}");
+        
         bool delivered = await pipeServer.SendSpawnItemReliableAsync(fullId, count, itemEventId, cancellationToken: cancellationToken);
-        itemTransferLogger.Log($"DELIVER_TO_GAME ack fullId={fullId} good={goodId} qty={count} event={itemEventId} delivered={delivered}");
+        
+        if (Properties.Settings.Default.IsDebug)
+            itemTransferLogger.Log($"DELIVER_TO_GAME ack fullId={fullId} good={goodId} qty={count} event={itemEventId} delivered={delivered}");
+        
         if (!delivered)
             return false;
 
-        if (IsMechanicalBarrelItem(goodId) || IsAromaticBranchItem(goodId))
+        if (IsMechanicalBarrelItem(goodId))
         {
             int eventFlagId = PermanentGoodToFlagCollection.GetPermanentFlagForItem(goodId);
-            itemTransferLogger.Log($"DELIVER_TO_GAME set_permanent_flag good={goodId} flag={eventFlagId}");
+            if (Properties.Settings.Default.IsDebug)
+                itemTransferLogger.Log($"DELIVER_TO_GAME set_permanent_flag good={goodId} flag={eventFlagId}");
+
             pipeServer.SendSetEventFlagId(eventFlagId, 1);
         }
 
         if (IsSekiroMemoryItem(goodId))
         {
-            itemTransferLogger.Log($"DELIVER_TO_GAME extra_memory_counter good={goodId}");
+            if (Properties.Settings.Default.IsDebug)
+                itemTransferLogger.Log($"DELIVER_TO_GAME extra_memory_counter good={goodId}");
+
             pipeServer.SendSpawnItem(0x40000000 + 5400, 1);
         }
 
@@ -1328,11 +1351,6 @@ public partial class RoomViewModel : MyBaseViewModel
     private static bool IsMechanicalBarrelItem(int goodId)
     {
         return goodId == 2910;
-    }
-
-    private static bool IsAromaticBranchItem(int goodId)
-    {
-        return goodId == 2502;
     }
 
     private static bool IsEndingMatchingGoal(string endingType, int goalOption)

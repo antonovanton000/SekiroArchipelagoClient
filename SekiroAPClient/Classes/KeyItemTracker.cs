@@ -36,21 +36,14 @@ namespace SekiroAPClient.Classes
                 CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/hidden_temple_key.png", UriKind.RelativeOrAbsolute)),
                 UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/hidden_temple_key_no.png", UriKind.RelativeOrAbsolute)),
             });
-            KeyItems.Add(new KeyItemTrackModel
-            {
-                Name = "Mortal Blade",
-                GoodId = 2400,
-                CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/mortal_blade.png", UriKind.RelativeOrAbsolute)),
-                UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/mortal_blade_no.png", UriKind.RelativeOrAbsolute)),
-            });
             if (withApItems)
             {
                 KeyItems.Add(new KeyItemTrackModel
                 {
-                    Name = "Senpou Temple Key",
-                    GoodId = 9406,
-                    CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/senpou_key.png", UriKind.RelativeOrAbsolute)),
-                    UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/senpou_key_no.png", UriKind.RelativeOrAbsolute)),
+                    Name = "Ashina Requisitions Whistle",
+                    GoodId = 9410,
+                    CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/whistle.png", UriKind.RelativeOrAbsolute)),
+                    UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/whistle_no.png", UriKind.RelativeOrAbsolute)),
                 });
                 KeyItems.Add(new KeyItemTrackModel
                 {
@@ -58,6 +51,13 @@ namespace SekiroAPClient.Classes
                     GoodId = 9407,
                     CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/dungeon_key.png", UriKind.RelativeOrAbsolute)),
                     UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/dungeon_key_no.png", UriKind.RelativeOrAbsolute)),
+                });
+                KeyItems.Add(new KeyItemTrackModel
+                {
+                    Name = "Senpou Temple Key",
+                    GoodId = 9406,
+                    CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/senpou_key.png", UriKind.RelativeOrAbsolute)),
+                    UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/senpou_key_no.png", UriKind.RelativeOrAbsolute)),
                 });
                 KeyItems.Add(new KeyItemTrackModel
                 {
@@ -80,6 +80,13 @@ namespace SekiroAPClient.Classes
                 GoodId = 9405,
                 CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/gun_fort_key.png", UriKind.RelativeOrAbsolute)),
                 UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/gun_fort_key_no.png", UriKind.RelativeOrAbsolute)),
+            });
+            KeyItems.Add(new KeyItemTrackModel
+            {
+                Name = "Mortal Blade",
+                GoodId = 2400,
+                CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/mortal_blade.png", UriKind.RelativeOrAbsolute)),
+                UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/mortal_blade_no.png", UriKind.RelativeOrAbsolute)),
             });
             KeyItems.Add(new KeyItemTrackModel
             {

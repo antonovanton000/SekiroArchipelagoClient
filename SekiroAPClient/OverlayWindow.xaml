@@ -18,18 +18,18 @@
         Title="BoardWindow"
         d:DataContext="{d:DesignInstance Type=vm:RoomViewModel, IsDesignTimeCreatable=False}"
         Height="600"
-        Width="550">
+        Width="500">
     <Window.Resources>
 
     </Window.Resources>
     <Grid Background="#01000000" MouseDown="Grid_MouseDown">
-        <Viewbox Stretch="Uniform" x:Name="mainViewBox">
-            <Grid Background="#01000000" MinHeight="600" MinWidth="500">
+        <Viewbox Stretch="Uniform" x:Name="mainViewBox" >
+            <Grid Background="#01000000" MinHeight="600" MinWidth="550">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="1*" />
                     <RowDefinition Height="50" />
                 </Grid.RowDefinitions>
-                <Grid Width="500">
+                <Grid Width="550">
                     <ItemsControl ItemsSource="{Binding KeyItemTracker.KeyItems}"
                                   Margin="0,40,0,0"
                                   ScrollViewer.CanContentScroll="False"

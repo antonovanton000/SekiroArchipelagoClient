@@ -24,8 +24,8 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <Version>1.2.0</Version>
-    <AssemblyVersion>1.2.0</AssemblyVersion>
+    <Version>1.2.1</Version>
+    <AssemblyVersion>1.2.1</AssemblyVersion>
  </PropertyGroup>
 
 	
@@ -68,12 +68,13 @@
     <None Remove="Images\items\senpou_key_no.png" />
     <None Remove="Images\items\shelter_stone.png" />
     <None Remove="Images\items\shelter_stone_no.png" />
+    <None Remove="Images\items\whistle.png" />
+    <None Remove="Images\items\whistle_no.png" />
     <None Remove="Images\items\young_bell.png" />
     <None Remove="Images\items\young_bell_no.png" />
     <None Remove="Images\ocean-header.png" />
     <None Remove="Images\ocean-header.dark.png" />
     <None Remove="Images\sekiro_logo.png" />
-    <None Remove="Images\Wolf.png" />
     <None Remove="presets\10%25 Boss Replacement.txt" />
     <None Remove="presets\Ashina Zoo.txt" />
     <None Remove="presets\Nightmare Mode.txt" />
@@ -140,12 +141,13 @@
     <Resource Include="Images\items\senpou_key_no.png" />
     <Resource Include="Images\items\shelter_stone.png" />
     <Resource Include="Images\items\shelter_stone_no.png" />
+    <Resource Include="Images\items\whistle.png" />
+    <Resource Include="Images\items\whistle_no.png" />
     <Resource Include="Images\items\young_bell.png" />
     <Resource Include="Images\items\young_bell_no.png" />
     <Resource Include="Images\ocean-header.png" />
     <Resource Include="Images\ocean-header.dark.png" />
     <Resource Include="Images\sekiro_logo.png" />
-    <Resource Include="Images\Wolf.png" />
     <Resource Include="SekiroData\items.json" />
   </ItemGroup>
 

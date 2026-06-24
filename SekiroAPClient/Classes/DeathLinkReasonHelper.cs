@@ -17,7 +17,11 @@ namespace SekiroAPClient.Classes
             "Unlucky",
             "Mistakes Were Made",
             "Lack of Awareness",
-            "Button Mismanagement"
+            "Button Mismanagement",
+            "Parry.exe Stopped Working",
+            "Camera Betrayal",
+            "Victory Was Not Meant To Be",
+            "Input Not Recognized"
         };
 
         public static string GetRandomDeathLinkReason()

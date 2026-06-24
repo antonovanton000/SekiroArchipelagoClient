@@ -334,6 +334,7 @@ namespace RandomizerCommon
             {
                 AddInGameMessagingText(langFmgs);
             }
+            AddEnglishFallbackText(game);
 
             // Slowless slow walk
             if (opt["headlesswalk"]) deleteEvents.Add(20005431);
@@ -384,6 +385,43 @@ namespace RandomizerCommon
             eventFmg[15100006] = "Death Link";
             eventFmg[15000450] = "Additional Options";
             eventFmg[15100450] = "Additional option for idols.";
+        }
+
+        private static void AddEnglishFallbackText(GameData game)
+        {
+            int[] goodsFallbackIds = { 9406, 9407, 9408, 9409, 9410 };
+            int[] eventFallbackIds = { 12000003, 12000004, 12000005, 12000006, 12000008, 10010154, 10010155, 10010156, 10010157, 10010186, 10010187, 10010188, 10010189 };
+
+            foreach (Dictionary<string, FMG> langFmgs in game.OtherItemFMGs.Values)
+            {
+                CopyMissingFmgEntries(game.ItemFMGs, langFmgs, goodsFallbackIds);
+            }
+
+            foreach (Dictionary<string, FMG> langFmgs in game.OtherMenuFMGs.Values)
+            {
+                CopyMissingFmgEntries(game.MenuFMGs, langFmgs, eventFallbackIds);
+            }
+        }
+
+        private static void CopyMissingFmgEntries(
+            Dictionary<string, FMG> englishFmgs,
+            Dictionary<string, FMG> targetFmgs,
+            IEnumerable<int> ids)
+        {
+            foreach (KeyValuePair<string, FMG> entry in englishFmgs)
+            {
+                if (!targetFmgs.TryGetValue(entry.Key, out FMG targetFmg))
+                    continue;
+
+                foreach (int id in ids)
+                {
+                    string englishText = entry.Value[id];
+                    if (string.IsNullOrEmpty(englishText) || !string.IsNullOrEmpty(targetFmg[id]))
+                        continue;
+
+                    targetFmg[id] = englishText;
+                }
+            }
         }
 
         public static readonly List<string> Langs = new List<string>
