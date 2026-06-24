@@ -367,3 +367,4 @@ FodyWeavers.xsd
 /.codex/SaveInspect
 /ReleaseTool/ReleaseTool.csproj
 /ReleaseTool/Program.cs
+/.codex
