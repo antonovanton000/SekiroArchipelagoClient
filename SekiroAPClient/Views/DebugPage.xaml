@@ -8,7 +8,7 @@
       xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
       xmlns:icnt="clr-namespace:InjustUILibrary.Controls"
       mc:Ignorable="d" 
-      d:DesignHeight="500" d:DesignWidth="900"      
+      d:DesignHeight="900" d:DesignWidth="900"      
       x:Name="page"
       Title="DebugPage">
     <Page.DataContext>
@@ -56,8 +56,10 @@
                 <RowDefinition Height="105"/>
                 <RowDefinition Height="70"/>
                 <RowDefinition Height="60"/>
-                <RowDefinition Height="100"/>
-                <RowDefinition Height="1*"/>
+                <RowDefinition Height="100" />
+                <RowDefinition Height="70" />
+                <RowDefinition Height="100" />
+                <RowDefinition Height="1*" />
             </Grid.RowDefinitions>
             <Grid>
                 <TextBlock Text="Log" HorizontalAlignment="Left" VerticalAlignment="Center"
@@ -188,6 +190,41 @@
                 </ComboBox>
                 <Button Style="{StaticResource FlatButtonStylePrimaryNoArrow}" Content="Set Event Flag" Grid.Row="1" Grid.Column="3" 
                         Command="{Binding SendEventFlagValueCommand}" Height="32" FontSize="13"/>
+            </Grid>
+            <Grid Grid.Row="7">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="20" />
+                    <RowDefinition Height="40" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150" />
+                    <ColumnDefinition Width="150" />
+                    <ColumnDefinition Width="100" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Get Event Flag"
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Center"
+                           Style="{StaticResource FlatTextBlockStyle}" />
+                <TextBox Grid.Row="1"
+                         Grid.Column="0"
+                         Style="{StaticResource FlatTextBoxStyle}"
+                         Margin="0,0,10,0"
+                         Text="{Binding EventFlagId_forGet, Mode=TwoWay}"
+                         Height="32" />
+                <Button Style="{StaticResource FlatButtonStylePrimaryNoArrow}"
+                        Content="Get Event Flag"
+                        Grid.Row="1"
+                        Grid.Column="1"
+                        Command="{Binding GetEventFlagValueCommand}"
+                        Height="32"
+                        FontSize="13" />
+                <TextBlock Text="{Binding EventFlagResult}"
+                           VerticalAlignment="Center"
+                           Margin="20,0,0,0"
+                           FontWeight="Black"
+                           Style="{StaticResource FlatTextBlockStyle}"
+                           Grid.Row="1"
+                           Grid.Column="2" />
             </Grid>
         </Grid>
     </Grid>

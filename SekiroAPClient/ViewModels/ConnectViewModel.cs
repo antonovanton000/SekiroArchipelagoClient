@@ -73,7 +73,6 @@ public partial class ConnectViewModel : MyBaseViewModel
         MainWindow.NavigateTo(new DebugPage() { DataContext = new DebugViewModel() });
     }
 
-
     [RelayCommand]
     void GoToRandomizerOptionsPage() => MainWindow.NavigateTo(new RandomizerOptionsPage() { DataContext = new RandomizerOptionsViewModel() });
 
@@ -94,7 +93,7 @@ public partial class ConnectViewModel : MyBaseViewModel
                     return;
                 }
                 NotificationStatus = $"Try to login as {ConnectModel.PlayerName}";
-                var loginResult = await _currentSession.LoginAsync(ConnectModel.GameName, ConnectModel.PlayerName, ItemsHandlingFlags.RemoteItems, password: ConnectModel.Password);
+                var loginResult = await _currentSession.LoginAsync(ConnectModel.GameName, ConnectModel.PlayerName, ItemsHandlingFlags.IncludeOwnItems, password: ConnectModel.Password);
                 if (!loginResult.Successful)
                 {
                     MainWindow.ShowToast(new ToastInfo() { ToastType = ToastType.Error, Title = "Error", Detail = "Player Name or Password invalid!" });

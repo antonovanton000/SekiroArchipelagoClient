@@ -336,6 +336,12 @@ namespace RandomizerCommon
             }
             AddEnglishFallbackText(game);
 
+            if (!opt["earlyreq"])
+            {
+                AddEarlyReqNewShopRows(game);
+                PatchEarlyReqCommonEvents(game, events);
+            }
+
             // Slowless slow walk
             if (opt["headlesswalk"]) deleteEvents.Add(20005431);
 
@@ -374,6 +380,217 @@ namespace RandomizerCommon
                 }
             }
                        
+        }
+
+        private static void AddEarlyReqNewShopRows(GameData game)
+        {
+            AddConfettiShopRow(game, 1100516, "Confetti_1", 71102360, 9136);
+            AddConfettiShopRow(game, 1100517, "Confetti_2", 71102370, 9137);
+        }
+
+        private static void AddConfettiShopRow(GameData game, int rowId, string name, int eventFlag, int qwcId)
+        {
+            PARAM shops = game.Param("ShopLineupParam");
+            PARAM.Row row = shops[rowId] ?? game.AddRow("ShopLineupParam", rowId);
+            row.Name = name;
+            SetParamCell(row, "EquipId", 3450);
+            SetParamCell(row, "value", 50);
+            SetParamCell(row, "mtrlId", -1);
+            SetParamCell(row, "EventFlag", eventFlag);
+            SetParamCell(row, "qwcID", qwcId);
+            SetParamCell(row, "sellQuantity", 1);
+            SetParamCell(row, "shopType", 0);
+            SetParamCell(row, "equipType", 3);
+            SetParamCell(row, "value_SAN", -1);
+            SetParamCell(row, "PriceRate", 1f);
+        }
+
+        private static void SetParamCell(PARAM.Row row, string fieldName, object value)
+        {
+            PARAM.Cell cell = row[fieldName];
+            object current = cell.Value;
+            if (current is sbyte) cell.Value = Convert.ToSByte(value);
+            else if (current is byte) cell.Value = Convert.ToByte(value);
+            else if (current is short) cell.Value = Convert.ToInt16(value);
+            else if (current is ushort) cell.Value = Convert.ToUInt16(value);
+            else if (current is int) cell.Value = Convert.ToInt32(value);
+            else if (current is uint) cell.Value = Convert.ToUInt32(value);
+            else if (current is float) cell.Value = Convert.ToSingle(value);
+            else cell.Value = value;
+        }
+
+        private static void PatchEarlyReqCommonEvents(GameData game, Events events)
+        {
+            if (!game.Emevds.TryGetValue("common", out EMEVD common))
+            {
+                throw new Exception("Missing common emevd required for earlyreq-disabled patch");
+            }
+
+            EMEVD.Event init = RequireEvent(common, 0, "earlyreq-disabled");
+            AddInstructionIfMissing(init, events.ParseAdd("Initialize Event (25, 720, 6790, 9136, 9300, -1)"));
+            AddInstructionIfMissing(init, events.ParseAdd("Initialize Event (26, 720, 6791, 9137, 9300, -1)"));
+            AddInstructionIfMissing(init, events.ParseAdd("Initialize Event (32, 750, 71102360, 6790)"));
+            AddInstructionIfMissing(init, events.ParseAdd("Initialize Event (33, 750, 71102370, 6791)"));
+
+            PatchOfferingBoxEvent714(common, events);
+            PatchEvent9009(common, events);
+        }
+
+        private static void PatchOfferingBoxEvent714(EMEVD common, Events events)
+        {
+            EMEVD.Event ev = RequireEvent(common, 714, "earlyreq-disabled");
+            List<(int EventFlag, int QwcFlag)> offeringBoxPairs = ExtractOfferingBoxPairs(events, ev);
+            AddOfferingBoxPairIfMissing(offeringBoxPairs, 71102360, 9136);
+            AddOfferingBoxPairIfMissing(offeringBoxPairs, 71102370, 9137);
+
+            ev.Instructions.Clear();
+            ev.Parameters.Clear();
+            foreach (string command in BuildOfferingBoxEvent714(offeringBoxPairs))
+            {
+                ev.Instructions.Add(events.ParseAdd(command));
+            }
+        }
+
+        private static List<(int EventFlag, int QwcFlag)> ExtractOfferingBoxPairs(Events events, EMEVD.Event ev)
+        {
+            List<(int EventFlag, int QwcFlag)> pairs = new List<(int, int)>();
+            HashSet<int> knownQwcFlags = new HashSet<int>
+            {
+                9020, 9021, 9022, 9023, 9024, 9025, 9026, 9027, 9028, 9029, 9034, 9035, 9136, 9137,
+            };
+
+            for (int i = 0; i + 1 < ev.Instructions.Count; i++)
+            {
+                string first = events.Parse(ev.Instructions[i]).ToString();
+                string second = events.Parse(ev.Instructions[i + 1]).ToString();
+                if (!TryParseIfEventFlag(first, resultGroup: 2, desiredState: 0, out int eventFlag)
+                    || !TryParseIfEventFlag(second, resultGroup: 2, desiredState: 1, out int qwcFlag)
+                    || !knownQwcFlags.Contains(qwcFlag))
+                {
+                    continue;
+                }
+
+                AddOfferingBoxPairIfMissing(pairs, eventFlag, qwcFlag);
+            }
+
+            if (pairs.Count == 0)
+            {
+                throw new Exception("Could not extract existing Event 714 Offering Box flag pairs before earlyreq-disabled patch");
+            }
+
+            return pairs;
+        }
+
+        private static bool TryParseIfEventFlag(string command, int resultGroup, int desiredState, out int eventFlag)
+        {
+            eventFlag = 0;
+            Match match = Regex.Match(command, @"^IF Event Flag \((-?\d+), (-?\d+), 0, (-?\d+)\)$");
+            if (!match.Success)
+                return false;
+
+            if (!int.TryParse(match.Groups[1].Value, out int parsedResultGroup)
+                || !int.TryParse(match.Groups[2].Value, out int parsedDesiredState)
+                || !int.TryParse(match.Groups[3].Value, out int parsedEventFlag)
+                || parsedResultGroup != resultGroup
+                || parsedDesiredState != desiredState)
+            {
+                return false;
+            }
+
+            eventFlag = parsedEventFlag;
+            return true;
+        }
+
+        private static void AddOfferingBoxPairIfMissing(List<(int EventFlag, int QwcFlag)> pairs, int eventFlag, int qwcFlag)
+        {
+            if (pairs.Any(pair => pair.QwcFlag == qwcFlag))
+                return;
+
+            pairs.Add((eventFlag, qwcFlag));
+        }
+
+        private static IEnumerable<string> BuildOfferingBoxEvent714(IReadOnlyList<(int EventFlag, int QwcFlag)> offeringBoxPairs)
+        {
+            int[] allOfferingBoxFlags =
+            {
+                6719, 6766, 6767, 6500, 6508, 6723, 6741, 6760, 6762, 6769, 6506, 6780, 6790, 6791,
+            };
+
+            List<string> commands = new List<string>();
+            commands.Add("Set Event Flag (9008, 0)");
+
+            foreach (int flag in allOfferingBoxFlags)
+            {
+                commands.Add($"IF Event Flag (1, 1, 0, {flag})");
+            }
+
+            commands.Add("END IF Condition Group State (Uncompiled) (0, 1, 1)");
+
+            foreach ((int eventFlag, int qwcFlag) in offeringBoxPairs)
+            {
+                commands.Add($"IF Event Flag (2, 0, 0, {eventFlag})");
+                commands.Add($"IF Event Flag (2, 1, 0, {qwcFlag})");
+                commands.Add("GOTO IF Condition Group State (Uncompiled) (0, 1, 2)");
+                commands.Add("IF Condition Group (0, 0, 2)");
+                commands.Add("Clear Compiled Condition Group State (0)");
+            }
+
+            commands.Add("GOTO Unconditionally (20)");
+            commands.Add("Label 0 ()");
+            commands.Add("Set Event Flag (9008, 1)");
+            commands.Add("Label 20 ()");
+
+            foreach ((int eventFlag, _) in offeringBoxPairs)
+            {
+                commands.Add($"IF Event Flag (-1, 2, 0, {eventFlag})");
+            }
+
+            foreach ((_, int qwcFlag) in offeringBoxPairs)
+            {
+                commands.Add($"IF Event Flag (-1, 2, 0, {qwcFlag})");
+            }
+
+            commands.Add("IF Condition Group (0, 1, -1)");
+            commands.Add("END Unconditionally (1)");
+
+            return commands;
+        }
+
+        private static void PatchEvent9009(EMEVD common, Events events)
+        {
+            EMEVD.Event ev = RequireEvent(common, 9009, "earlyreq-disabled");
+            ev.Instructions.Clear();
+            ev.Parameters.Clear();
+            ev.Instructions.AddRange(new[]
+            {
+                "IF Batch Event Flags (-1, 2, 0, 9020, 9035)",
+                "IF Batch Event Flags (-1, 2, 0, 9136, 9137)",
+                "IF Condition Group (0, 1, -1)",
+                "Set Event Flag (9009, 1)",
+            }.Select(events.ParseAdd));
+        }
+
+        private static EMEVD.Event RequireEvent(EMEVD emevd, long eventId, string patchName)
+        {
+            EMEVD.Event ev = emevd.Events.FirstOrDefault(e => e.ID == eventId);
+            if (ev == null)
+            {
+                throw new Exception($"Missing event required for {patchName} patch: {eventId}");
+            }
+            return ev;
+        }
+
+        private static void AddInstructionIfMissing(EMEVD.Event ev, EMEVD.Instruction instruction)
+        {
+            if (ev.Instructions.Any(i => InstructionMatches(i, instruction))) return;
+            ev.Instructions.Add(instruction);
+        }
+
+        private static bool InstructionMatches(EMEVD.Instruction left, EMEVD.Instruction right)
+        {
+            return left.Bank == right.Bank
+                && left.ID == right.ID
+                && left.ArgData.SequenceEqual(right.ArgData);
         }
 
         private static void AddInGameMessagingText(Dictionary<string, FMG> menuFmgs)

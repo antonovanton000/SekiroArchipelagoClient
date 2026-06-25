@@ -564,6 +564,7 @@ public partial class RoomViewModel : MyBaseViewModel
             IsItemNotification = false,
             Text = "Connection Error!"
         });
+        await TryReconnectAgain();
     }
 
     private async void Socket_SocketClosed(string reason)
@@ -579,12 +580,13 @@ public partial class RoomViewModel : MyBaseViewModel
     {
         if (!IsActiveRoomViewModel)
             return;
-
+        var type = message.GetType().ToString();
         if (message is ItemSendLogMessage itemMessage)
         {
             if (ShowNotifications)
             {
-                if (itemMessage.IsSenderTheActivePlayer || itemMessage.IsReceiverTheActivePlayer)
+                if (itemMessage.IsSenderTheActivePlayer || itemMessage.IsReceiverTheActivePlayer && 
+                    itemMessage.Parts.FirstOrDefault()?.Text.Contains("Hint", StringComparison.InvariantCultureIgnoreCase) == false)
                 {
                     await PushNotificationAsync(new ServerNotification()
                     {
@@ -595,6 +597,14 @@ public partial class RoomViewModel : MyBaseViewModel
                     });
                 }
             }
+        }
+        else if(message is ChatLogMessage chatMessage)
+        {
+
+        }
+        else if(message is HintItemSendLogMessage hintMessage)
+        {
+
         }
         else if (message is TagsChangedLogMessage logMessage)
         {
@@ -616,6 +626,11 @@ public partial class RoomViewModel : MyBaseViewModel
             return;
 
         await RecieveItems(helper, _receivedItemsCts.Token);
+    }
+
+    private void Locations_CheckedLocationsUpdated(ReadOnlyCollection<long> newCheckedLocations)
+    {
+
     }
 
     private async void PipeServer_ItemReceived(ItemRecievedArgs obj)
@@ -814,6 +829,7 @@ public partial class RoomViewModel : MyBaseViewModel
         (App.Current.MainWindow as MainWindow).Closing += RoomViewModel_Closing;
         CurrentSession.MessageLog.OnMessageReceived += MessageLog_OnMessageReceived;
         CurrentSession.Items.ItemReceived += Items_ItemReceived;
+        CurrentSession.Locations.CheckedLocationsUpdated += Locations_CheckedLocationsUpdated;
         CurrentSession.Socket.SocketClosed += Socket_SocketClosed;
         CurrentSession.Socket.ErrorReceived += Socket_ErrorReceived;
         pipeServer.ItemReceived += PipeServer_ItemReceived;
@@ -835,6 +851,7 @@ public partial class RoomViewModel : MyBaseViewModel
         CurrentSession.Items.ItemReceived -= Items_ItemReceived;
         CurrentSession.Socket.SocketClosed -= Socket_SocketClosed;
         CurrentSession.Socket.ErrorReceived -= Socket_ErrorReceived;
+        CurrentSession.Locations.CheckedLocationsUpdated -= Locations_CheckedLocationsUpdated;
         pipeServer.ItemReceived -= PipeServer_ItemReceived;
         pipeServer.ConnectionChanged -= PipeServer_ConnectionChanged;
         pipeServer.WorldStateChanged -= PipeServer_WorldStateChanged;
@@ -1114,6 +1131,8 @@ public partial class RoomViewModel : MyBaseViewModel
             while (!cancellationToken.IsCancellationRequested && helper.Any())
             {
                 var item = helper.DequeueItem();
+                if (CurrentSession.Locations.AllLocationsChecked.Any(i => i == item.LocationId)) continue;
+
                 var isCheatConsole = item.LocationName == "Cheat Console";
                 var key = ReceivedItemStore.MakeKey(item.ItemId, item.LocationId, item.Player.Slot);
                 var alreadyDelivered = !isCheatConsole && localItemsStore.Has(key);

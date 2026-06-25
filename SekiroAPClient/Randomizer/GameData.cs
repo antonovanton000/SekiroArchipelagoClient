@@ -322,6 +322,7 @@ namespace RandomizerCommon
 
             CopyLogosAndIcons(outPath, $@"{Dir}\Base\menu");
             CopySfx(outPath, $@"{Dir}\Base\sfx");
+            ClearGeneratedDirectory(outPath, "msg");
             CopyScripts(outPath, $@"{Dir}\Base\script");
             CopyAdditionalRegionLockMapFiles(outPath);
             CopyAdditionalRegionLockObjFiles(outPath);
@@ -411,20 +412,34 @@ namespace RandomizerCommon
         void CopySfx(string outPath, string basePath)
         {
             var destPath = Path.Combine(outPath, "sfx");
-            if (!Directory.Exists(destPath))
-            {
-                Directory.CreateDirectory(destPath);
-                CopyFilesRecursively(new DirectoryInfo(basePath), new DirectoryInfo(destPath));
-            }
+            CopyGeneratedDirectory(basePath, destPath);
         }
 
         void CopyLogosAndIcons(string outPath, string basePath)
         {
             var destPath = Path.Combine(outPath, "menu");
-            if (!Directory.Exists(destPath))
-            {                
-                Directory.CreateDirectory(destPath);
-                CopyFilesRecursively(new DirectoryInfo(basePath), new DirectoryInfo(destPath));
+            CopyGeneratedDirectory(basePath, destPath);
+        }
+
+        void CopyGeneratedDirectory(string sourcePath, string destPath)
+        {
+            if (!Directory.Exists(sourcePath)) return;
+
+            if (Directory.Exists(destPath))
+            {
+                Directory.Delete(destPath, recursive: true);
+            }
+
+            Directory.CreateDirectory(destPath);
+            CopyFilesRecursively(new DirectoryInfo(sourcePath), new DirectoryInfo(destPath), overwrite: true);
+        }
+
+        void ClearGeneratedDirectory(string outPath, string relativePath)
+        {
+            string destPath = Path.Combine(outPath, relativePath);
+            if (Directory.Exists(destPath))
+            {
+                Directory.Delete(destPath, recursive: true);
             }
         }
 

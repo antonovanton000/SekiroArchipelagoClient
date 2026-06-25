@@ -301,11 +301,13 @@ Enemies:
   DebugText: m10_00_00_00 - c1050_0001 - npc 10500012 - think 10500000 - id 1000331 (1005331) - Shinobi Hunter
   Events: IF Character Has SpEffect; IF Character AI State; IF Character Dead/Alive; IF Entity In/Outside Radius Of Entity; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #duo enemy in hirata that drops bulging coin purse
 - ID: 1000332
   Name: c1050_0002
   DebugText: m10_00_00_00 - c1050_0002 - npc 10500010 - think 10500000 - id 1000332 (1005331) - Shinobi Hunter
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Entity In/Outside Radius Of Entity; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; SKIP IF Character Has SpEffect; GOTO IF Character Has SpEffect; Force Character Target; IF Character Dead/Alive
   Class: Basic
+  Tags: exclude:unkillable #duo enemy in hirata that drops bulging coin purse
 - ID: 1000333
   Name: c1050_0003
   DebugText: m10_00_00_00 - c1050_0003 - npc 10505002 - think 10500000 - id 1000333 (1005601) - Shinobi Hunter
@@ -543,6 +545,7 @@ Enemies:
   DebugText: m10_00_00_00 - c1470_0000 - npc 14700000 - think 14700000 - id 1000350 - Lone Shadow
   Events: IF Character Backread Status; IF Entity In/Outside Radius Of Entity; IF Character Has SpEffect; Set Network Update Rate; GOTO IF Character Has SpEffect; Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character AI State; IF Damage Type; IF Character Posture Ratio; SKIP IF Character Has SpEffect; Force Character Target; IF Character Dead/Alive; IF In/Outside Area; Set SpEffect; Change Character Enable State; Set Character Animation State; Set Character Backread State; IF Character HP Ratio; IF Number of Character Health Bars (Other); Clear SpEffect; IF Character DrawGroup State; Force Character Death
   Class: Basic
+  Tags: exclude:unkillable #Lone Shadow in Hirata guarding pagoda
 - ID: 1000351
   Name: c1470_0001
   DebugText: m10_00_00_00 - c1470_0001 - npc 14703000 - think 14700003 - id 1000351 (1005601) - Lone Shadow
@@ -1599,6 +1602,7 @@ Enemies:
   Events: IF Character Has SpEffect; IF Character AI State; IF Character Dead/Alive; IF Entity In/Outside Radius Of Entity; Force Character Target; Change Character Enable State; Set Character Animation State; Set Character Backread State; Set SpEffect; IF Character HP Ratio; IF Number of Character Health Bars (Other); Clear SpEffect; IF Character DrawGroup State; SKIP IF Character Has SpEffect; Force Character Death
   Class: Basic
   Category: Cannon
+  Tags: exclude:unkillable #Black Gunpowder from Outskirts enemy
 - ID: 1100380
   Name: c1240_0000
   DebugText: m11_00_00_00 - c1240_0000 - npc 12400000 - think 12400000 - id 1100380 (1105600) - Gamefowl
@@ -1637,6 +1641,7 @@ Enemies:
   DebugText: m11_00_00_00 - c1360_0000 - npc 13602000 - think 13600000 - id 1100450 (1105600) - Assassin (Senpou)
   Events: Change Character Patrol Behavior; IF Character AI State; Request Character AI Re-plan; Change Character Enable State; Set Character Animation State; Set Character Backread State; Set SpEffect; IF Character HP Ratio; IF Number of Character Health Bars (Other); Clear SpEffect; IF Character Has SpEffect; IF Character DrawGroup State; SKIP IF Character Has SpEffect; Force Character Death
   Class: Basic
+  Tags: exclude:unkillable #Herb catalogue Scrap enemy
 - ID: 1100452
   Name: c1361_0002
   DebugText: m11_00_00_00 - c1361_0002 - npc 13611000 - think 13600003 - id 1100452 (1105610) - Assassin (Interior Ministry)
@@ -2575,17 +2580,20 @@ Enemies:
   ESDs: 111530,0,0,0,0,0,0,0
   Events: IF Character Has SpEffect; IF Character AI State; IF Character Dead/Alive; IF Entity In/Outside Radius Of Entity; Force Character Target; Change Character Enable State; Set Character Animation State; Set Character Backread State; Set SpEffect; IF Character HP Ratio; IF Number of Character Health Bars (Other); Clear SpEffect; IF Character DrawGroup State; SKIP IF Character Has SpEffect; Force Character Death
   Class: Basic
+  Tags: exclude:unkillable #Shinobi Hunter near bridge to serpent shrine
 - ID: 1110461
   Name: c1050_0001
   DebugText: m11_01_00_00 - c1050_0001 - npc 10504000 - think 10500000 - id 1110461 - Shinobi Hunter
   ESDs: 111530,0,0,0,0,0,0,0
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; SKIP IF Character Has SpEffect; GOTO IF Character Has SpEffect; Force Character Target; Set Character AI State; IF Entity In/Outside Radius Of Entity; IF Character Damaged By; IF Character Dead/Alive; Change Character Enable State; Set Character Animation State; Set Character Backread State; Set SpEffect; IF Character HP Ratio; IF Number of Character Health Bars (Other); Clear SpEffect; IF Character DrawGroup State; Force Character Death
   Class: Basic
+  Tags: exclude:unkillable #Shinobi Hunter near bridge to serpent shrine
 - ID: 1110462
   Name: c1050_0002
   DebugText: m11_01_00_00 - c1050_0002 - npc 10501000 - think 10500000 - id 1110462 - Shinobi Hunter
   Events: IF Character Has SpEffect; IF Character AI State; IF Character Dead/Alive; IF Entity In/Outside Radius Of Entity; Force Character Target; Change Character Enable State; Set Character Animation State; Set Character Backread State; Set SpEffect; IF Character HP Ratio; IF Number of Character Health Bars (Other); Clear SpEffect; IF Character DrawGroup State; SKIP IF Character Has SpEffect; Force Character Death
   Class: Basic
+  Tags: exclude:unkillable #Shinobi Hunter near bridge to serpent shrine
 - ID: 1110580
   Name: c1100_0000
   DebugText: m11_01_00_00 - c1100_0000 - npc 11007000 - think 11000000 - id 1110580 - Gecko
@@ -2776,13 +2784,13 @@ Enemies:
   DebugText: m11_01_00_00 - c1180_0002 - npc 11801100 - think 11800200 - id 1110432 - Taro Troop
   Events: Create NPC Part; Set NPC Part Damaging Prosthetic; Set SpEffect; IF NPC Part HP; Change Character DispMask; Force Animation Playback; Clear SpEffect; Set Character Gravity; Set Character MapHit; IF Entity In/Outside Radius Of Entity; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; SKIP IF Character Has SpEffect; GOTO IF Character Has SpEffect; Force Character Target; Change Character Enable State; Set Character Animation State; Set Character Backread State; IF Character HP Ratio; IF Number of Character Health Bars (Other); IF Character DrawGroup State; Force Character Death
   Class: Basic
-  Tags: unique npcpart
+  Tags: unique npcpart exclude:unkillable
 - ID: 1110433
   Name: c1180_0003
   DebugText: m11_01_00_00 - c1180_0003 - npc 11801100 - think 11800200 - id 1110433 - Taro Troop
   Events: Create NPC Part; Set NPC Part Damaging Prosthetic; Set SpEffect; IF NPC Part HP; Change Character DispMask; Force Animation Playback; Clear SpEffect; Set Character Gravity; Set Character MapHit; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; SKIP IF Character Has SpEffect; GOTO IF Character Has SpEffect; Force Character Target; Change Character Enable State; Set Character Animation State; Set Character Backread State; IF Character HP Ratio; IF Number of Character Health Bars (Other); IF Character DrawGroup State; Force Character Death
   Class: Basic
-  Tags: unique npcpart
+  Tags: unique npcpart exclude:unkillable
 - ID: 1110434
   Name: c1180_0004
   DebugText: m11_01_00_00 - c1180_0004 - npc 11806110 - think 11800110 - id 1110434 - Taro Troop
@@ -2898,7 +2906,7 @@ Enemies:
   ESDs: 111602,10,0,0,0,0,0,0
   Events: IF Character Dead/Alive; Create NPC Part; Set NPC Part Damaging Prosthetic; IF NPC Part HP; Change Character DispMask; Force Animation Playback; Clear SpEffect; Set SpEffect; Set Character Gravity; Set Character MapHit; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; SKIP IF Character Has SpEffect; GOTO IF Character Has SpEffect; Force Character Target; SKIP IF Comparison; Change Character Enable State; Set Character Animation State; Set Character Backread State; IF Character HP Ratio; IF Number of Character Health Bars (Other); IF Character DrawGroup State; Force Character Death
   Class: Basic  # One of early rats
-  Tags: npcpart
+  Tags: npcpart exclude:unkillable #Black Gunpowder from Tengu rat enemy
   Add: 1110645
 - ID: 1110645
   Name: c1360_0001
@@ -5733,6 +5741,7 @@ Enemies:
   Events: IF Character Dead/Alive; Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Entity In/Outside Radius Of Entity; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; SKIP IF Character Has SpEffect; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
   Category: Scattershot
+  Tags: exclude:unkillable #
 - ID: 1700203
   Name: c1190_0011
   DebugText: m17_00_00_00 - c1190_0011 - npc 11900200 - think 11900200 - id 1700203 - Sunken Valley Clan
@@ -5883,6 +5892,7 @@ Enemies:
   DebugText: m17_00_00_00 - c1250_0005 - npc 12500202 - think 12500201 - id 1700310 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700338
   Name: c1250_0006
   DebugText: m17_00_00_00 - c1250_0006 - npc 12500200 - think 12500200 - id 1700338 - Valley Monkey
@@ -5894,21 +5904,25 @@ Enemies:
   Events: IF Character Dead/Alive; Set Network Update Rate; Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Entity In/Outside Radius Of Entity; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; SKIP IF Character Has SpEffect; GOTO IF Character Has SpEffect; Force Character Target; Change Character Enable State; Set Character Animation State; Set Character Backread State; Set SpEffect; IF Character HP Ratio; IF Number of Character Health Bars (Other); Clear SpEffect; IF Character DrawGroup State; Force Character Death
   Class: Basic
   Category: Elder
+  Tags: exclude:unkillable #
 - ID: 1700311
   Name: c1250_0008
   DebugText: m17_00_00_00 - c1250_0008 - npc 12500202 - think 12500201 - id 1700311 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700312
   Name: c1250_0009
   DebugText: m17_00_00_00 - c1250_0009 - npc 12500202 - think 12500201 - id 1700312 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700313
   Name: c1250_0010
   DebugText: m17_00_00_00 - c1250_0010 - npc 12500202 - think 12500201 - id 1700313 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700650
   Name: c1250_0011
   DebugText: m17_00_00_00 - c1250_0011 - npc 12500010 - think 12500000 - id 1700650 - Valley Monkey
@@ -5919,6 +5933,7 @@ Enemies:
   DebugText: m17_00_00_00 - c1250_0012 - npc 12500020 - think 12500001 - id 1700316 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700305
   Name: c1250_0013
   DebugText: m17_00_00_00 - c1250_0013 - npc 12500130 - think 12500130 - id 1700305 - Valley Monkey
@@ -5929,21 +5944,25 @@ Enemies:
   DebugText: m17_00_00_00 - c1250_0014 - npc 12500020 - think 12500001 - id 1700317 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700318
   Name: c1250_0015
   DebugText: m17_00_00_00 - c1250_0015 - npc 12500020 - think 12500001 - id 1700318 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700319
   Name: c1250_0016
   DebugText: m17_00_00_00 - c1250_0016 - npc 12500020 - think 12500001 - id 1700319 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700320
   Name: c1250_0017
   DebugText: m17_00_00_00 - c1250_0017 - npc 12500020 - think 12500001 - id 1700320 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700364
   Name: c1250_0018
   DebugText: m17_00_00_00 - c1250_0018 - npc 12500150 - think 12500151 - id 1700364 - Valley Monkey
@@ -5954,11 +5973,13 @@ Enemies:
   DebugText: m17_00_00_00 - c1250_0019 - npc 12500020 - think 12500001 - id 1700321 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700314
   Name: c1250_0020
   DebugText: m17_00_00_00 - c1250_0020 - npc 12500020 - think 12500001 - id 1700314 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700359
   Name: c1250_0021
   DebugText: m17_00_00_00 - c1250_0021 - npc 12500000 - think 12500000 - id 1700359 - Valley Monkey
@@ -5969,21 +5990,25 @@ Enemies:
   DebugText: m17_00_00_00 - c1250_0022 - npc 12500020 - think 12500001 - id 1700322 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700323
   Name: c1250_0023
   DebugText: m17_00_00_00 - c1250_0023 - npc 12500020 - think 12500001 - id 1700323 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700315
   Name: c1250_0024
   DebugText: m17_00_00_00 - c1250_0024 - npc 12500020 - think 12500001 - id 1700315 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700324
   Name: c1250_0025
   DebugText: m17_00_00_00 - c1250_0025 - npc 12500020 - think 12500001 - id 1700324 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700339
   Name: c1250_0026
   DebugText: m17_00_00_00 - c1250_0026 - npc 12500200 - think 12500200 - id 1700339 - Valley Monkey
@@ -6014,34 +6039,41 @@ Enemies:
   DebugText: m17_00_00_00 - c1250_0032 - npc 12500020 - think 12500001 - id 1700325 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700326
   Name: c1250_0033
   DebugText: m17_00_00_00 - c1250_0033 - npc 12500020 - think 12500001 - id 1700326 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700327
   Name: c1250_0034
   DebugText: m17_00_00_00 - c1250_0034 - npc 12500020 - think 12500001 - id 1700327 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700328
   Name: c1250_0035
   DebugText: m17_00_00_00 - c1250_0035 - npc 12500020 - think 12500001 - id 1700328 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700329
   Name: c1250_0036
   DebugText: m17_00_00_00 - c1250_0036 - npc 12500020 - think 12500001 - id 1700329 (1705299) - Valley Monkey
   Events: Set Character Gravity; Set Character MapHit; Force Animation Playback; IF Character Backread Status; IF Character Has SpEffect; IF Character AI State; IF Damage Type; IF Character Posture Ratio; GOTO IF Character Has SpEffect; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700333
   Name: c1250_0037
   DebugText: m17_00_00_00 - c1250_0037 - npc 12500121 - think 12500100 - id 1700333 (1705299) - Valley Monkey
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700334
   Name: c1250_0045
   DebugText: m17_00_00_00 - c1250_0045 - npc 12500120 - think 12500120 - id 1700334 (1705299) - Valley Monkey
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 1700361
   Name: c1250_0046
   DebugText: m17_00_00_00 - c1250_0046 - npc 12500030 - think 12500030 - id 1700361 - Valley Monkey
@@ -6068,6 +6100,7 @@ Enemies:
   Events: IF Character Dead/Alive; Set Network Update Rate; IF Character Has SpEffect; IF Character AI State; IF Entity In/Outside Radius Of Entity; Force Character Target; Change Character Enable State; Set Character Animation State; Set Character Backread State; Set SpEffect; IF Character HP Ratio; IF Number of Character Health Bars (Other); Clear SpEffect; IF Character DrawGroup State; SKIP IF Character Has SpEffect; Force Character Death
   Class: Basic
   Category: Elder
+  Tags: exclude:unkillable #
 - ID: 1700367
   Name: c1250_0053
   DebugText: m17_00_00_00 - c1250_0053 - npc 12500000 - think 12500000 - id 1700367 - Valley Monkey
@@ -6555,11 +6588,13 @@ Enemies:
   DebugText: m20_00_00_00 - c1060_0000 - npc 10600000 - think 10600000 - id 2000650 (2005236) - Spear Adept
   Events: IF Character Posture Ratio; IF Character HP Ratio; IF Character Has SpEffect; IF Character AI State; IF Character Dead/Alive; IF Entity In/Outside Radius Of Entity; Force Character Target; Change Character Enable State; Set Character Animation State; Set Character Backread State; Set SpEffect; IF Number of Character Health Bars (Other); Clear SpEffect; IF Character DrawGroup State; SKIP IF Character Has SpEffect; Force Character Death
   Class: Basic
+  Tags: exclude:unkillable #Senpou bridge spear adept drop
 - ID: 2000466
   Name: c1060_0002
   DebugText: m20_00_00_00 - c1060_0002 - npc 10600000 - think 10601000 - id 2000466 - Spear Adept
   Events: Set SpEffect; IF Character AI State; Clear SpEffect; IF Character Dead/Alive; IF In/Outside Area; Set Network Update Rate; IF Character Has SpEffect; IF Entity In/Outside Radius Of Entity; Force Character Target
   Class: Basic
+  Tags: exclude:unkillable #
 - ID: 2000467
   Name: c1060_0003
   DebugText: m20_00_00_00 - c1060_0003 - npc 10600000 - think 10601001 - id 2000467 - Spear Adept
@@ -6683,7 +6718,7 @@ Enemies:
   DebugText: m20_00_00_00 - c1180_0000 - npc 11803400 - think 11800400 - id 2000670 (2005256) - Taro Troop
   Events: Create NPC Part; Set NPC Part Damaging Prosthetic; IF NPC Part HP; IF Character Has SpEffect; Change Character DispMask; Set SpEffect; Force Animation Playback; Clear SpEffect; Change Character Enable State; Set Character Animation State; Set Character Backread State; IF Character HP Ratio; IF Number of Character Health Bars (Other); IF Character DrawGroup State; SKIP IF Character Has SpEffect; Force Character Death
   Class: Basic
-  Tags: npcpart
+  Tags: npcpart exclude:unkillable
 - ID: 2000671
   Name: c1180_0001
   DebugText: m20_00_00_00 - c1180_0001 - npc 11803000 - think 11800000 - id 2000671 - Taro Troop

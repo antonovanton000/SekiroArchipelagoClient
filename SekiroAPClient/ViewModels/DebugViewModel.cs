@@ -100,6 +100,12 @@ public partial class DebugViewModel : MyBaseViewModel
     [ObservableProperty]
     int eventFlagValue = 0;
 
+    [ObservableProperty]
+    int eventFlagId_forGet;
+
+    [ObservableProperty]
+    string eventFlagResult = "";
+
     [RelayCommand]
     async Task Appearing()
     {
@@ -220,6 +226,22 @@ public partial class DebugViewModel : MyBaseViewModel
         pipeServer.SendSetEventFlagId(eventFlagId, value);
         LogText += $"[Debug] {message}: flag {eventFlagId} = {value}" + Environment.NewLine;
     }
+
+    [RelayCommand]
+    async Task GetEventFlagValue()
+    {
+        if (EventFlagId_forGet <= 0) return;
+        var res = await pipeServer.SendGetEventFlagIdAsync(EventFlagId_forGet);
+        if (res == null)
+        {
+            EventFlagResult = "NULL";
+        }
+        else
+        {
+            EventFlagResult = res == true ? "True" : "False";
+        }
+    }
+
 
     void ChangeDebugState(bool debug)
     {
