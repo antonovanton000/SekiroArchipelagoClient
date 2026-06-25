@@ -1131,7 +1131,7 @@ public partial class RoomViewModel : MyBaseViewModel
             while (!cancellationToken.IsCancellationRequested && helper.Any())
             {
                 var item = helper.DequeueItem();
-                if (CurrentSession.Locations.AllLocationsChecked.Any(i => i == item.LocationId)) continue;
+                if (item.Player.Name == CurrentSession.Players.ActivePlayer.Name && CurrentSession.Locations.AllLocationsChecked.Any(i => i == item.LocationId)) continue;
 
                 var isCheatConsole = item.LocationName == "Cheat Console";
                 var key = ReceivedItemStore.MakeKey(item.ItemId, item.LocationId, item.Player.Slot);

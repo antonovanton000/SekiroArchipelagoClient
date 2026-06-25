@@ -336,7 +336,7 @@ namespace RandomizerCommon
             }
             AddEnglishFallbackText(game);
 
-            if (!opt["earlyreq"])
+            if (!opt["earlyreq"] && opt["enemy"])
             {
                 AddEarlyReqNewShopRows(game);
                 PatchEarlyReqCommonEvents(game, events);
