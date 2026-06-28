@@ -16,6 +16,9 @@ static void GetTimestamp(char* buf, size_t size)
 
 void Log(const char* msg)
 {
+    if (!g_IsDebug)
+        return;
+
     HANDLE hFile = CreateFileA(
         "sekiroapclient_log.txt",
         FILE_APPEND_DATA,

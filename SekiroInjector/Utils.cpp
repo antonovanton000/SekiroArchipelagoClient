@@ -379,7 +379,6 @@ bool JsonFieldToString(const std::string& json, const char* field, std::string& 
 constexpr size_t HINT_LINE_WIDTH = 40;
 constexpr size_t HINT_ELLIPSIS_LEN = 3;
 
-// Обрезка строки под "…"
 std::wstring TruncateWithDots(const std::wstring& s, size_t maxLen)
 {
     if (s.size() <= maxLen) return s;
@@ -389,7 +388,7 @@ std::wstring TruncateWithDots(const std::wstring& s, size_t maxLen)
     return res;
 }
 
-// 1. Заменяем ЛИТЕРАЛЬНЫЕ "\n" и "\r\n" на настоящий L'\n'
+
 std::wstring UnescapeBackslashNewlines(const std::wstring& input)
 {
     std::wstring out;
@@ -403,16 +402,14 @@ std::wstring UnescapeBackslashNewlines(const std::wstring& input)
 
             if (next == L'n')
             {
-                out.push_back(L'\n'); // "\n" -> перевод строки
+                out.push_back(L'\n'); 
                 ++i;
                 continue;
             }
             if (next == L'r')
-            {
-                // "\r" или "\r\n" -> просто перевод строки
+            {                
                 out.push_back(L'\n');
-                ++i;
-                // если дальше ещё 'n' — съедаем его
+                ++i;                
                 if (i + 1 < input.size() && input[i + 1] == L'n')
                     ++i;
                 continue;
@@ -433,7 +430,6 @@ static inline int HexVal(wchar_t c)
     return -1;
 }
 
-// "\u0027" -> L'\'', "\u00AB" -> «, и т.д.
 inline std::wstring UnescapeUnicodeUxxxx(const std::wstring& input)
 {
     std::wstring out;
@@ -473,7 +469,7 @@ std::wstring NormalizeRealNewlines(const std::wstring& input)
         if (input[i] == L'\r')
         {
             if (i + 1 < input.size() && input[i + 1] == L'\n')
-                ++i; // пропускаем \n
+                ++i; 
 
             out.push_back(L'\n');
         }
@@ -486,7 +482,6 @@ std::wstring NormalizeRealNewlines(const std::wstring& input)
     return out;
 }
 
-// Финальный хелпер: строка "как из C#" -> с нормальными \n
 std::wstring FixHintTextFromCSharp(const std::wstring& raw)
 {
     std::wstring s = UnescapeUnicodeUxxxx(raw);

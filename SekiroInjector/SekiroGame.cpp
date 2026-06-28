@@ -202,7 +202,7 @@ int GetPlayerHp()
 	if (!SafeReadPtr(g_WCMStorageAddr, worldChrMan) || !worldChrMan)
 		return -1;
 
-	// 3) Follow the same pointer chain you already used
+
 	uintptr_t p1 = 0, p2 = 0, p3 = 0;
 	if (!SafeReadPtr(worldChrMan + 0x88, p1) || !p1) return -1;
 	if (!SafeReadPtr(p1 + 0x1FF8, p2) || !p2) return -1;
@@ -269,7 +269,6 @@ bool IsWorldLoaded()
 	if (!SafeReadFloat(p2 + 0x80, plX)) {
 		static bool loggedMissingCoordX = false;
 		if (!loggedMissingCoordX) {
-			Logf("[WorldLoaded] Coordinate X read failed. p2=0x%llX", p2);
 			loggedMissingCoordX = true;
 		}
 		int hp = GetPlayerHp();
@@ -330,7 +329,6 @@ bool GetPlayerDeathFlag(int& outDeathFlag)
 	if (!SafeReadPtr(g_PGDStorageAddr, playerGameData) || !playerGameData)
 		return -1;
 
-	// 3) Follow the same pointer chain you already used
 	uintptr_t p1 = 0;
 	if (!SafeReadPtr(playerGameData + 0x8, p1) || !p1) return -1;
 	if (!SafeReadInt(p1 + 0x178, outDeathFlag)) return -1;

@@ -111,6 +111,7 @@ public partial class RandomizerHelper : ObservableObject
         var itemCounts = ((JObject)slotData["itemCounts"]).ToObject<Dictionary<string, int>>()
             .ToDictionary(entry => long.Parse(entry.Key), entry => entry.Value);
 
+        var json = slotData["options"].ToString();
 
         //CheckVersionRange(slotData);
         var options = ((JObject)slotData["options"]).ToObject<Dictionary<string, int>>();

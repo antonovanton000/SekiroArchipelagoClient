@@ -203,7 +203,7 @@ bool IsAllowedGoods(uint32_t goodsId)
 	return g_AllowedGoods.find(goodsId) != g_AllowedGoods.end();
 }
 
-bool IsTrackedRewardLot(uint32_t lotId)
+bool IsTrackedSuctionLot(uint32_t lotId)
 {
 	return lotId == 51300  // DT: Hidden Tooth - complete Hanbei's quest
 		|| lotId == 61000  // DT: Shinobi Esoteric Text - Sculptor with 1 skill point
@@ -215,7 +215,8 @@ bool IsTrackedRewardLot(uint32_t lotId)
 		|| lotId == 53110  // AD: Academics' Red Lump - red-eyed Doujun, enemy drop
 		|| lotId == 53050  // AD: Red Lump - red-eyed Jinzaemon, enemy drop
 		|| lotId == 52650  // AD: Red Lump - red-eyed Kotaro, enemy drop
-		|| lotId == 12504000; // AC/C: Bundled Jizo Statue - path to serpent shrine, enemy drop
+		|| lotId == 12504000 // AC/C: Bundled Jizo Statue - path to serpent shrine, enemy drop
+		|| lotId == 62520; //FP2: Divine Grass - Feeding Grounds, Attendant for Great White Whisker 
 }
 
 void OnLootDetected(uint32_t lotIndex, uint32_t goodid, bool isFromShop)
@@ -277,7 +278,7 @@ void __fastcall Hooked_RewardParamInit(void* rewardParam, int mode)
 	uint32_t lotId = g_RewardCtx.lotId;
 	bool isAllowedItem = IsAllowedGoods(goodsId);
 
-	if (isAllowedItem && !IsTrackedRewardLot(lotId))
+	if (isAllowedItem && !IsTrackedSuctionLot(lotId))
 	{
 		Logf("[Reward] ignored lot=%u goods=%u qty=%u allowed=%s", lotId, goodsId, quantity, isAllowedItem ? "true" : "false");
 		return;
@@ -405,7 +406,7 @@ void __fastcall Hooked_SuctionPickupExec(
 	GameplayItemOperationScope operation;
 	PickupRead picked = ReadPickup(mapItemMan, a2, a3);
 
-	if (picked.valid && IsTrackedRewardLot(picked.lotId))
+	if (picked.valid && IsTrackedSuctionLot(picked.lotId))
 	{
 		OnLootDetected(picked.lotId, picked.goodsId, false);
 		Logf("[SuctionPickup] staged lot=%u goods=%u qty=%u", picked.lotId, picked.goodsId, picked.quantity);

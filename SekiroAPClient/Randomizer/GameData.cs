@@ -776,6 +776,26 @@ namespace RandomizerCommon
             ev.Instructions.Insert(index + 1, addInstruction);
         }
 
+        private static void InsertInstructionsBeforeIfMissing(EMEVD.Event ev, Events events, string beforeCommand, IEnumerable<string> addCommands)
+        {
+            List<EMEVD.Instruction> instructions = addCommands.Select(events.ParseAdd).ToList();
+            int existingCount = instructions.Count(addInstruction => ev.Instructions.Any(i => InstructionMatches(i, addInstruction)));
+            if (existingCount == instructions.Count) return;
+            if (existingCount != 0)
+            {
+                throw new Exception($"Found partial additional_region_locks insertion in event {ev.ID} before: {beforeCommand}");
+            }
+
+            EMEVD.Instruction beforeInstruction = events.ParseAdd(beforeCommand);
+            int index = ev.Instructions.FindIndex(i => InstructionMatches(i, beforeInstruction));
+            if (index == -1)
+            {
+                throw new Exception($"Missing insertion point required for additional_region_locks patch in event {ev.ID}: {beforeCommand}");
+            }
+
+            ev.Instructions.InsertRange(index, instructions);
+        }
+
         private static void ReplaceInstructionArgValue(EMEVD.Event ev, Events events, int oldValue, int newValue, int expectedCount)
         {
             List<(Events.Instr Instr, int ArgIndex, bool IsUInt)> matches = new List<(Events.Instr, int, bool)>();
@@ -887,11 +907,17 @@ namespace RandomizerCommon
 
         private static void PatchBlazingBullVictoryEvents(EMEVD emevd, Events events)
         {
+            EMEVD.Event event11115200 = RequireEvent(emevd, 11115200);
             ReplaceInstruction(
-                RequireEvent(emevd, 11115200),
+                event11115200,
                 events,
                 "IF Event Flag (0, 1, 0, 11110440)",
                 "IF Event Flag (0, 1, 0, 61110990)");
+            InsertInstructionsBeforeIfMissing(
+                event11115200,
+                events,
+                "Set Player Respawn Point (1112950)",
+                BuildBlazingBullCastleHitSwapCommands());
 
             EMEVD.Event event11115203 = RequireEvent(emevd, 11115203);
             ReplaceInstructionArgValue(event11115203, events, 11110440, 61110990, 1);
@@ -908,6 +934,31 @@ namespace RandomizerCommon
                 events,
                 "Delete Object-following SFX (1111440, 1)",
                 "Reproduce Object Animation (1111442, 10)");
+        }
+
+        private static IEnumerable<string> BuildBlazingBullCastleHitSwapCommands()
+        {
+            for (int hitId = 1114200; hitId <= 1114205; hitId++)
+            {
+                yield return $"Activate Hit ({hitId}, 0)";
+            }
+
+            for (int hitId = 1114210; hitId <= 1114215; hitId++)
+            {
+                yield return $"Activate Hit ({hitId}, 1)";
+            }
+
+            for (int hitId = 1114200; hitId <= 1114205; hitId++)
+            {
+                yield return $"Activate Hit and Create Navimesh ({hitId}, 0)";
+            }
+
+            for (int hitId = 1114210; hitId <= 1114215; hitId++)
+            {
+                yield return $"Activate Hit and Create Navimesh ({hitId}, 1)";
+            }
+
+            yield return "Set Event Flag (11110442, 1)";
         }
 
         private static IEnumerable<string> BuildDoorLockEvent(
