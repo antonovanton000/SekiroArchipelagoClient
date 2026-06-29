@@ -26,49 +26,57 @@ public sealed class GitHubReleaseProvider
         string assetName = "randomizerAP",
         CancellationToken ct = default)
     {
-        EnsureGitHubHeaders();
+        try
+        {
 
-        var url = $"https://api.github.com/repos/{_owner}/{_repo}/releases?per_page=30&page=1";
+            EnsureGitHubHeaders();
 
-        using var resp = await _http.GetAsync(url, ct).ConfigureAwait(false);
-        var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            var url = $"https://api.github.com/repos/{_owner}/{_repo}/releases?per_page=30&page=1";
 
-        if (!resp.IsSuccessStatusCode)
-            throw new InvalidOperationException($"GitHub API error {(int)resp.StatusCode} {resp.ReasonPhrase}. Body: {body}");
+            using var resp = await _http.GetAsync(url, ct).ConfigureAwait(false);
+            var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
-        var releases = JsonSerializer.Deserialize<GitHubRelease[]>(body, JsonOptions)
-                       ?? Array.Empty<GitHubRelease>();
+            if (!resp.IsSuccessStatusCode)
+                throw new InvalidOperationException($"GitHub API error {(int)resp.StatusCode} {resp.ReasonPhrase}. Body: {body}");
 
-        var filtered = releases.Where(r => r.Draft == false);
+            var releases = JsonSerializer.Deserialize<GitHubRelease[]>(body, JsonOptions)
+                           ?? Array.Empty<GitHubRelease>();
 
-        if (!includePrerelease)
-            filtered = filtered.Where(r => r.Prerelease == false);
+            var filtered = releases.Where(r => r.Draft == false);
 
-        var release = filtered.FirstOrDefault();
-        if (release == null)
-            return null;
+            if (!includePrerelease)
+                filtered = filtered.Where(r => r.Prerelease == false);
 
-        var version = ExtractVersion(release);
-        if (version == null)
-            return null;
+            var release = filtered.FirstOrDefault();
+            if (release == null)
+                return null;
 
-        var assets = release.Assets ?? Array.Empty<GitHubAsset>();
-        if (assets.Length == 0)
-            throw new InvalidOperationException("Release has no assets attached.");
+            var version = ExtractVersion(release);
+            if (version == null)
+                return null;
 
-        var asset = assets.FirstOrDefault(a => a.Name.Contains(assetName, StringComparison.OrdinalIgnoreCase))
-                    ?? throw new InvalidOperationException($"Asset '{assetName}' not found in release assets.");
+            var assets = release.Assets ?? Array.Empty<GitHubAsset>();
+            if (assets.Length == 0)
+                throw new InvalidOperationException("Release has no assets attached.");
 
-        if (string.IsNullOrWhiteSpace(asset.BrowserDownloadUrl))
-            throw new InvalidOperationException("Asset has empty browser_download_url.");
+            var asset = assets.FirstOrDefault(a => a.Name.Contains(assetName, StringComparison.OrdinalIgnoreCase))
+                        ?? throw new InvalidOperationException($"Asset '{assetName}' not found in release assets.");
 
-        return new LatestReleaseInfo(
-            Version: version,
-            DownloadUrl: asset.BrowserDownloadUrl,
-            AssetName: asset.Name,
-            ReleaseTitle: release.Name ?? release.TagName ?? "(untitled)",
-            IsPrerelease: release.Prerelease
-        );
+            if (string.IsNullOrWhiteSpace(asset.BrowserDownloadUrl))
+                throw new InvalidOperationException("Asset has empty browser_download_url.");
+
+            return new LatestReleaseInfo(
+                Version: version,
+                DownloadUrl: asset.BrowserDownloadUrl,
+                AssetName: asset.Name,
+                ReleaseTitle: release.Name ?? release.TagName ?? "(untitled)",
+                IsPrerelease: release.Prerelease
+            );
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("Failed to get latest release info from GitHub.", ex);
+        }
     }
 
     private void EnsureGitHubHeaders()

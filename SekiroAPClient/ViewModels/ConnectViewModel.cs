@@ -133,6 +133,9 @@ public partial class ConnectViewModel : MyBaseViewModel
 
     async Task CheckForUpdate()
     {
+        try
+        {
+
         using var http = new HttpClient();
         var provider = new GitHubReleaseProvider(http, "antonovanton000", "SekiroArchipelagoClient");
 
@@ -152,6 +155,11 @@ public partial class ConnectViewModel : MyBaseViewModel
         {
             ShowUpdateNotification = true;
         }        
+        }
+        catch (Exception ex)
+        {
+            
+        }
     }
 
     #endregion
