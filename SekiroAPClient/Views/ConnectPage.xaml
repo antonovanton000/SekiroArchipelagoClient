@@ -79,6 +79,14 @@
                 <TextBlock Text="{Binding Version}" FontFamily="{StaticResource Londrina-Black}" Style="{StaticResource FlatTextBlockStyle}"
                            HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,5" Grid.Row="1"/>
                 <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Orientation="Horizontal">
+                    <Button Content="Steam Options"
+                            Height="32"
+                            FontSize="13"
+                            Margin="0,0,10,0"
+                            Style="{StaticResource FlatButtonStylePrimaryNoArrow}"
+                            Width="120"
+                            Command="{Binding ShowSteamOptionsPageCommand}"
+                            Visibility="{Binding ShowSteamOptionsButton, Converter={StaticResource BoolToVisConverter}}" />
                     <Button Content="Randomizer Options" Style="{StaticResource FlatButtonStylePrimaryNoArrow}" Command="{Binding GoToRandomizerOptionsPageCommand}" Height="32" FontSize="13"/>
                 </StackPanel>
             </Grid>

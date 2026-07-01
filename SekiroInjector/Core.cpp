@@ -236,12 +236,11 @@ DWORD WINAPI CoreThread(LPVOID)
 
     Logf("[Core] Initialization OK");
 
-    // Init overlay as early as possible — ещё в меню игры.
-    Overlay_SetHeader("Sekiro Archipelago Client (debug)");
-    if (!Overlay_Init(nullptr))
-    {
-        Log("[Core] Overlay_Init failed, overlay disabled");
-    }
+    //Overlay_SetHeader("Sekiro Archipelago Client (debug)");
+    //if (!Overlay_Init(nullptr))
+    //{
+    //    Log("[Core] Overlay_Init failed, overlay disabled");
+    //}
 
     while (g_Running)
     {

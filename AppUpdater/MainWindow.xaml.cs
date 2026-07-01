@@ -53,8 +53,8 @@ namespace AppUpdater
 
                 using var http = new HttpClient();
                 var provider = new GitHubReleaseProvider(http, "antonovanton000", "SekiroArchipelagoClient");
-
-                var stable = await provider.GetLatestAsync(includePrerelease: false, assetName: "randomizerAP");
+                var OS = App.IsLinux ? "linux" : "windows";
+                var stable = await provider.GetLatestAsync(includePrerelease: false, assetName: $"randomizerAP_{OS}");
 
                 if (stable == null)
                 {

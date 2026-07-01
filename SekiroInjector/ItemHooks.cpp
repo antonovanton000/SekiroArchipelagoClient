@@ -8,7 +8,6 @@
 #include "Overlay.h"
 #include "PipeConnection.h"
 #include "Core.h"
-#include <mutex>
 #include <queue>
 #include <atomic>
 
@@ -56,8 +55,38 @@ struct PendingForeignRemoval
 	ULONGLONG removeAfterMs;
 };
 
-static std::mutex g_ForeignRemovalMutex;
+static INIT_ONCE g_ForeignRemovalLockOnce = INIT_ONCE_STATIC_INIT;
+static CRITICAL_SECTION g_ForeignRemovalLock;
 static std::queue<PendingForeignRemoval> g_PendingForeignRemovals;
+
+class CriticalSectionLock
+{
+public:
+	explicit CriticalSectionLock(CRITICAL_SECTION& section)
+		: m_section(section)
+	{
+		EnterCriticalSection(&m_section);
+	}
+
+	~CriticalSectionLock()
+	{
+		LeaveCriticalSection(&m_section);
+	}
+
+private:
+	CRITICAL_SECTION& m_section;
+};
+
+static BOOL CALLBACK InitForeignRemovalLock(PINIT_ONCE, PVOID, PVOID*)
+{
+	InitializeCriticalSection(&g_ForeignRemovalLock);
+	return TRUE;
+}
+
+static void EnsureForeignRemovalLock()
+{
+	InitOnceExecuteOnce(&g_ForeignRemovalLockOnce, InitForeignRemovalLock, nullptr, nullptr);
+}
 
 class GameplayItemOperationScope
 {
@@ -134,8 +163,9 @@ void ItemHooks_EndApGrant()
 static void QueueForeignRemoval(uint32_t goodsId, ULONGLONG delayMs = FOREIGN_REMOVE_DELAY_MS)
 {
 	const ULONGLONG removeAfterMs = GetTickCount64() + delayMs;
+	EnsureForeignRemovalLock();
 	{
-		std::lock_guard<std::mutex> lock(g_ForeignRemovalMutex);
+		CriticalSectionLock lock(g_ForeignRemovalLock);
 		g_PendingForeignRemovals.push({ goodsId, removeAfterMs });
 	}
 
@@ -161,8 +191,9 @@ void ItemHooks_ProcessPendingForeignRemovals()
 		return;
 
 	PendingForeignRemoval pending{};
+	EnsureForeignRemovalLock();
 	{
-		std::lock_guard<std::mutex> lock(g_ForeignRemovalMutex);
+		CriticalSectionLock lock(g_ForeignRemovalLock);
 		if (g_PendingForeignRemovals.empty())
 			return;
 
@@ -175,7 +206,7 @@ void ItemHooks_ProcessPendingForeignRemovals()
 		return;
 
 	{
-		std::lock_guard<std::mutex> lock(g_ForeignRemovalMutex);
+		CriticalSectionLock lock(g_ForeignRemovalLock);
 		if (g_PendingForeignRemovals.empty())
 		{
 			ItemHooks_EndApGrant();

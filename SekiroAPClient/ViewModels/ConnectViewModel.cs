@@ -44,6 +44,10 @@ public partial class ConnectViewModel : MyBaseViewModel
     [ObservableProperty]
     bool showUpdateNotification;
 
+
+    [ObservableProperty]
+    bool showSteamOptionsButton = false;
+
     [ObservableProperty]
     string version = "";
 
@@ -56,6 +60,12 @@ public partial class ConnectViewModel : MyBaseViewModel
     {
         Version = App.AppVersion;
         MainWindow.ShowTopButtons();
+
+        if (App.PipeServer.IsTcpTransport)
+        {
+            ShowSteamOptionsButton = true;            
+            return;
+        }
 
         await CheckForUpdate();
     }
@@ -75,6 +85,19 @@ public partial class ConnectViewModel : MyBaseViewModel
 
     [RelayCommand]
     void GoToRandomizerOptionsPage() => MainWindow.NavigateTo(new RandomizerOptionsPage() { DataContext = new RandomizerOptionsViewModel() });
+
+    [RelayCommand]
+    void ShowSteamOptionsPage()
+    {
+        if (App.PipeServer.IsTcpTransport)
+        {
+            var window = new SteamLaunchOptionsWindow
+            {
+                Owner = App.Current.MainWindow
+            };
+            window.ShowDialog();            
+        }
+    }
 
     [RelayCommand]
     async Task Connect()
@@ -101,7 +124,7 @@ public partial class ConnectViewModel : MyBaseViewModel
                 }
                 App.SetActiveSession(_currentSession);
                 SaveSettings();
-                ConnectModel.PropertyChanged -= ConnectModel_PropertyChanged;                
+                ConnectModel.PropertyChanged -= ConnectModel_PropertyChanged;
                 MainWindow.NavigateTo(new RoomPage() { DataContext = new RoomViewModel(_currentSession) });
 
             }
@@ -123,7 +146,7 @@ public partial class ConnectViewModel : MyBaseViewModel
     [RelayCommand]
     void StartUpdate()
     {
-        Process.Start("AppUpdater.exe");
+        Process.Start("AppUpdater.exe", App.PipeServer.IsTcpTransport ? "--linux" : "--windows");
         App.Current.Shutdown();
     }
 
@@ -136,29 +159,36 @@ public partial class ConnectViewModel : MyBaseViewModel
         try
         {
 
-        using var http = new HttpClient();
-        var provider = new GitHubReleaseProvider(http, "antonovanton000", "SekiroArchipelagoClient");
+            if (App.PipeServer.IsTcpTransport)
+            {
+                //No updates for linux only windows for now 
+                //Will be implemented later if needed
+                return;
+            }
 
-        var stable = await provider.GetLatestAsync(includePrerelease: false, assetName: "randomizerAP");
+            using var http = new HttpClient();
+            var provider = new GitHubReleaseProvider(http, "antonovanton000", "SekiroArchipelagoClient");
 
-        var appVersion = System.Version.Parse(App.AppVersion);
+            var stable = await provider.GetLatestAsync(includePrerelease: false, assetName: "randomizerAP");
 
-        if (stable == null)
-        {
-            return;
-        }
+            var appVersion = System.Version.Parse(App.AppVersion);
 
-        var latestVersion = stable?.Version;
-        if (latestVersion == null) return;
+            if (stable == null)
+            {
+                return;
+            }
 
-        if (latestVersion > appVersion)
-        {
-            ShowUpdateNotification = true;
-        }        
+            var latestVersion = stable?.Version;
+            if (latestVersion == null) return;
+
+            if (latestVersion > appVersion)
+            {
+                ShowUpdateNotification = true;
+            }
         }
         catch (Exception ex)
         {
-            
+
         }
     }
 

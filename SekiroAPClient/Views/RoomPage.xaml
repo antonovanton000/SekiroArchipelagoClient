@@ -72,7 +72,7 @@
                                 Content="{Binding OverlayButtonText}"                                
                                 Margin="10,0"                                
                                 Command="{Binding OpenExternalWindowCommand}"/>
-                        <Button Content="{Binding GameActionButtonText}" Style="{StaticResource FlatButtonStylePrimaryNoArrow}" Width="120"
+                        <Button Content="Launch Game" Style="{StaticResource FlatButtonStylePrimaryNoArrow}" Width="120"
                                 Command="{Binding LaunchGameCommand}"
                                 Visibility="{Binding ShowGameActionButton, Converter={StaticResource BoolToVisConverter}}" />
                         <TextBlock Text="{Binding GameConnectionStatusText}" Style="{StaticResource HeaderTextBlockBlockStyle}" VerticalAlignment="Center"

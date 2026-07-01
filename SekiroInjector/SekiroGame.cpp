@@ -7,7 +7,6 @@
 #include "Overlay.h"       
 #include "Core.h"       
 #include <vector>
-#include <mutex>
 #include <Psapi.h>
 #include "InGameMessaging.h"
 #include "PipeConnection.h"
@@ -45,7 +44,6 @@ thread_local bool g_InOurGrant = false;
 
 static bool g_DeathFromDeathlink = false;
 
-static std::mutex g_PickupMutex;
 static std::vector<PickupEvent> g_PickupQueue;
 
 struct QueuedApGrant
@@ -57,11 +55,41 @@ struct QueuedApGrant
 	uint32_t grantRequestId;
 };
 
-static std::mutex g_ApGrantQueueMutex;
+static INIT_ONCE g_ApGrantQueueLockOnce = INIT_ONCE_STATIC_INIT;
+static CRITICAL_SECTION g_ApGrantQueueLock;
 static std::deque<QueuedApGrant> g_ApGrantQueue;
 static ULONGLONG g_LastApGrantMs = 0;
 static bool g_ApGrantWaitLogged = false;
 static constexpr ULONGLONG AP_GRANT_INTERVAL_MS = 100;
+
+class CriticalSectionLock
+{
+public:
+	explicit CriticalSectionLock(CRITICAL_SECTION& section)
+		: m_section(section)
+	{
+		EnterCriticalSection(&m_section);
+	}
+
+	~CriticalSectionLock()
+	{
+		LeaveCriticalSection(&m_section);
+	}
+
+private:
+	CRITICAL_SECTION& m_section;
+};
+
+static BOOL CALLBACK InitApGrantQueueLock(PINIT_ONCE, PVOID, PVOID*)
+{
+	InitializeCriticalSection(&g_ApGrantQueueLock);
+	return TRUE;
+}
+
+static void EnsureApGrantQueueLock()
+{
+	InitOnceExecuteOnce(&g_ApGrantQueueLockOnce, InitApGrantQueueLock, nullptr, nullptr);
+}
 
 static uintptr_t g_GameDataManStorage = 0;
 static uintptr_t g_GameDataMan = 0;
@@ -685,6 +713,7 @@ bool GetEventFlagSafe(uint32_t flagId, bool& outValue)
 bool SekiroGame_Initialize()
 {
 	Logf("[SekiroGame] Initialize");
+	EnsureApGrantQueueLock();
 	g_Initialized = true;
 	Sleep(10000);
 	InitEventFlagSystem();
@@ -867,8 +896,9 @@ bool SekiroGame_GrantItemWithEvent(uint32_t eventId, uint32_t goodsId, uint32_t 
 
 void SekiroGame_QueueGrantItem(uint32_t eventId, uint32_t goodsId, uint32_t count, uint32_t deliveryFlagId, uint32_t grantRequestId)
 {
+	EnsureApGrantQueueLock();
 	{
-		std::lock_guard<std::mutex> lock(g_ApGrantQueueMutex);
+		CriticalSectionLock lock(g_ApGrantQueueLock);
 		g_ApGrantQueue.push_back({ eventId, goodsId, count, deliveryFlagId, grantRequestId });
 	}
 
@@ -885,8 +915,9 @@ void SekiroGame_ProcessPendingGrants()
 		return;
 
 	QueuedApGrant grant{};
+	EnsureApGrantQueueLock();
 	{
-		std::lock_guard<std::mutex> lock(g_ApGrantQueueMutex);
+		CriticalSectionLock lock(g_ApGrantQueueLock);
 		if (g_ApGrantQueue.empty())
 			return;
 		grant = g_ApGrantQueue.front();
@@ -903,7 +934,7 @@ void SekiroGame_ProcessPendingGrants()
 	}
 
 	{
-		std::lock_guard<std::mutex> lock(g_ApGrantQueueMutex);
+		CriticalSectionLock lock(g_ApGrantQueueLock);
 		if (g_ApGrantQueue.empty())
 		{
 			ItemHooks_EndApGrant();

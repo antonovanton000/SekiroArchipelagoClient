@@ -94,9 +94,6 @@ public partial class RoomViewModel : MyBaseViewModel
     string gameConnectionStatusText = "";
 
     [ObservableProperty]
-    string gameActionButtonText = "Launch Game";
-
-    [ObservableProperty]
     bool showNotifications = true;
 
     public ObservableCollection<ServerNotification> Notifications { get; }
@@ -371,16 +368,6 @@ public partial class RoomViewModel : MyBaseViewModel
     [RelayCommand]
     void LaunchGame()
     {
-        if (pipeServer.IsTcpTransport)
-        {
-            var window = new SteamLaunchOptionsWindow
-            {
-                Owner = App.Current.MainWindow
-            };
-            window.ShowDialog();
-            return;
-        }
-
 #if DEBUG
         Process.Start(new ProcessStartInfo() { FileName = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Sekiro\\sekiro.exe", WorkingDirectory = Path.Combine(App.Location, "..") });
 #else
@@ -808,15 +795,13 @@ public partial class RoomViewModel : MyBaseViewModel
         if (pipeServer.IsTcpTransport)
         {
             ShowGameActionButton = true;
-            ShowGameConnectionStatus = true;
-            GameActionButtonText = "Steam Setup";
+            ShowGameConnectionStatus = true;            
             GameConnectionStatusText = IsConnectedToGame ? "Game: Connected" : "Game: Disconnected";
             return;
         }
 
         ShowGameActionButton = !IsConnectedToGame;
-        ShowGameConnectionStatus = IsConnectedToGame;
-        GameActionButtonText = "Launch Game";
+        ShowGameConnectionStatus = IsConnectedToGame;        
         GameConnectionStatusText = "Connected to Game";
     }
 
