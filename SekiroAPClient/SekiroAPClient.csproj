@@ -24,8 +24,8 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <Version>1.2.5</Version>
-    <AssemblyVersion>1.2.5</AssemblyVersion>
+    <Version>1.2.6</Version>
+    <AssemblyVersion>1.2.6</AssemblyVersion>
  </PropertyGroup>
 
 	

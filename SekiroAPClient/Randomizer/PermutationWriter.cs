@@ -81,6 +81,7 @@ public class PermutationWriter
         Dictionary<int, int> shopEventFlags = null)
     {
         bool isArchipelago = permutation.ForcedMode;
+        HashSet<int> writtenOfferingBoxShops = new HashSet<int>();
 
         foreach (string hintType in ann.HintCategories)
         {
@@ -481,6 +482,10 @@ public class PermutationWriter
 
                             ApplyQuantityToShop(shopCells, newQuantity);
                             SetShop(target.ID, shopCells);
+                            if (isArchipelago && game.Sekiro && IsOfferingBoxShop(target.ID))
+                            {
+                                writtenOfferingBoxShops.Add(target.ID);
+                            }
                         }
                     }
                     // Add special flags for specific items
@@ -514,6 +519,11 @@ public class PermutationWriter
         itemLots.Rows = itemLots.Rows.OrderBy(r => r.ID).ToList();
         Console.WriteLine("-- End of item spoilers");
         Console.WriteLine();
+
+        if (isArchipelago && game.Sekiro)
+        {
+            NormalizeWrittenOfferingBoxShopQuantities(writtenOfferingBoxShops);
+        }
 
         // Hacky convenience function for generating race mode list
         if (opt["racemodeinfo"])
@@ -1104,6 +1114,46 @@ public class PermutationWriter
         if (shopCells.ContainsKey("sellQuantity"))
         {
             shopCells["sellQuantity"] = (short)(quantity <= 0 ? 1 : quantity);
+        }
+    }
+
+    private static bool IsOfferingBoxShop(int shopId)
+    {
+        return shopId / 100 == 11005;
+    }
+
+    private void NormalizeWrittenOfferingBoxShopQuantities(IReadOnlyCollection<int> shopIds)
+    {
+        if (shopIds == null || shopIds.Count == 0)
+            return;
+
+        int fixedRows = 0;
+        foreach (int shopId in shopIds)
+        {
+            PARAM.Row row = shops[shopId];
+            if (row == null)
+                continue;
+
+            if (!row.Cells.Any(cell => cell.Def.InternalName == "sellQuantity"))
+                continue;
+
+            int equipId = row.Cells.Any(cell => cell.Def.InternalName == "EquipId")
+                ? (int)row["EquipId"].Value
+                : 0;
+            if (equipId <= 0)
+                continue;
+
+            short quantity = (short)row["sellQuantity"].Value;
+            if (quantity > 0)
+                continue;
+
+            row["sellQuantity"].Value = (short)1;
+            fixedRows++;
+        }
+
+        if (fixedRows > 0)
+        {
+            Console.WriteLine($"[OFFERING BOX] Normalized sellQuantity for {fixedRows} written shop rows");
         }
     }
 

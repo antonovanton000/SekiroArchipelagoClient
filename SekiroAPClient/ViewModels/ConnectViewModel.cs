@@ -63,8 +63,7 @@ public partial class ConnectViewModel : MyBaseViewModel
 
         if (App.PipeServer.IsTcpTransport)
         {
-            ShowSteamOptionsButton = true;            
-            return;
+            ShowSteamOptionsButton = true;                        
         }
 
         await CheckForUpdate();
@@ -158,14 +157,6 @@ public partial class ConnectViewModel : MyBaseViewModel
     {
         try
         {
-
-            if (App.PipeServer.IsTcpTransport)
-            {
-                //No updates for linux only windows for now 
-                //Will be implemented later if needed
-                return;
-            }
-
             using var http = new HttpClient();
             var provider = new GitHubReleaseProvider(http, "antonovanton000", "SekiroArchipelagoClient");
 
