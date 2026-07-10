@@ -33,6 +33,12 @@ namespace SekiroAPClient
                 .Skip(1)
                 .Any(arg => string.Equals(arg, "--developer-mode", StringComparison.OrdinalIgnoreCase));
 
+            if (IsDeveloperMode)
+            {
+                Settings.Default.IsDebug = true;
+                Settings.Default.Save();
+            }
+
             var assembly = Assembly.GetExecutingAssembly();
             var attribute = assembly.GetCustomAttribute<AssemblyFileVersionAttribute>();
             AppVersion = attribute.Version.ToString();
