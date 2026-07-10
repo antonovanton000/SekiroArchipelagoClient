@@ -18,6 +18,9 @@ public sealed class ReceivedItemStore
     public static string MakeKey(long itemId, long locationId, int fromPlayerSlot)
         => $"{itemId}:{locationId}:{fromPlayerSlot}";
 
+    public static string MakeCheatConsoleKey(int receivedIndex, long itemId, int fromPlayerSlot)
+        => $"cheat:{receivedIndex}:{itemId}:{fromPlayerSlot}";
+
     public bool Has(string key)
     {
         lock (_lock)

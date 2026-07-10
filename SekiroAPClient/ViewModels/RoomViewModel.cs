@@ -1113,14 +1113,25 @@ public partial class RoomViewModel : MyBaseViewModel
 
         try
         {
+            var cheatConsoleOccurrenceCursor = new Dictionary<string, int>(StringComparer.Ordinal);
             while (!cancellationToken.IsCancellationRequested && helper.Any())
             {
+                int helperIndexBeforeDequeue = helper.Index;
+                int allItemsReceivedCountBeforeDequeue = helper.AllItemsReceived?.Count() ?? -1;
                 var item = helper.DequeueItem();
                 if (item.Player.Name == CurrentSession.Players.ActivePlayer.Name && CurrentSession.Locations.AllLocationsChecked.Any(i => i == item.LocationId)) continue;
 
                 var isCheatConsole = item.LocationName == "Cheat Console";
-                var key = ReceivedItemStore.MakeKey(item.ItemId, item.LocationId, item.Player.Slot);
-                var alreadyDelivered = !isCheatConsole && localItemsStore.Has(key);
+                int? cheatConsoleReceivedIndex = null;
+                if (isCheatConsole)
+                {
+                    cheatConsoleReceivedIndex = ResolveCheatConsoleReceivedIndex(helper, item, cheatConsoleOccurrenceCursor);
+                }
+
+                var key = cheatConsoleReceivedIndex.HasValue
+                    ? ReceivedItemStore.MakeCheatConsoleKey(cheatConsoleReceivedIndex.Value, item.ItemId, item.Player.Slot)
+                    : ReceivedItemStore.MakeKey(item.ItemId, item.LocationId, item.Player.Slot);
+                var alreadyDelivered = localItemsStore.Has(key);
 
                 if (Properties.Settings.Default.IsDebug)
                     itemTransferLogger.Log($"RECEIVE dequeued key={key} itemId={item.ItemId} item='{item.ItemName}' locationId={item.LocationId} location='{item.LocationName}' from='{item.Player.Name}' fromSlot={item.Player.Slot} cheat={isCheatConsole} storeDelivered={alreadyDelivered}");
@@ -1155,7 +1166,7 @@ public partial class RoomViewModel : MyBaseViewModel
                     }
 
 
-                    if (!isCheatConsole && singletonKey != null && localItemsStore.Has(singletonKey))
+                    if (singletonKey != null && localItemsStore.Has(singletonKey))
                     {
                         if (Properties.Settings.Default.IsDebug)
                         {
@@ -1186,14 +1197,11 @@ public partial class RoomViewModel : MyBaseViewModel
                     }
 
 
-                    if (!isCheatConsole)
-                    {
-                        localItemsStore.TryMark(key);
-                        if (singletonKey != null)
-                            localItemsStore.TryMark(singletonKey);
-                        localItemsStore.Save();
-                        itemTransferLogger.Log($"RECEIVE stored_delivered key={key} fullId={gameItemFullId} good={goodId} qty={count} event={itemEventId}");
-                    }
+                    localItemsStore.TryMark(key);
+                    if (singletonKey != null)
+                        localItemsStore.TryMark(singletonKey);
+                    localItemsStore.Save();
+                    itemTransferLogger.Log($"RECEIVE stored_delivered key={key} fullId={gameItemFullId} good={goodId} qty={count} event={itemEventId}");
 
                 }
                 else
@@ -1214,6 +1222,51 @@ public partial class RoomViewModel : MyBaseViewModel
         {
             _receivedItemsLock.Release();
         }
+    }
+
+    private static int? ResolveCheatConsoleReceivedIndex(
+        IReceivedItemsHelper helper,
+        ItemInfo item,
+        Dictionary<string, int> occurrenceCursor)
+    {
+        var matchKey = MakeCheatConsoleOccurrenceKey(item);
+        occurrenceCursor.TryGetValue(matchKey, out int occurrence);
+        occurrenceCursor[matchKey] = occurrence + 1;
+
+        var allItems = helper.AllItemsReceived;
+        if (allItems == null)
+            return null;
+
+        int matchingOccurrence = 0;
+        int index = 0;
+        foreach (var receivedItem in allItems)
+        {
+            if (IsSameCheatConsoleReceivedItem(receivedItem, item))
+            {
+                if (matchingOccurrence == occurrence)
+                    return index;
+
+                matchingOccurrence++;
+            }
+
+            index++;
+        }
+
+        return null;
+    }
+
+    private static string MakeCheatConsoleOccurrenceKey(ItemInfo item)
+    {
+        return $"{item.ItemId}:{item.LocationId}:{item.Player.Slot}:{item.ItemName}:{item.LocationName}";
+    }
+
+    private static bool IsSameCheatConsoleReceivedItem(ItemInfo left, ItemInfo right)
+    {
+        return left.ItemId == right.ItemId
+            && left.LocationId == right.LocationId
+            && left.Player.Slot == right.Player.Slot
+            && string.Equals(left.ItemName, right.ItemName, StringComparison.Ordinal)
+            && string.Equals(left.LocationName, right.LocationName, StringComparison.Ordinal);
     }
 
     private async Task<bool> SendTrackedItemToGameAsync(int fullId, int goodId, int count, int itemEventId, CancellationToken cancellationToken)
