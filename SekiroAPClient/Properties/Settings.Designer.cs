@@ -274,5 +274,16 @@ namespace SekiroAPClient.Properties {
                 this["OWIsPositionSaved"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        public global::System.DateTime LastFeedbackSentAt {
+            get {
+                return ((global::System.DateTime)(this["LastFeedbackSentAt"]));
+            }
+            set {
+                this["LastFeedbackSentAt"] = value;
+            }
+        }
     }
 }

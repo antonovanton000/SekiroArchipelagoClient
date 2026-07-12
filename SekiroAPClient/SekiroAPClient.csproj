@@ -24,8 +24,8 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <Version>1.2.8</Version>
-    <AssemblyVersion>1.2.8</AssemblyVersion>
+    <Version>1.2.10</Version>
+    <AssemblyVersion>1.2.10</AssemblyVersion>
  </PropertyGroup>
 
 	
@@ -33,7 +33,7 @@
     <None Remove="Fonts\LexendDeca-Regular.ttf" />
     <None Remove="Fonts\LondrinaSolid-Black.ttf" />
     <None Remove="Fonts\LondrinaSolid-Regular.ttf" />
-    <None Remove="Fonts\Segoe Fluent Icons.ttf" />
+    <None Remove="Fonts\SEGOEICONS.TTF" />
     <None Remove="Images\archipelago_logo.png" />
     <None Remove="Images\grass.png" />
     <None Remove="Images\grass.dark.png" />
@@ -110,7 +110,7 @@
     <Resource Include="Fonts\LexendDeca-Regular.ttf" />
     <Resource Include="Fonts\LondrinaSolid-Black.ttf" />
     <Resource Include="Fonts\LondrinaSolid-Regular.ttf" />
-    <Resource Include="Fonts\Segoe Fluent Icons.ttf" />
+    <Resource Include="Fonts\SEGOEICONS.TTF" />
     <Resource Include="Images\archipelago_logo.png" />
     <Resource Include="Images\grass.png" />
     <Resource Include="Images\grass.dark.png" />

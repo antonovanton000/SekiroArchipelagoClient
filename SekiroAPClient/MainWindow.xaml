@@ -315,6 +315,15 @@
                                                FontSize="6" />
                                     </Border>
                                 </Grid>
+                                <Button Style="{StaticResource IconButtonStyle}"
+                                        Foreground="{DynamicResource AccentBrush}"
+                                        Content="&#xeC24;"
+                                        FontFamily="{StaticResource FluentIcons}"
+                                        FontSize="18"
+                                        Margin="3,0"
+                                        ToolTip="Feedback"
+                                        x:Name="btnFeedback"
+                                        Click="Feedback_Click" />
                                 <Grid Margin="10,0,0,0"
                                       Visibility="Visible">
                                     <Button Style="{StaticResource IconButtonStyle}"
@@ -323,6 +332,7 @@
                                             FontFamily="{StaticResource FluentIcons}"
                                             FontSize="18"
                                             Margin="3,0"
+                                            ToolTip="Settings"
                                             x:Name="btnSettings"
                                             Click="Settings_Click" />
                                 </Grid>
@@ -333,6 +343,7 @@
                                             FontFamily="{StaticResource FluentIcons}"
                                             FontSize="18"
                                             Margin="3,0"
+                                            ToolTip="About"
                                             x:Name="btnAbout"
                                             Click="About_Click" />
                                 </Grid>

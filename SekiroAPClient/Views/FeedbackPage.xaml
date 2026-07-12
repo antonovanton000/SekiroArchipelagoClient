@@ -1,0 +1,139 @@
+﻿<Page x:Class="SekiroAPClient.Views.FeedbackPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
+      xmlns:vm="clr-namespace:SekiroAPClient.ViewModels"
+      xmlns:v="clr-namespace:InjustUILibrary.Validation"
+      xmlns:icnt="clr-namespace:InjustUILibrary.Controls"
+      xmlns:local="clr-namespace:SekiroAPClient.Views"
+      mc:Ignorable="d"
+      d:DesignHeight="700"
+      d:DesignWidth="900"
+      d:DataContext="{d:DesignInstance Type=vm:FeedbackViewModel, IsDesignTimeCreatable=False}"
+      x:Name="page"
+      Title="FeedbackPage">
+    <behaviors:Interaction.Triggers>
+        <behaviors:EventTrigger EventName="Loaded"
+                                SourceObject="{Binding ElementName=page}">
+            <behaviors:InvokeCommandAction Command="{Binding AppearingCommand}" />
+        </behaviors:EventTrigger>
+    </behaviors:Interaction.Triggers>
+    <Grid>
+        <Grid.Background>
+            <ImageBrush ImageSource="{DynamicResource GrassBackgroundImage}"
+                        TileMode="Tile"
+                        Viewport="0,0,512,512"
+                        ViewportUnits="Absolute"
+                        Stretch="Fill"
+                        AlignmentX="Left"
+                        AlignmentY="Top" />
+        </Grid.Background>
+        <TextBlock Style="{StaticResource FlatTextBlockStyle}"
+                   HorizontalAlignment="Right"
+                   Margin="0,25,40,0">
+            <Run Text="AppVersion:" />
+            <Run x:Name="runVersion"
+                 Text=""
+                 FontWeight="Bold" />
+        </TextBlock>
+        <StackPanel x:Name="content"
+                    Margin="20,20,20,0">
+
+
+            <TextBlock Style="{StaticResource HeaderTextBlockBlockStyle}"
+                       Text="Feedback"
+                       Margin="0,0,0,20" />
+
+            <TextBlock Style="{StaticResource FlatTextBlockStyle}"
+                       FontSize="14"
+                       TextWrapping="Wrap">
+                <Run Text="Your feedback helps improve the Sekiro Archipelago Client." />
+                <LineBreak />
+                <LineBreak />
+                <Run Text="Use this page to report a bug, suggest a new feature, or share your experience with the client. Please provide as much detail as possible, especially when reporting an issue." />
+            </TextBlock>
+            <icnt:ValidationForm x:Name="form"
+                                 ValidSubmitCommand="{Binding SendFeedbackCommand}">
+                <icnt:ValidationForm.Items>
+                    <icnt:InputField Placeholder="Name"
+                                     Margin="0,20,0,0"
+                                     Label="Name"
+                                     Text="{Binding Name, Mode=TwoWay}">
+                        <icnt:InputField.ValidationRules>
+                            <v:RequierdRule />
+                        </icnt:InputField.ValidationRules>
+                    </icnt:InputField>
+
+                    <icnt:TextAreaField Placeholder="Feedback"
+                                        Label="Feedback"
+                                        Height="200"
+                                        Margin="0,0,0,0"
+                                        Text="{Binding Message, Mode=TwoWay}">
+                        <icnt:TextAreaField.ValidationRules>
+                            <v:RequierdRule />
+                        </icnt:TextAreaField.ValidationRules>
+                    </icnt:TextAreaField>
+                </icnt:ValidationForm.Items>
+            </icnt:ValidationForm>
+
+
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Overall Experience: "
+                           Style="{StaticResource SubHeaderTextBlockBlockStyle}"  VerticalAlignment="Center"/>
+                <RadioButton GroupName="gr1" IsChecked="{Binding IsPositive}">
+                    <RadioButton.Style>
+                        <Style TargetType="ToggleButton"
+                               BasedOn="{StaticResource IconToggleButtonStyleBig}">
+                            <Style.Triggers>
+                                <Trigger Property="IsChecked"
+                                         Value="False">
+                                    <Setter Property="Content"
+                                            Value="&#xE8E1;" />
+                                </Trigger>
+                                <Trigger Property="IsChecked"
+                                         Value="True">
+                                    <Setter Property="Content"
+                                            Value="&#xF3BF;" />
+                                    <Setter Property="Foreground"
+                                            Value="{StaticResource Blue}" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </RadioButton.Style>
+                </RadioButton>
+
+                <RadioButton GroupName="gr1">
+                    <RadioButton.Style>
+                        <Style TargetType="ToggleButton"
+                               BasedOn="{StaticResource IconToggleButtonStyleBig}">
+                            <Style.Triggers>
+                                <Trigger Property="IsChecked"
+                                         Value="False">
+                                    <Setter Property="Content"
+                                            Value="&#xE8E0;" />
+                                </Trigger>
+                                <Trigger Property="IsChecked"
+                                         Value="True">
+                                    <Setter Property="Content"
+                                            Value="&#xF3C0;" />
+                                    <Setter Property="Foreground"
+                                            Value="{StaticResource Danger}" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </RadioButton.Style>
+                </RadioButton>
+            </StackPanel>
+
+
+            <Button Style="{StaticResource FlatButtonStylePrimaryNoArrow}"
+                    Content="Send Feedback"
+                    Command="{Binding ElementName=form, Path=ButtonSubmitCommand}"
+                    Width="140"
+                    Margin="0,30,0,0" />
+
+        </StackPanel>
+    </Grid>
+</Page>

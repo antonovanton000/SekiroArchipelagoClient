@@ -1,0 +1,194 @@
+﻿<UserControl x:Class="InjustUILibrary.Controls.TextAreaField"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:cl="clr-namespace:InjustUILibrary.Classes"
+             xmlns:local="clr-namespace:InjustUILibrary.Controls"
+             mc:Ignorable="d" 
+             x:Name="control"
+             d:DesignHeight="180" d:DesignWidth="800"
+             >
+    <UserControl.Resources>
+        <Storyboard x:Key="goUp">
+            <DoubleAnimation Storyboard.TargetName="pg_tt" Storyboard.TargetProperty="Y" To="-45" Duration="0:0:0.12"/>
+            <DoubleAnimation Storyboard.TargetName="pg_tt" Storyboard.TargetProperty="X" To="-15" Duration="0:0:0.12"/>
+            <DoubleAnimation Storyboard.TargetName="pg_st" Storyboard.TargetProperty="ScaleX" To="0.8" Duration="0:0:0.12"/>
+            <DoubleAnimation Storyboard.TargetName="pg_st" Storyboard.TargetProperty="ScaleY" To="0.8" Duration="0:0:0.12"/>
+            <DoubleAnimation Storyboard.TargetName="plc" Storyboard.TargetProperty="Opacity" From="0.4" To="1" Duration="0:0:0.12"/>
+            <ColorAnimation Storyboard.TargetName="plc" Storyboard.TargetProperty="Foreground.Color" To="{DynamicResource InputFieldLabelColor}" Duration="0:0:0.12"/>
+        </Storyboard>
+        <Storyboard x:Key="goDown">
+            <DoubleAnimation Storyboard.TargetName="pg_tt" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.12"/>
+            <DoubleAnimation Storyboard.TargetName="pg_tt" Storyboard.TargetProperty="X" To="0" Duration="0:0:0.12"/>
+            <DoubleAnimation Storyboard.TargetName="pg_st" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.12"/>
+            <DoubleAnimation Storyboard.TargetName="pg_st" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.12"/>
+            <DoubleAnimation Storyboard.TargetName="plc" Storyboard.TargetProperty="Opacity" From="1" To="0.4" Duration="0:0:0.12"/>
+            <ColorAnimation Storyboard.TargetName="plc" Storyboard.TargetProperty="Foreground.Color" To="{DynamicResource PrimaryTextDarkerColor}" Duration="0:0:0.12"/>
+        </Storyboard>
+    </UserControl.Resources>
+    <Grid>
+
+        <Border Height="150" BorderThickness="1" Margin="0,25,0,0" CornerRadius="10" Padding="10,3" x:Name="cmpBorder">
+            <Border.Style>
+                <Style TargetType="{x:Type Border}">
+                    <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource BorderColorBrush}"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsEnabled, ElementName=control}"
+                                     Value="False">
+                            <Setter Property="BorderBrush"
+                                    Value="{DynamicResource BorderDisabledColorBrush}" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Grid>
+                <Border x:Name="placeholderGrid" CornerRadius="3,3,0,0"
+                        VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,8,0,0">
+                    <Border.RenderTransform>
+                        <TransformGroup>
+                            <TranslateTransform x:Name="pg_tt" Y="0" X="0"/>
+                            <ScaleTransform x:Name="pg_st" ScaleX="1" ScaleY="1"/>
+                        </TransformGroup>
+                    </Border.RenderTransform>
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ElementName=control, Path=IsReadOnly}" Value="True">
+                                    <Setter Property="Background" Value="{Binding ElementName=cmpBorder, Path=Background}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Grid VerticalAlignment="Top">
+                        <Grid Background="{Binding ElementName=cmpBorder, Path=Background}" VerticalAlignment="Bottom" Height="12" Visibility="Collapsed">
+                        </Grid>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="plc"
+                                       Text="{Binding Placeholder, ElementName=control}"
+                                       Margin="3,0"
+                                       FontSize="18"
+                                       RenderTransformOrigin="0.5,0.5">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground">
+                                            <Setter.Value>
+                                                <SolidColorBrush Color="{DynamicResource PrimaryTextDarkerColor}" />
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ElementName=control, Path=IsReadOnly}"
+                                                         Value="True">
+                                                <Setter Property="Foreground">
+                                                    <Setter.Value>
+                                                        <SolidColorBrush Color="{DynamicResource AccentDisabledColor}" />
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding ElementName=control, Path=IsReadOnly}"
+                                                         Value="False">
+                                                <Setter Property="Foreground">
+                                                    <Setter.Value>
+                                                        <SolidColorBrush Color="{DynamicResource PrimaryTextDarkerColor}" />
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Setter Property="Opacity"
+                                                        Value="0.4" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <Grid Margin="0,-4,0,0"
+                                  Visibility="{Binding ElementName=control, Path=IsPlaceholderUp, Converter={StaticResource BoolToVisConverter}}">
+                                <TextBlock Text="*"
+                                           Visibility="{Binding ElementName=control, Path=IsRequiered, Converter={StaticResource BoolToVisConverter}}"
+                                           FontSize="20"
+                                           RenderTransformOrigin="0.5,0.5">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ElementName=control, Path=IsReadOnly}"
+                                                             Value="True">
+                                                    <Setter Property="Foreground"
+                                                            Value="{DynamicResource DisabledForegroundBrush}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding ElementName=control, Path=IsReadOnly}"
+                                                             Value="False">
+                                                    <Setter Property="Foreground"
+                                                            Value="{DynamicResource Danger}" />
+                                                    <Setter Property="Opacity"
+                                                            Value="1" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                <TextBox x:Name="tbx"
+                         Height="150"
+                         Margin="0,7,0,3"
+                         AcceptsReturn="True"
+                         VerticalScrollBarVisibility="Auto"                         
+                         VerticalAlignment="Stretch"
+                         VerticalContentAlignment="Top"
+                         CaretBrush="{DynamicResource PrimaryTextDarkerBrush}"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         FontSize="15"
+                         Foreground="{DynamicResource PrimaryTextDarkerBrush}"
+                         GotFocus="TextBox_GotFocus"
+                         LostFocus="TextBox_LostFocus"
+                         IsReadOnly="{Binding IsReadOnly, ElementName=control}"
+                         PreviewTextInput="tbx_PreviewTextInput"
+                         DataObject.Pasting="TextBoxPasting"
+                         TextWrapping="Wrap">
+                    <TextBox.Style>
+                        <Style TargetType="TextBox">
+                            <Setter Property="Validation.ErrorTemplate"
+                                    Value="{x:Null}" />
+                            <Style.Triggers>
+                                <MultiTrigger>
+                                    <MultiTrigger.Conditions>
+                                        <Condition Property="IsInactiveSelectionHighlightEnabled"
+                                                   Value="true" />
+                                        <Condition Property="IsSelectionActive"
+                                                   Value="false" />
+                                    </MultiTrigger.Conditions>
+                                    <Setter Property="SelectionBrush"
+                                            Value="Transparent" />
+                                </MultiTrigger>
+                                <Trigger Property="Validation.HasError"
+                                         Value="true">
+                                    <Setter Property="BorderBrush"
+                                            Value="Transparent" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBox.Style>
+                    <TextBox.Text>
+                        <Binding x:Name="tbxTextBinding"
+                                 Path="Text"
+                                 ElementName="control"
+                                 Mode="TwoWay"
+                                 NotifyOnSourceUpdated="True"
+                                 NotifyOnTargetUpdated="True"
+                                 UpdateSourceTrigger="PropertyChanged" />
+                    </TextBox.Text>
+                </TextBox>
+                
+            </Grid>
+        </Border>
+        <TextBlock Visibility="{Binding IsError, ElementName=control, Converter={StaticResource BoolToVisConverter}}"
+                   Text="{Binding ErrorMessage,ElementName=control}"
+                   Foreground="{DynamicResource Danger}"
+                   HorizontalAlignment="Right"
+                   VerticalAlignment="Top"
+                   Margin="5,12,5,0"
+                   FontSize="15" />
+    </Grid>
+</UserControl>

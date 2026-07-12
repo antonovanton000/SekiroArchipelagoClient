@@ -13,14 +13,14 @@ namespace SekiroAPClient.Classes
     {
         public ObservableCollection<KeyItemTrackModel> KeyItems { get; set; } = [];
 
-        public void InitializeKeyItems(bool withApItems = false)
+        public void InitializeKeyItems(bool withApItems = false, bool isFullGame = true)
         {
             KeyItems.Add(new KeyItemTrackModel
             {
                 Name = "Shinobi Prosthetic",
                 GoodId = 2310,
                 CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/prosthetic_tool.png", UriKind.RelativeOrAbsolute)),
-                UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/prosthetic_tool_no.png", UriKind.RelativeOrAbsolute)),                
+                UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/prosthetic_tool_no.png", UriKind.RelativeOrAbsolute)),
             });
             KeyItems.Add(new KeyItemTrackModel
             {
@@ -109,40 +109,43 @@ namespace SekiroAPClient.Classes
                 CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/mibubreathing.png", UriKind.RelativeOrAbsolute)),
                 UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/mibubreathing_no.png", UriKind.RelativeOrAbsolute)),
             });
-            KeyItems.Add(new KeyItemTrackModel
+            if (isFullGame)
             {
-                Name = "Aromatic Branch",
-                GoodId = 2502,
-                CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/branch.png", UriKind.RelativeOrAbsolute)),
-                UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/branch_no.png", UriKind.RelativeOrAbsolute)),
-            });
-            KeyItems.Add(new KeyItemTrackModel
-            {
-                Name = "Father's Bell Charm",
-                GoodId = 9011,
-                CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/fathers_bell_charm.png", UriKind.RelativeOrAbsolute)),
-                UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/fathers_bell_charm_no.png", UriKind.RelativeOrAbsolute)),
-            });
-            KeyItems.Add(new KeyItemTrackModel
-            {
-                Name = "Secret Passage Key",
-                GoodId = 9404,
-                CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/secret_passage_key.png", UriKind.RelativeOrAbsolute)),
-                UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/secret_passage_key_no.png", UriKind.RelativeOrAbsolute)),
-            });
-            KeyItems.Add(new KeyItemTrackModel
-            {
-                Name = "Divine Dragon's Tears",
-                GoodId = 9000,
-                CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/dragon_tears.png", UriKind.RelativeOrAbsolute)),
-                UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/dragon_tears_no.png", UriKind.RelativeOrAbsolute)),
-            });
+                KeyItems.Add(new KeyItemTrackModel
+                {
+                    Name = "Aromatic Branch",
+                    GoodId = 2502,
+                    CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/branch.png", UriKind.RelativeOrAbsolute)),
+                    UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/branch_no.png", UriKind.RelativeOrAbsolute)),
+                });
+                KeyItems.Add(new KeyItemTrackModel
+                {
+                    Name = "Father's Bell Charm",
+                    GoodId = 9011,
+                    CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/fathers_bell_charm.png", UriKind.RelativeOrAbsolute)),
+                    UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/fathers_bell_charm_no.png", UriKind.RelativeOrAbsolute)),
+                });
+                KeyItems.Add(new KeyItemTrackModel
+                {
+                    Name = "Secret Passage Key",
+                    GoodId = 9404,
+                    CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/secret_passage_key.png", UriKind.RelativeOrAbsolute)),
+                    UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/secret_passage_key_no.png", UriKind.RelativeOrAbsolute)),
+                });
+                KeyItems.Add(new KeyItemTrackModel
+                {
+                    Name = "Divine Dragon's Tears",
+                    GoodId = 9000,
+                    CheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/dragon_tears.png", UriKind.RelativeOrAbsolute)),
+                    UnCheckedImageSource = new BitmapImage(new Uri("pack://application:,,,/Images/items/dragon_tears_no.png", UriKind.RelativeOrAbsolute)),
+                });
+            }
         }
 
         public bool CheckItem(int goodId)
         {
             var item = KeyItems.FirstOrDefault(i => i.GoodId == goodId);
-            if (item!=null)
+            if (item != null)
             {
                 item.IsChecked = true;
                 return true;

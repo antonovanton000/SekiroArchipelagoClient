@@ -165,7 +165,7 @@ public partial class RoomViewModel : MyBaseViewModel
         ShowNotifications = Settings.Default.ShowNotifications;
         itemTransferLogger.Log($"SESSION START server={CurrentSession.Socket.Uri} slot={CurrentSession.ConnectionInfo.Slot} player={CurrentSession.Players.ActivePlayer.Name}");
         AddEventHandlers();
-        ResetKeyItemTracker(false);
+        ResetKeyItemTracker(false,false);
         IsConnectedToGame = pipeServer.IsConnected;
         await LoadApItemMappingAsync(CurrentSession);
         LogText += $"Successfully connected to {CurrentSession.Socket.Uri.Authority}\r\n";
@@ -183,7 +183,7 @@ public partial class RoomViewModel : MyBaseViewModel
         if (savedState != null)
         {
             State = savedState;
-            ResetKeyItemTracker(State.RoomRandomizerOptions.AdditionalRegionLock);
+            ResetKeyItemTracker(State.RoomRandomizerOptions.AdditionalRegionLock, State.RoomRandomizerOptions.GoalOption != 1);
             IsRandomizing = false;
             await LoadKeyItemTrackerStateAsync();
             if (ShowNotifications)
@@ -858,7 +858,7 @@ public partial class RoomViewModel : MyBaseViewModel
         State = await RandomizerHelper.RandomizeArchipelago(CurrentSession);
         if (State != null)
         {
-            ResetKeyItemTracker(State.RoomRandomizerOptions.AdditionalRegionLock);
+            ResetKeyItemTracker(State.RoomRandomizerOptions.AdditionalRegionLock, State.RoomRandomizerOptions.GoalOption != 1);
             IsRandomizing = false;
             await Task.Delay(500);
             await PushNotificationAsync(new ServerNotification()
@@ -873,10 +873,10 @@ public partial class RoomViewModel : MyBaseViewModel
         }
     }
 
-    void ResetKeyItemTracker(bool withApItems)
+    void ResetKeyItemTracker(bool withApItems, bool isFullGame)
     {
         KeyItemTracker = new KeyItemTracker();
-        KeyItemTracker.InitializeKeyItems(withApItems);
+        KeyItemTracker.InitializeKeyItems(withApItems, isFullGame);
     }
 
     async Task ShowConnectedToArchipelagoHintAsync(bool force = false)

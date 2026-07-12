@@ -117,6 +117,14 @@ namespace SekiroAPClient
             //MainWindow.NavigateTo(page);
         }
 
+        private void Feedback_Click(object sender, RoutedEventArgs e)
+        {
+            var vm = new FeedbackViewModel();
+            var page = new FeedbackPage() { DataContext = vm };
+
+            NavigateTo(page);
+        }
+
         private void About_Click(object sender, RoutedEventArgs e)
         {
             if (frame.Content is AboutPage)
@@ -358,6 +366,7 @@ namespace SekiroAPClient
         }
 
         #endregion
+
 
     }
 
