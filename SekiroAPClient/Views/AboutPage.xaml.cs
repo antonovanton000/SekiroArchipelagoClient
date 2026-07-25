@@ -14,5 +14,15 @@ public partial class AboutPage : Page
     {
         InitializeComponent();
         runVersion.Text = App.AppVersion;
-    }   
+    }
+
+    private void Hyperlink_Click(object sender, RoutedEventArgs e)
+    {
+        Process.Start(
+                new ProcessStartInfo
+                {
+                    FileName = "https://discordapp.com/users/742384872584118434",
+                    UseShellExecute = true
+                });
+    }
 }

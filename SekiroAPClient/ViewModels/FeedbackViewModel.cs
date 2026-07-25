@@ -67,6 +67,7 @@ namespace SekiroAPClient.ViewModels
 
             Properties.Settings.Default.LastFeedbackSentAt = DateTime.Now;
             Properties.Settings.Default.Save();
+            MainWindow.GoBack();
         }
 
         void ClearFeedback()

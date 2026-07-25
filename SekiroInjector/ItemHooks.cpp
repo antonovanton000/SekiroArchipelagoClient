@@ -247,7 +247,9 @@ bool IsTrackedSuctionLot(uint32_t lotId)
 		|| lotId == 53050  // AD: Red Lump - red-eyed Jinzaemon, enemy drop
 		|| lotId == 52650  // AD: Red Lump - red-eyed Kotaro, enemy drop
 		|| lotId == 12504000 // AC/C: Bundled Jizo Statue - path to serpent shrine, enemy drop
-		|| lotId == 62520; //FP2: Divine Grass - Feeding Grounds, Attendant for Great White Whisker 
+		|| lotId == 62520 //FP2: Divine Grass - Feeding Grounds, Attendant for Great White Whisker 
+		|| lotId == 52500 //FP2: Treasure Carp Scale - Feeding Grounds, feed Great Carp once
+		|| lotId == 52501; //FP2: Treasure Carp Scale - Feeding Grounds, feed Great Carp twice
 }
 
 void OnLootDetected(uint32_t lotIndex, uint32_t goodid, bool isFromShop)
