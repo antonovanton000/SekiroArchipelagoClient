@@ -1,0 +1,192 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>apclient.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="modengine\**" />
+    <Compile Remove="SoulsFormatsBackup\**" />
+    <EmbeddedResource Remove="modengine\**" />
+    <EmbeddedResource Remove="SoulsFormatsBackup\**" />
+    <None Remove="dists\Base\*.emevd.dcx" />
+    <None Remove="dists\Base\*.msb.dcx" />
+    <None Remove="dists\Base\*.talkesdbnd.dcx" />
+    <None Remove="modengine\**" />
+    <None Remove="SoulsFormatsBackup\**" />
+    <Page Remove="modengine\**" />
+    <Page Remove="SoulsFormatsBackup\**" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+ </PropertyGroup>
+
+	
+  <ItemGroup>
+    <None Remove="Fonts\LexendDeca-Regular.ttf" />
+    <None Remove="Fonts\LondrinaSolid-Black.ttf" />
+    <None Remove="Fonts\LondrinaSolid-Regular.ttf" />
+    <None Remove="Fonts\SEGOEICONS.TTF" />
+    <None Remove="Images\archipelago_logo.png" />
+    <None Remove="Images\grass.png" />
+    <None Remove="Images\grass.dark.png" />
+    <None Remove="Images\header-logo.png" />
+    <None Remove="Images\items\branch.png" />
+    <None Remove="Images\items\branch_no.png" />
+    <None Remove="Images\items\depths_key.png" />
+    <None Remove="Images\items\depths_key_no.png" />
+    <None Remove="Images\items\disbell.png" />
+    <None Remove="Images\items\disbell_no.png" />
+    <None Remove="Images\items\dragon_tears.png" />
+    <None Remove="Images\items\dragon_tears_no.png" />
+    <None Remove="Images\items\dungeon_key.png" />
+    <None Remove="Images\items\dungeon_key_no.png" />
+    <None Remove="Images\items\fathers_bell_charm.png" />
+    <None Remove="Images\items\fathers_bell_charm_no.png" />
+    <None Remove="Images\items\gun_fort_key.png" />
+    <None Remove="Images\items\gun_fort_key_no.png" />
+    <None Remove="Images\items\hidden_temple_key.png" />
+    <None Remove="Images\items\hidden_temple_key_no.png" />
+    <None Remove="Images\items\lotus.png" />
+    <None Remove="Images\items\lotus_no.png" />
+    <None Remove="Images\items\mibubreathing.png" />
+    <None Remove="Images\items\mibubreathing_no.png" />
+    <None Remove="Images\items\mortal_blade.png" />
+    <None Remove="Images\items\mortal_blade_no.png" />
+    <None Remove="Images\items\prosthetic_tool.png" />
+    <None Remove="Images\items\prosthetic_tool_no.png" />
+    <None Remove="Images\items\secret_passage_key.png" />
+    <None Remove="Images\items\secret_passage_key_no.png" />
+    <None Remove="Images\items\senpou_key.png" />
+    <None Remove="Images\items\senpou_key_no.png" />
+    <None Remove="Images\items\shelter_stone.png" />
+    <None Remove="Images\items\shelter_stone_no.png" />
+    <None Remove="Images\items\whistle.png" />
+    <None Remove="Images\items\whistle_no.png" />
+    <None Remove="Images\items\young_bell.png" />
+    <None Remove="Images\items\young_bell_no.png" />
+    <None Remove="Images\ocean-header.png" />
+    <None Remove="Images\ocean-header.dark.png" />
+    <None Remove="Images\sekiro_logo.png" />
+    <None Remove="presets\10%25 Boss Replacement.txt" />
+    <None Remove="presets\Ashina Zoo.txt" />
+    <None Remove="presets\Better Nightmare Mode.txt" />
+    <None Remove="presets\Nightmare Mode.txt" />
+    <None Remove="presets\No Demon of Hatred.txt" />
+    <None Remove="presets\Oops All.txt" />
+    <None Remove="SekiroData\items.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="apclient.ico" />
+    <Content Include="presets\10% Boss Replacement.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="presets\Ashina Zoo.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="presets\Better Nightmare Mode.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="presets\Nightmare Mode.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="presets\No Demon of Hatred.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="presets\Oops All.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Fonts\LexendDeca-Regular.ttf" />
+    <Resource Include="Fonts\LondrinaSolid-Black.ttf" />
+    <Resource Include="Fonts\LondrinaSolid-Regular.ttf" />
+    <Resource Include="Fonts\SEGOEICONS.TTF" />
+    <Resource Include="Images\archipelago_logo.png" />
+    <Resource Include="Images\grass.png" />
+    <Resource Include="Images\grass.dark.png" />
+    <Resource Include="Images\header-logo.png" />
+    <Resource Include="Images\items\branch.png" />
+    <Resource Include="Images\items\branch_no.png" />
+    <Resource Include="Images\items\depths_key.png" />
+    <Resource Include="Images\items\depths_key_no.png" />
+    <Resource Include="Images\items\disbell.png" />
+    <Resource Include="Images\items\disbell_no.png" />
+    <Resource Include="Images\items\dragon_tears.png" />
+    <Resource Include="Images\items\dragon_tears_no.png" />
+    <Resource Include="Images\items\dungeon_key.png" />
+    <Resource Include="Images\items\dungeon_key_no.png" />
+    <Resource Include="Images\items\fathers_bell_charm.png" />
+    <Resource Include="Images\items\fathers_bell_charm_no.png" />
+    <Resource Include="Images\items\gun_fort_key.png" />
+    <Resource Include="Images\items\gun_fort_key_no.png" />
+    <Resource Include="Images\items\hidden_temple_key.png" />
+    <Resource Include="Images\items\hidden_temple_key_no.png" />
+    <Resource Include="Images\items\lotus.png" />
+    <Resource Include="Images\items\lotus_no.png" />
+    <Resource Include="Images\items\mibubreathing.png" />
+    <Resource Include="Images\items\mibubreathing_no.png" />
+    <Resource Include="Images\items\mortal_blade.png" />
+    <Resource Include="Images\items\mortal_blade_no.png" />
+    <Resource Include="Images\items\prosthetic_tool.png" />
+    <Resource Include="Images\items\prosthetic_tool_no.png" />
+    <Resource Include="Images\items\secret_passage_key.png" />
+    <Resource Include="Images\items\secret_passage_key_no.png" />
+    <Resource Include="Images\items\senpou_key.png" />
+    <Resource Include="Images\items\senpou_key_no.png" />
+    <Resource Include="Images\items\shelter_stone.png" />
+    <Resource Include="Images\items\shelter_stone_no.png" />
+    <Resource Include="Images\items\whistle.png" />
+    <Resource Include="Images\items\whistle_no.png" />
+    <Resource Include="Images\items\young_bell.png" />
+    <Resource Include="Images\items\young_bell_no.png" />
+    <Resource Include="Images\ocean-header.png" />
+    <Resource Include="Images\ocean-header.dark.png" />
+    <Resource Include="Images\sekiro_logo.png" />
+    <Resource Include="SekiroData\items.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Archipelago.MultiClient.Net" Version="6.7.1" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="NLog" Version="6.0.7" />
+    <PackageReference Include="Pidgin" Version="3.5.1" />
+    <PackageReference Include="SemanticVersioning" Version="3.0.0" />
+    <PackageReference Include="System.ValueTuple" Version="4.6.1" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+    <Compile Update="Views\RoomPage.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <None Update="dists\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

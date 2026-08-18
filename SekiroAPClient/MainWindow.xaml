@@ -1,0 +1,638 @@
+﻿<Window x:Class="SekiroAPClient.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SekiroAPClient"
+        xmlns:c="clr-namespace:SekiroAPClient.Controls"
+        xmlns:icnt="clr-namespace:InjustUILibrary.Controls"
+        mc:Ignorable="d"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResizeWithGrip"
+        SourceInitialized="Window_SourceInitialized"
+        Closing="Window_Closing"
+        Background="Transparent"
+        Title="Sekiro Archipelago Client"
+        Height="660"
+        Width="800"
+        MinHeight="480"
+        MinWidth="800">
+    <Window.Resources>
+        <Storyboard x:Key="showSuccess">
+            <ObjectAnimationUsingKeyFrames BeginTime="0:0:0"
+                                           Storyboard.TargetName="toastGrid"
+                                           Storyboard.TargetProperty="(UIElement.Visibility)">
+                <DiscreteObjectKeyFrame KeyTime="00:00:00"
+                                        Value="{x:Static Visibility.Visible}" />
+            </ObjectAnimationUsingKeyFrames>
+            <ObjectAnimationUsingKeyFrames BeginTime="0:0:0"
+                                           Storyboard.TargetName="successToast"
+                                           Storyboard.TargetProperty="(UIElement.Visibility)">
+                <DiscreteObjectKeyFrame KeyTime="00:00:00"
+                                        Value="{x:Static Visibility.Visible}" />
+            </ObjectAnimationUsingKeyFrames>
+            <DoubleAnimation Storyboard.TargetName="successToast"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0"
+                             To="1"
+                             Duration="0:0:0.3" />
+            <DoubleAnimation Storyboard.TargetName="successToast"
+                             Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
+                             From="0.1"
+                             To="1"
+                             Duration="0:0:0.2" />
+            <DoubleAnimation Storyboard.TargetName="successToast"
+                             Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
+                             From="0.1"
+                             To="1"
+                             Duration="0:0:0.2" />
+        </Storyboard>
+
+        <Storyboard x:Key="hideSuccess">
+            <ObjectAnimationUsingKeyFrames BeginTime="0:0:0.2"
+                                           Storyboard.TargetName="toastGrid"
+                                           Storyboard.TargetProperty="(UIElement.Visibility)">
+                <DiscreteObjectKeyFrame KeyTime="00:00:00"
+                                        Value="{x:Static Visibility.Collapsed}" />
+            </ObjectAnimationUsingKeyFrames>
+            <ObjectAnimationUsingKeyFrames BeginTime="0:0:0.2"
+                                           Storyboard.TargetName="successToast"
+                                           Storyboard.TargetProperty="(UIElement.Visibility)">
+                <DiscreteObjectKeyFrame KeyTime="00:00:00"
+                                        Value="{x:Static Visibility.Collapsed}" />
+            </ObjectAnimationUsingKeyFrames>
+            <DoubleAnimation Storyboard.TargetName="successToast"
+                             Storyboard.TargetProperty="Opacity"
+                             From="1"
+                             To="0"
+                             Duration="0:0:0.2" />
+            <DoubleAnimation Storyboard.TargetName="successToast"
+                             Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
+                             From="1"
+                             To="0.4"
+                             Duration="0:0:0.3" />
+            <DoubleAnimation Storyboard.TargetName="successToast"
+                             Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
+                             From="1"
+                             To="0.4"
+                             Duration="0:0:0.3" />
+        </Storyboard>
+        <Storyboard x:Key="showWarning">
+            <ObjectAnimationUsingKeyFrames BeginTime="0:0:0"
+                                           Storyboard.TargetName="toastGrid"
+                                           Storyboard.TargetProperty="(UIElement.Visibility)">
+                <DiscreteObjectKeyFrame KeyTime="00:00:00"
+                                        Value="{x:Static Visibility.Visible}" />
+            </ObjectAnimationUsingKeyFrames>
+            <ObjectAnimationUsingKeyFrames BeginTime="0:0:0"
+                                           Storyboard.TargetName="warningToast"
+                                           Storyboard.TargetProperty="(UIElement.Visibility)">
+                <DiscreteObjectKeyFrame KeyTime="00:00:00"
+                                        Value="{x:Static Visibility.Visible}" />
+            </ObjectAnimationUsingKeyFrames>
+            <DoubleAnimation Storyboard.TargetName="warningToast"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0"
+                             To="1"
+                             Duration="0:0:0.3" />
+            <DoubleAnimation Storyboard.TargetName="warningToast"
+                             Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
+                             From="0.1"
+                             To="1"
+                             Duration="0:0:0.2" />
+            <DoubleAnimation Storyboard.TargetName="warningToast"
+                             Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
+                             From="0.1"
+                             To="1"
+                             Duration="0:0:0.2" />
+        </Storyboard>
+        <Storyboard x:Key="hideWarning">
+            <ObjectAnimationUsingKeyFrames BeginTime="0:0:0.2"
+                                           Storyboard.TargetName="toastGrid"
+                                           Storyboard.TargetProperty="(UIElement.Visibility)">
+                <DiscreteObjectKeyFrame KeyTime="00:00:00"
+                                        Value="{x:Static Visibility.Collapsed}" />
+            </ObjectAnimationUsingKeyFrames>
+            <ObjectAnimationUsingKeyFrames BeginTime="0:0:0.2"
+                                           Storyboard.TargetName="warningToast"
+                                           Storyboard.TargetProperty="(UIElement.Visibility)">
+                <DiscreteObjectKeyFrame KeyTime="00:00:00"
+                                        Value="{x:Static Visibility.Collapsed}" />
+            </ObjectAnimationUsingKeyFrames>
+            <DoubleAnimation Storyboard.TargetName="warningToast"
+                             Storyboard.TargetProperty="Opacity"
+                             From="1"
+                             To="0"
+                             Duration="0:0:0.2" />
+            <DoubleAnimation Storyboard.TargetName="warningToast"
+                             Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
+                             From="1"
+                             To="0.4"
+                             Duration="0:0:0.3" />
+            <DoubleAnimation Storyboard.TargetName="warningToast"
+                             Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
+                             From="1"
+                             To="0.4"
+                             Duration="0:0:0.3" />
+        </Storyboard>
+        <Storyboard x:Key="showError">
+            <ObjectAnimationUsingKeyFrames BeginTime="0:0:0"
+                                           Storyboard.TargetName="toastGrid"
+                                           Storyboard.TargetProperty="(UIElement.Visibility)">
+                <DiscreteObjectKeyFrame KeyTime="00:00:00"
+                                        Value="{x:Static Visibility.Visible}" />
+            </ObjectAnimationUsingKeyFrames>
+            <ObjectAnimationUsingKeyFrames BeginTime="0:0:0"
+                                           Storyboard.TargetName="errorToast"
+                                           Storyboard.TargetProperty="(UIElement.Visibility)">
+                <DiscreteObjectKeyFrame KeyTime="00:00:00"
+                                        Value="{x:Static Visibility.Visible}" />
+            </ObjectAnimationUsingKeyFrames>
+            <DoubleAnimation Storyboard.TargetName="errorToast"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0"
+                             To="1"
+                             Duration="0:0:0.3" />
+            <DoubleAnimation Storyboard.TargetName="errorToast"
+                             Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
+                             From="0.1"
+                             To="1"
+                             Duration="0:0:0.2" />
+            <DoubleAnimation Storyboard.TargetName="errorToast"
+                             Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
+                             From="0.1"
+                             To="1"
+                             Duration="0:0:0.2" />
+        </Storyboard>
+        <Storyboard x:Key="hideError">
+            <ObjectAnimationUsingKeyFrames BeginTime="0:0:0.2"
+                                           Storyboard.TargetName="toastGrid"
+                                           Storyboard.TargetProperty="(UIElement.Visibility)">
+                <DiscreteObjectKeyFrame KeyTime="00:00:00"
+                                        Value="{x:Static Visibility.Collapsed}" />
+            </ObjectAnimationUsingKeyFrames>
+            <ObjectAnimationUsingKeyFrames BeginTime="0:0:0.2"
+                                           Storyboard.TargetName="errorToast"
+                                           Storyboard.TargetProperty="(UIElement.Visibility)">
+                <DiscreteObjectKeyFrame KeyTime="00:00:00"
+                                        Value="{x:Static Visibility.Collapsed}" />
+            </ObjectAnimationUsingKeyFrames>
+            <DoubleAnimation Storyboard.TargetName="errorToast"
+                             Storyboard.TargetProperty="Opacity"
+                             From="1"
+                             To="0"
+                             Duration="0:0:0.2" />
+            <DoubleAnimation Storyboard.TargetName="errorToast"
+                             Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)"
+                             From="1"
+                             To="0.4"
+                             Duration="0:0:0.3" />
+            <DoubleAnimation Storyboard.TargetName="errorToast"
+                             Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)"
+                             From="1"
+                             To="0.4"
+                             Duration="0:0:0.3" />
+        </Storyboard>
+        <Storyboard x:Key="successPBAnimation">
+            <DoubleAnimation Storyboard.TargetName="successPB"
+                             Storyboard.TargetProperty="Width"
+                             From="0"
+                             To="320" />
+        </Storyboard>
+        <Storyboard x:Key="warningPBAnimation">
+            <DoubleAnimation Storyboard.TargetName="warningPB"
+                             Storyboard.TargetProperty="Width"
+                             From="0"
+                             To="320" />
+        </Storyboard>
+        <Storyboard x:Key="dangerPBAnimation">
+            <DoubleAnimation Storyboard.TargetName="dangerPB"
+                             Storyboard.TargetProperty="Width"
+                             From="0"
+                             To="320" />
+        </Storyboard>
+    </Window.Resources>
+    <icnt:ClippedBorder x:Name="mainborder"
+                        CornerRadius="20,20,0,20"
+                        BorderThickness="2"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        Background="{DynamicResource BackgroundBrush}"
+                        d:Background="#3FB24A">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="70" />
+                <RowDefinition Height="1*" />
+            </Grid.RowDefinitions>
+            <icnt:ClippedBorder x:Name="windowTop"
+                                BorderThickness="0"
+                                CornerRadius="20,20,0,0"
+                                Grid.Column="0"
+                                Grid.Row="0"
+                                Grid.ColumnSpan="2"
+                                Background="{DynamicResource WindowTopBackgroundBrush}"
+                                MouseDown="Grid_MouseDown">
+                <Grid>
+                    <Grid.Background>
+                        <ImageBrush ImageSource="{DynamicResource HeaderBackgroundImage}"
+                                    TileMode="Tile"
+                                    Viewport="0,0,512,70"
+                                    ViewportUnits="Absolute"
+                                    Stretch="Fill"
+                                    AlignmentX="Left"
+                                    AlignmentY="Top" />
+                    </Grid.Background>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="auto" />
+                        <ColumnDefinition Width="1*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Grid x:Name="topLeftGrid"
+                          Width="250"
+                          Margin="0,0,0,10">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Click="GoBack_Click"
+                                    Visibility="{Binding ElementName=frame, Path=CanGoBack, Converter={StaticResource BoolToVisConverter}}"
+                                    Style="{StaticResource IconButtonStyle}"
+                                    Content="&#xe0a6;"
+                                    Foreground="{DynamicResource PrimaryBrush}"
+                                    FontSize="15"
+                                    Margin="10,0,0,0" />
+                            <Image Source="/Images/header-logo.png"
+                                   Width="140"
+                                   Height="50">
+                                <Image.Style>
+                                    <Style TargetType="Image">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ElementName=frame, Path=CanGoBack}"
+                                                         Value="True">
+                                                <Setter Property="Margin"
+                                                        Value="10,0,0,0" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding ElementName=frame, Path=CanGoBack}"
+                                                         Value="False">
+                                                <Setter Property="Margin"
+                                                        Value="20,0,0,0" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Image.Style>
+                            </Image>
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Grid.Column="1"
+                                HorizontalAlignment="Right"
+                                Orientation="Horizontal"
+                                Margin="0,0,5,10">
+                        <StackPanel Margin="0,1,30,0"
+                                    Orientation="Horizontal">
+
+                            <StackPanel Orientation="Horizontal"
+                                        x:Name="btnSettingsGrid"
+                                        Visibility="Collapsed"
+                                        d:Visibility="Visible">
+                                <Grid Visibility="Collapsed">
+                                    <Button Style="{StaticResource IconButtonStyle}"
+                                            Foreground="{DynamicResource AccentBrush}"
+                                            Content="&#xe91C;"
+                                            FontFamily="{StaticResource FluentIcons}"
+                                            FontSize="18"
+                                            Margin="3,0"
+                                            x:Name="btnNotifications"
+                                            Click="NotificationsButton_Click" />
+                                    <Border Background="{StaticResource Danger}"
+                                            Width="10"
+                                            Height="10"
+                                            CornerRadius="7"
+                                            Visibility="Collapsed"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Margin="0,-19,-19,0"
+                                            x:Name="lblNotificationsBadge">
+                                        <Label x:Name="lblNotificationsCount"
+                                               Foreground="White"
+                                               FontSize="6" />
+                                    </Border>
+                                </Grid>
+                                <Button Style="{StaticResource IconButtonStyle}"
+                                        Foreground="{DynamicResource AccentBrush}"
+                                        Content="&#xeC24;"
+                                        FontFamily="{StaticResource FluentIcons}"
+                                        FontSize="18"
+                                        Margin="3,0"
+                                        ToolTip="Feedback"
+                                        x:Name="btnFeedback"
+                                        Click="Feedback_Click" />
+                                <Grid Margin="10,0,0,0"
+                                      Visibility="Visible">
+                                    <Button Style="{StaticResource IconButtonStyle}"
+                                            Foreground="{DynamicResource AccentBrush}"
+                                            Content="&#xe115;"
+                                            FontFamily="{StaticResource FluentIcons}"
+                                            FontSize="18"
+                                            Margin="3,0"
+                                            ToolTip="Settings"
+                                            x:Name="btnSettings"
+                                            Click="Settings_Click" />
+                                </Grid>
+                                <Grid Margin="10,0,0,0">
+                                    <Button Style="{StaticResource IconButtonStyle}"
+                                            Foreground="{DynamicResource AccentBrush}"
+                                            Content="&#xe11B;"
+                                            FontFamily="{StaticResource FluentIcons}"
+                                            FontSize="18"
+                                            Margin="3,0"
+                                            ToolTip="About"
+                                            x:Name="btnAbout"
+                                            Click="About_Click" />
+                                </Grid>
+                            </StackPanel>
+                            <Grid Margin="10,0,0,0">
+                                <icnt:ThemeSwitch x:Name="themeSwitch"
+                                                  Changed="ThemeSwitch_Changed" />
+                            </Grid>
+                        </StackPanel>
+                        <Button Margin="0,0,5,0"
+                                Style="{StaticResource IconButtonStyle}"
+                                FontSize="16"
+                                Foreground="{DynamicResource AccentBrush}"
+                                Content="&#xe108;"
+                                FontFamily="{StaticResource FluentIcons}"
+                                Click="Minimize_Click" />
+                        <Button Margin="0,0,5,0"
+                                Style="{StaticResource IconButtonStyle}"
+                                FontSize="16"
+                                Foreground="{DynamicResource AccentBrush}"
+                                Content="&#xe15B;"
+                                FontFamily="{StaticResource FluentIcons}"
+                                Click="Expand_Click" />
+                        <Button Margin="0,0,5,0"
+                                Style="{StaticResource IconButtonStyle}"
+                                FontSize="16"
+                                Foreground="{DynamicResource AccentBrush}"
+                                Content="&#xe10A;"
+                                FontFamily="{StaticResource FluentIcons}"
+                                Click="Close_Click" />
+                    </StackPanel>
+                </Grid>
+            </icnt:ClippedBorder>
+            <Grid Grid.Row="1">
+                <!--<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                              MinHeight="450" MinWidth="800">-->
+                <Border x:Name="frameBorder"
+                        MinWidth="450"
+                        Margin="0,-1,0,0"
+                        Padding="0"
+                        BorderThickness="0,0,0,0">
+                    <Frame NavigationUIVisibility="Hidden"
+                           x:Name="frame"
+                           Source="/Views/SplashPage.xaml"
+                           Navigated="frame_Navigated" />
+                </Border>
+                <!--</ScrollViewer>-->
+            </Grid>
+            <Grid x:Name="NotificationGrid"
+                  Visibility="Collapsed"
+                  Grid.ColumnSpan="2"
+                  Grid.RowSpan="2"
+                  Background="#80000000">
+                <Border Height="250"
+                        Width="650"
+                        Background="{DynamicResource BackgroundBrush}"
+                        CornerRadius="8">
+                    <Grid Margin="20">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="7*" />
+                            <RowDefinition Height="3*" />
+                        </Grid.RowDefinitions>
+                        <TextBlock x:Name="tblNotificationMessage"
+                                   Text=""
+                                   FontSize="20"
+                                   TextAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource PrimaryTextDarkerBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="20,0" />
+                        <StackPanel Orientation="Horizontal"
+                                    Grid.Row="1"
+                                    HorizontalAlignment="Center">
+                            <Button x:Name="btnNotificationYes"
+                                    Click="Notification_Yes_Click"
+                                    Style="{StaticResource FlatButtonStylePrimaryNoArrow}"
+                                    Content="Yes"
+                                    Width="120"
+                                    Margin="10" />
+                            <Button x:Name="btnNotificationNo"
+                                    Click="Notification_No_Click"
+                                    Style="{StaticResource FlatButtonStyle}"
+                                    Content="No"
+                                    Width="120"
+                                    Margin="10" />
+                            <Button x:Name="btnNotificationOk"
+                                    Click="Notification_Ok_Click"
+                                    Style="{StaticResource FlatButtonStyle}"
+                                    Content="Ok"
+                                    Width="120"
+                                    Margin="10" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+            <Grid x:Name="ErrorMessageGrid"
+                  Visibility="Collapsed"
+                  Grid.RowSpan="2"
+                  Grid.ColumnSpan="2"
+                  Background="#40000000">
+                <Border Height="300"
+                        Width="700"
+                        Background="{DynamicResource BackgroundBrush}"
+                        CornerRadius="8">
+                    <Grid Margin="20">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="3*" />
+                            <RowDefinition Height="7*" />
+                            <RowDefinition Height="3*" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="An unexpected error occurred :("
+                                   FontSize="20"
+                                   TextAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource AccentBrush}" />
+                        <TextBox IsReadOnly="True"
+                                 IsReadOnlyCaretVisible="False"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 HorizontalAlignment="Stretch"
+                                 VerticalAlignment="Stretch"
+                                 x:Name="tbxErrorMessage"
+                                 Text=""
+                                 TextWrapping="Wrap"
+                                 FontSize="20"
+                                 TextAlignment="Center"
+                                 Foreground="{DynamicResource AccentBrush}"
+                                 Grid.Row="1" />
+                        <StackPanel Orientation="Horizontal"
+                                    Grid.Row="2"
+                                    HorizontalAlignment="Center">
+                            <Button Click="ErrorCopy_Click"
+                                    Style="{StaticResource FlatButtonStyle}"
+                                    Content="Copy error"
+                                    Width="200"
+                                    Margin="10" />
+                            <Button Click="ErrorOk_Click"
+                                    Style="{StaticResource FlatButtonStyle}"
+                                    Content="Ок"
+                                    Width="200"
+                                    Margin="10" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+            <Grid x:Name="toastGrid"
+                  Grid.Row="1"
+                  Grid.Column="1"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Top"
+                  Margin="0,20,20,0"
+                  Visibility="Collapsed"
+                  d:Visibility="Visible">
+                <icnt:ClippedBorder x:Name="successToast"
+                                    Background="#FFBCF2C0"
+                                    Height="65"
+                                    Width="320"
+                                    BorderThickness="1"
+                                    BorderBrush="#FF79E16A"
+                                    CornerRadius="8"
+                                    Visibility="Collapsed"
+                                    RenderTransformOrigin="0.5 0.5">
+                    <icnt:ClippedBorder.RenderTransform>
+                        <ScaleTransform ScaleX="1"
+                                        ScaleY="1" />
+                    </icnt:ClippedBorder.RenderTransform>
+                    <icnt:ClippedBorder.Effect>
+                        <DropShadowEffect BlurRadius="15"
+                                          Color="Black"
+                                          Opacity="0.3" />
+                    </icnt:ClippedBorder.Effect>
+                    <Grid>
+                        <Button Style="{StaticResource IconButtonStyle}"
+                                Content="&#xe10a;"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                FontSize="17" />
+                        <StackPanel Margin="12,10,40,5">
+                            <TextBlock Text="{Binding Title}"
+                                       FontFamily="Segoe UI"
+                                       FontWeight="Bold"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource PrimaryTextDarkerBrush}" />
+                            <TextBlock Text="{Binding Detail}"
+                                       TextWrapping="Wrap"
+                                       FontFamily="Segoe UI"
+                                       FontWeight="Regular"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource PrimaryTextDarkerBrush}" />
+                        </StackPanel>
+                        <Rectangle x:Name="successPB"
+                                   Height="5"
+                                   VerticalAlignment="Bottom"
+                                   HorizontalAlignment="Left"
+                                   Width="0"
+                                   Fill="#25000000" />
+                    </Grid>
+                </icnt:ClippedBorder>
+                <icnt:ClippedBorder x:Name="warningToast"
+                                    Background="#FFF6F368"
+                                    Height="65"
+                                    Width="320"
+                                    BorderThickness="1"
+                                    BorderBrush="#FFE4E549"
+                                    CornerRadius="8"
+                                    Visibility="Collapsed"
+                                    RenderTransformOrigin="0.5 0.5">
+                    <icnt:ClippedBorder.RenderTransform>
+                        <ScaleTransform ScaleX="1"
+                                        ScaleY="1" />
+                    </icnt:ClippedBorder.RenderTransform>
+                    <icnt:ClippedBorder.Effect>
+                        <DropShadowEffect BlurRadius="15"
+                                          Color="Black"
+                                          Opacity="0.3" />
+                    </icnt:ClippedBorder.Effect>
+                    <Grid>
+                        <Button Style="{StaticResource IconButtonStyle}"
+                                Content="&#xe10a;"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                FontSize="17" />
+                        <StackPanel Margin="12,10,40,5">
+                            <TextBlock Text="{Binding Title}"
+                                       FontFamily="Segoe UI"
+                                       FontWeight="Bold"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource PrimaryTextDarkerBrush}" />
+                            <TextBlock Text="{Binding Detail}"
+                                       TextWrapping="Wrap"
+                                       FontFamily="Segoe UI"
+                                       FontWeight="Regular"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource PrimaryTextDarkerBrush}" />
+                        </StackPanel>
+                        <Rectangle x:Name="warningPB"
+                                   Height="5"
+                                   VerticalAlignment="Bottom"
+                                   HorizontalAlignment="Left"
+                                   Width="0"
+                                   Fill="#25000000" />
+                    </Grid>
+                </icnt:ClippedBorder>
+                <icnt:ClippedBorder x:Name="errorToast"
+                                    Background="#FFFF9696"
+                                    Height="65"
+                                    Width="320"
+                                    BorderThickness="1"
+                                    BorderBrush="#FF911010"
+                                    CornerRadius="8"
+                                    Visibility="Collapsed"
+                                    RenderTransformOrigin="0.5 0.5">
+                    <icnt:ClippedBorder.RenderTransform>
+                        <ScaleTransform ScaleX="1"
+                                        ScaleY="1" />
+                    </icnt:ClippedBorder.RenderTransform>
+                    <icnt:ClippedBorder.Effect>
+                        <DropShadowEffect BlurRadius="15"
+                                          Color="Black"
+                                          Opacity="0.3" />
+                    </icnt:ClippedBorder.Effect>
+                    <Grid>
+                        <Button Style="{StaticResource IconButtonStyle}"
+                                Content="&#xe10a;"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                FontSize="17" />
+                        <StackPanel Margin="12,10,40,5">
+                            <TextBlock Text="{Binding Title}"
+                                       FontFamily="Segoe UI"
+                                       FontWeight="Bold"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource PrimaryTextDarkerBrush}" />
+                            <TextBlock Text="{Binding Detail}"
+                                       TextWrapping="Wrap"
+                                       FontFamily="Segoe UI"
+                                       FontWeight="Regular"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource PrimaryTextDarkerBrush}" />
+                        </StackPanel>
+                        <Rectangle x:Name="dangerPB"
+                                   Height="5"
+                                   VerticalAlignment="Bottom"
+                                   HorizontalAlignment="Left"
+                                   Width="0"
+                                   Fill="#25000000" />
+                    </Grid>
+                </icnt:ClippedBorder>
+            </Grid>
+        </Grid>
+    </icnt:ClippedBorder>
+</Window>

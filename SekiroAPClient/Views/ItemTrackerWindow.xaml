@@ -1,0 +1,220 @@
+<Window x:Class="SekiroAPClient.Views.ItemTrackerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:SekiroAPClient.ViewModels"
+        xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
+        mc:Ignorable="d"
+        Title="Archipelago Item Tracker"
+        Width="1180"
+        Height="760"
+        MinWidth="900"
+        MinHeight="560"
+        WindowStartupLocation="CenterOwner"
+        x:Name="page"
+        d:DataContext="{d:DesignInstance Type=vm:ItemTrackerViewModel}">
+    <behaviors:Interaction.Triggers>
+        <behaviors:EventTrigger EventName="Loaded"
+                                SourceObject="{Binding ElementName=page}">
+            <behaviors:InvokeCommandAction Command="{Binding AppearingCommand}" />
+        </behaviors:EventTrigger>
+    </behaviors:Interaction.Triggers>
+    <Window.Resources>
+        <Style x:Key="SpoilerItemTextStyle" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#1F4F2D"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="TrackerRowStyle" TargetType="DataGridRow">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsChecked}" Value="True">
+                    <Setter Property="Background" Value="#DDF5E4"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding FlagStatus}" Value="ON">
+                    <Setter Property="Background" Value="#DDF5E4"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsRecentlyPicked}" Value="True">
+                    <Setter Property="Background" Value="#FFF0A8"/>
+                    <DataTrigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                 From="0.45"
+                                                 To="1"
+                                                 Duration="0:0:0.18"
+                                                 AutoReverse="True"
+                                                 RepeatBehavior="4x"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </DataTrigger.EnterActions>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Spoiler URL" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <TextBox Grid.Column="1"
+                     Text="{Binding SpoilerUrl, UpdateSourceTrigger=PropertyChanged}"
+                     MinWidth="420"
+                     VerticalContentAlignment="Center"
+                     Margin="0,0,8,0"/>
+            <Button Grid.Column="2"
+                    Content="Load Spoiler"
+                    Command="{Binding LoadSpoilerCommand}"
+                    MinWidth="110"
+                    Margin="0,0,8,0"/>
+            <Button Grid.Column="3"
+                    Content="Check Flags"
+                    Command="{Binding CheckAllFlagsCommand}"
+                    MinWidth="100"/>
+        </Grid>
+
+        <DockPanel Grid.Row="1" Margin="0,10,0,10">
+            <TextBlock DockPanel.Dock="Right"
+                       Text="{Binding CheckedCount, StringFormat=Picked {0}}"
+                       Margin="12,0,0,0"
+                       FontWeight="SemiBold"/>
+            <TextBlock DockPanel.Dock="Right"
+                       Text="{Binding TotalCount, StringFormat=/ {0}}"
+                       FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding Status}" TextWrapping="Wrap"/>
+        </DockPanel>
+
+        <Border Grid.Row="2"
+                Visibility="{Binding IsSpoilerLoaded, Converter={StaticResource NotBoolToVisibilityConverter}}"
+                BorderBrush="#D6D6D6"
+                BorderThickness="1"
+                Background="#FAFAFA"
+                Padding="28">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="560">
+                <TextBlock Text="Load spoiler log to start item tracking"
+                           FontSize="22"
+                           FontWeight="SemiBold"
+                           TextAlignment="Center"
+                           Margin="0,0,0,12"/>
+                <TextBlock Text="Paste the Archipelago spoiler URL above. The tracker will show all AP locations only after the spoiler data is loaded."
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"
+                           Foreground="#555"/>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="2"
+              Visibility="{Binding IsSpoilerLoaded, Converter={StaticResource BoolToVisConverter}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <ListBox ItemsSource="{Binding Groups}"
+                     SelectedItem="{Binding SelectedGroup, Mode=TwoWay}"
+                     DisplayMemberPath="RegionName"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+
+            <DataGrid x:Name="ActiveEntriesGrid"
+                      Grid.Column="2"
+                      ItemsSource="{Binding SelectedGroup.Entries}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      IsReadOnly="True"
+                      EnableRowVirtualization="True"
+                      EnableColumnVirtualization="True"
+                      VirtualizingPanel.IsVirtualizing="True"
+                      VirtualizingPanel.VirtualizationMode="Recycling"
+                      ScrollViewer.CanContentScroll="True"
+                      GridLinesVisibility="Horizontal"
+                      HeadersVisibility="Column"
+                      RowHeaderWidth="0"
+                      RowStyle="{StaticResource TrackerRowStyle}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="State" Binding="{Binding CheckedText}" Width="70"/>
+                    <DataGridTextColumn Header="AP Id" Binding="{Binding LocationId}" Width="70"/>
+                    <DataGridTextColumn Header="Location"
+                                        Binding="{Binding LocationName}"
+                                        Width="2*">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="TextWrapping"
+                                        Value="Wrap" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Spoiler Item" Binding="{Binding SpoilerDisplay}" Width="1.4*"
+                                        ElementStyle="{StaticResource SpoilerItemTextStyle}"/>
+                    <DataGridTextColumn Header="Lot" Binding="{Binding LotIdSummary}" Width="110"/>
+                    <DataGridTextColumn Header="Good" Binding="{Binding GoodId}" Width="70"/>
+                    <DataGridTextColumn Header="Qty" Binding="{Binding Quantity}" Width="45"/>
+                    <DataGridTextColumn Header="Flag" Binding="{Binding EventFlagId}" Width="90"/>
+                    <DataGridTextColumn Header="Flag State" Binding="{Binding FlagStatus}" Width="130"/>
+                    <DataGridTemplateColumn Header="Issue" Width="95">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="Report"
+                                        Command="{Binding DataContext.ReportCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}"
+                                        Padding="8,2"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+
+        <Border Grid.Row="3"
+                Margin="0,10,0,0"
+                BorderBrush="#D6D6D6"
+                BorderThickness="1"
+                Background="#F8F8F8"
+                Padding="8,5">
+            <TextBlock Text="{Binding LastPickupStatus}"
+                       TextWrapping="Wrap"
+                       FontWeight="SemiBold"/>
+        </Border>
+
+        <Border Grid.RowSpan="4"
+                Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisConverter}}"
+                Background="#CCFFFFFF"
+                Panel.ZIndex="10" d:Visibility="Collapsed">
+            <Border Background="White"
+                    BorderBrush="#CFCFCF"
+                    BorderThickness="1"
+                    Padding="28"
+                    Width="420"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="Loading item tracker data"
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               TextAlignment="Center"
+                               Margin="0,0,0,10"/>
+                    <TextBlock Text="Please wait while the spoiler log and all tracker information are prepared."
+                               TextWrapping="Wrap"
+                               TextAlignment="Center"
+                               Foreground="#555"
+                               Margin="0,0,0,18"/>
+                    <ProgressBar IsIndeterminate="True" Height="8"/>
+                </StackPanel>
+            </Border>
+        </Border>
+    </Grid>
+</Window>

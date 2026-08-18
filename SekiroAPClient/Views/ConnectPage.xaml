@@ -1,0 +1,141 @@
+﻿<Page x:Class="SekiroAPClient.Views.ConnectPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"       
+      xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
+      xmlns:vm="clr-namespace:SekiroAPClient.ViewModels"
+      xmlns:v="clr-namespace:InjustUILibrary.Validation"
+      xmlns:icnt="clr-namespace:InjustUILibrary.Controls"
+      xmlns:local="clr-namespace:SekiroAPClient.Views"
+      mc:Ignorable="d" 
+      d:DesignHeight="500" d:DesignWidth="900"      
+      x:Name="page"      
+      Title="MainPage">
+    <Page.DataContext>
+        <vm:ConnectViewModel />
+    </Page.DataContext>
+    <behaviors:Interaction.Triggers>
+        <behaviors:EventTrigger EventName="Loaded" SourceObject="{Binding ElementName=page}">
+            <behaviors:InvokeCommandAction Command="{Binding AppearingCommand}" />
+        </behaviors:EventTrigger>
+    </behaviors:Interaction.Triggers>
+    <Page.Resources>
+        <Storyboard x:Key="showUpdateNotification">
+            <ObjectAnimationUsingKeyFrames BeginTime="0:0:0" Storyboard.TargetProperty="(UIElement.Visibility)">
+                <DiscreteObjectKeyFrame KeyTime="00:00:00" Value="{x:Static Visibility.Visible}"/>
+            </ObjectAnimationUsingKeyFrames>
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.3"/>
+            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(TranslateTransform.Y)" From="60" To="0" Duration="0:0:0.2"/>
+        </Storyboard>
+        <Storyboard x:Key="hdieUpdateNotification">
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="1" To="0" Duration="0:0:0.3"/>
+            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(TranslateTransform.Y)" From="0" To="60" Duration="0:0:0.2"/>
+            <ObjectAnimationUsingKeyFrames BeginTime="0:0:0.3" Storyboard.TargetProperty="(UIElement.Visibility)">
+                <DiscreteObjectKeyFrame KeyTime="00:00:00" Value="{x:Static Visibility.Collapsed}"/>
+            </ObjectAnimationUsingKeyFrames>
+        </Storyboard>
+    </Page.Resources>
+    <Grid ClipToBounds="True">
+        <Grid.Background>
+            <ImageBrush ImageSource="{DynamicResource GrassBackgroundImage}"
+                TileMode="Tile"
+                Viewport="0,0,512,512"
+                ViewportUnits="Absolute"
+                Stretch="Fill"
+                AlignmentX="Left"
+                AlignmentY="Top" />
+        </Grid.Background>
+        <Grid x:Name="content" Margin="20,20,20,0">
+            <Grid Visibility="{Binding IsBusy,Converter={StaticResource NotBoolToVisibilityConverter}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="1*"/>
+                </Grid.RowDefinitions>
+                <StackPanel Margin="0,0,0,10">
+                    <TextBlock Style="{StaticResource HeaderTextBlockBlockStyle}" Text="Welcome to the Sekiro Archipelago Client"/>
+                    <TextBlock Text="To get started, please enter:" Style="{StaticResource FlatTextBlockStyle}" FontSize="15"/>
+                </StackPanel>
+                <StackPanel Margin="80,20,80,0" Grid.Row="1">
+                    <icnt:ValidationForm x:Name="form" Margin="0,0,0,30" ValidSubmitCommand="{Binding ConnectCommand}">
+                        <icnt:ValidationForm.Items>
+                            <icnt:InputField Label="Room address" Placeholder="Archipelago room addres (archipelago.gg:12345)" Margin="0,0,0,15" Text="{Binding ConnectModel.RoomUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                <icnt:InputField.ValidationRules>
+                                    <v:RequierdRule/>
+                                </icnt:InputField.ValidationRules>
+                            </icnt:InputField>
+                            <icnt:InputField Label="Player Name" Placeholder="Player name (slot name)" Margin="0,0,0,15" Text="{Binding ConnectModel.PlayerName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                <icnt:InputField.ValidationRules>
+                                    <v:RequierdRule/>
+                                </icnt:InputField.ValidationRules>
+                            </icnt:InputField>
+                            <icnt:InputField Label="Password" Placeholder="Password" IsPassword="True" IsRequiered="False" Password="{Binding ConnectModel.Password, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        </icnt:ValidationForm.Items>
+                    </icnt:ValidationForm>
+                    <Button Content="Connect" Style="{StaticResource FlatButtonStylePrimary}" Width="140" Command="{Binding ElementName=form, Path=ButtonSubmitCommand}" Margin="0,0,0,0"/>
+                    <Button Content="Debug Page" Style="{StaticResource FlatTextButtonStyle}" Width="140" Command="{Binding GoToDebugPageCommand}" Margin="0,20,0,0"
+                            Visibility="{Binding IsDeveloperMode, Converter={StaticResource BoolToVisConverter}}"/>
+                </StackPanel>
+                <TextBlock Text="{Binding Version}" FontFamily="{StaticResource Londrina-Black}" Style="{StaticResource FlatTextBlockStyle}"
+                           HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,5" Grid.Row="1"/>
+                <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Orientation="Horizontal">
+                    <Button Content="Steam Options"
+                            Height="32"
+                            FontSize="13"
+                            Margin="0,0,10,0"
+                            Style="{StaticResource FlatButtonStylePrimaryNoArrow}"
+                            Width="120"
+                            Command="{Binding ShowSteamOptionsPageCommand}"
+                            Visibility="{Binding ShowSteamOptionsButton, Converter={StaticResource BoolToVisConverter}}" />
+                    <Button Content="Randomizer Options" Style="{StaticResource FlatButtonStylePrimaryNoArrow}" Command="{Binding GoToRandomizerOptionsPageCommand}" Height="32" FontSize="13"/>
+                </StackPanel>
+            </Grid>
+
+            <Grid Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisConverter}}" Grid.RowSpan="2">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0">
+                    <icnt:RingSpiner HorizontalAlignment="Center" VerticalAlignment="Center" SpinerColor="{DynamicResource PrimaryTextBrush}"/>
+                    <TextBlock Text="{Binding NotificationStatus}" HorizontalAlignment="Center" Margin="0,20,0,0"
+                               Style="{StaticResource SubHeaderTextBlockBlockStyle}"/>
+                </StackPanel>
+            </Grid>
+
+            <Border Background="{DynamicResource BackgroundBrush}" Height="60" VerticalAlignment="Bottom" CornerRadius="20,20,0,0"
+                    BorderThickness="1,1,1,0" BorderBrush="{DynamicResource BorderBrush}"
+                    x:Name="updateNotification" RenderTransformOrigin="0.5,0.5" Visibility="Collapsed">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ShowUpdateNotification}" Value="True">
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard Storyboard="{StaticResource showUpdateNotification}"/>
+                                </DataTrigger.EnterActions>
+                                <DataTrigger.ExitActions>
+                                    <BeginStoryboard Storyboard="{StaticResource hdieUpdateNotification}"/>
+                                </DataTrigger.ExitActions>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Border.RenderTransform>
+                    <TranslateTransform Y="0"/>
+                </Border.RenderTransform>
+                <Grid VerticalAlignment="Center" Margin="20,0">
+                    <TextBlock Style="{StaticResource FlatTextBlockStyle}" Foreground="{DynamicResource PrimaryTextDarkerBrush}"
+                               VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,100,0">
+                         A <Run FontWeight="Bold">new version</Run> of Sekiro Archipelago Client is available.
+                        <LineBreak/>
+                        Update now to get the latest features, improvements, and fixes.
+                    </TextBlock>
+                    <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                        <Button Content="Dismiss" Style="{StaticResource FlatTextButtonStyle}" 
+                                Foreground="{StaticResource Danger}" Margin="0,0,20,0"
+                                Command="{Binding DismissUpdateCommand}"/>
+                        <Button Content="Update Now" Style="{StaticResource FlatTextButtonStyle}" 
+                                Foreground="{StaticResource AccentBrush}"
+                                Command="{Binding StartUpdateCommand}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Page>

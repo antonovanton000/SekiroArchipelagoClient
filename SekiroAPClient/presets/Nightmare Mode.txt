@@ -1,0 +1,41 @@
+Description: "The worst run with the most annoying and challenging enemies which might be possibly doable."
+
+RecommendFullRandomization: false
+RecommendNoEnemyProgression: false
+RemoveSource: Divine Dragon
+
+# Bosses are mostly multiphase non-early-game ones. The difficult pool will repeat 2 times; the other pool is mainly just for variety.
+Boss:
+- Weight: 50
+  Pool: Demon of Hatred; Headless Ape; Isshin Ashina; Sword Saint Isshin; True Monk; Owl (Father)
+- Weight: 35
+  Pool: Great Shinobi Owl; Genichiro, Way of Tomoe (Mortal Blade); Guardian Ape; Corrupted Monk; Emma; Lady Butterfly 1; Lady Butterfly 2 
+- Weight: 15
+  Pool: Gyoubu Oniwa; Genichiro Ashina; Genichiro, Way of Tomoe (Lightning) 
+
+# Minibosses are bosses
+Miniboss:
+- Weight: 50
+  Pool: Bosses
+- Weight: 50
+  Pool: Long-arm Centipede Giraffe; Ashina Elite Ujinari Mizuo; Seven Ashina Spears 2; General Kuranosuke Matsomoto; Shigekichi of the Red Guard; Shichimen Warrior; O'Rin; Lone Shadow Masanaga the Spear-Bearer (Hirata)  
+
+# Regular enemies are all annoying or bosses
+# As a slight mercy, add the shichimen warrior who doesn't blast you from across the map
+Basic:
+- Weight: 30
+  Pool: Bosses; True Monk
+- Weight: 70
+  Pool: Assassin (Senpou) 1120426; Blue Palace Noble; Blue Palace Noble; Blue Palace Noble; Grabbing Mibu Villager; Nightjar Ninja; Exploding Nightjar Ninja; Kite Nightjar Ninja; Sniper Sunken Valley Clan; Spear Adept; Taro Troop (Mibu) 1500485; Terror Valley Monkey; Elder Valley Monkey; Lone Shadow; Red Guard; Okami Leader Shizu; Armored Warrior; Ashina Elite Ujinari Mizuo; Centipede Boss; Chained Ogre 1110610; Headless; Headless; Lone Shadow Masanaga the Spear-Bearer (Hirata); O'Rin; Seven Ashina Spears 2; Shichimen Warrior 1300200; Shura Samurai; Snake Eyes Shirafuji; Shigekichi of the Red Guard
+  RandomByType: true
+
+# Adds are basic enemies but mostly without multiphase ones. Just combine all reasonable enemies into one pool.
+Add:
+- Weight: 100
+  Pool: Assassin (Senpou) 1120426; Blue Palace Noble; Blue Palace Noble; Palace Hound; Grabbing Mibu Villager; Nightjar Ninja; Exploding Nightjar Ninja; Kite Nightjar Ninja; Sniper Sunken Valley Clan; Spear Adept; Taro Troop (Mibu) 1500485; Terror Valley Monkey; Elder Valley Monkey; Basic Lone Shadow; Red Guard; Okami Leader Shizu
+  RandomByType: true
+
+# Folding Monkeys are bosses instead
+FoldingMonkey:
+- Weight: 100
+  Pool: Bosses

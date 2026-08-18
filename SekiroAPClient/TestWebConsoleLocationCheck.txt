@@ -1,0 +1,119 @@
+(async () => {
+  const SPOILER_URL = "https://archipelago.gg/dl_spoiler/6IDPSp8jQ7maCECa0pHWIA";
+
+  const TARGET_PLAYER = prompt("Receiver player name, who should receive items:", "DirefulLemur0");
+  const SOURCE_PLAYER = prompt("World/location owner player name:", "");
+
+  const DELAY_MS = 1000;
+  const DRY_RUN = false; // change to false when the parsed list looks correct
+
+  if (!TARGET_PLAYER || !SOURCE_PLAYER) {
+    console.error("Both player names are required.");
+    return;
+  }
+
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+  function getLocationsSection(text) {
+    const start = text.search(/^Locations:\s*$/m);
+    if (start < 0) throw new Error("Could not find 'Locations:' section.");
+
+    const rest = text.slice(start);
+    const nextSection = rest.slice("Locations:".length).search(/^\S.*:\s*$/m);
+
+    if (nextSection < 0) return rest;
+    return rest.slice(0, "Locations:".length + nextSection);
+  }
+
+  function normalizeName(s) {
+    return (s || "").trim().replace(/^"|"$/g, "");
+  }
+
+  function parseLocationLine(line) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed === "Locations:") return null;
+
+    // Format: Location Name (WorldPlayer): Item Name (ReceiverPlayer)
+    let m = trimmed.match(/^(.+?)\s+\(([^()]+)\)\s*:\s*(.+?)(?:\s+\(([^()]+)\))?\s*$/);
+    if (m) {
+      return {
+        locationName: normalizeName(m[1]),
+        sourcePlayer: normalizeName(m[2]),
+        itemText: normalizeName(m[3]),
+        receiverPlayer: normalizeName(m[4])
+      };
+    }
+
+    // Format: Item Name to ReceiverPlayer (Location Name)
+    m = trimmed.match(/^(.+?)\s+to\s+(.+?)\s+\((.+)\)\s*$/);
+    if (m) {
+      return {
+        locationName: normalizeName(m[3]),
+        sourcePlayer: "",
+        itemText: normalizeName(m[1]),
+        receiverPlayer: normalizeName(m[2])
+      };
+    }
+
+    return null;
+  }
+
+  function sendConsoleCommand(command) {
+    const cmdel = document.getElementById("cmd");
+    const formel = document.getElementById("command-form");
+
+    if (!cmdel || !formel) {
+      throw new Error("Could not find #cmd or #command-form. Open this on the Archipelago Web Console page.");
+    }
+
+    cmdel.value = command;
+
+    const ev = new Event("submit", { bubbles: true, cancelable: true });
+    const handled = !formel.dispatchEvent(ev);
+
+    if (!handled && typeof formel.requestSubmit === "function") {
+      formel.requestSubmit();
+    }
+  }
+
+  const text = await fetch(SPOILER_URL).then(r => {
+    if (!r.ok) throw new Error(`Failed to fetch spoiler log: HTTP ${r.status}`);
+    return r.text();
+  });
+
+  const locationsText = getLocationsSection(text);
+  const parsed = locationsText
+    .split(/\r?\n/)
+    .map(parseLocationLine)
+    .filter(Boolean);
+
+  const matches = parsed.filter(x => {
+    const receiverOk = x.receiverPlayer === TARGET_PLAYER || x.itemText.endsWith(`(${TARGET_PLAYER})`);
+    const sourceOk = !x.sourcePlayer || x.sourcePlayer === SOURCE_PLAYER;
+    return receiverOk && sourceOk;
+  });
+
+  console.log(`Found ${matches.length} matching locations.`);  
+  console.table(matches.map(x => ({
+    source: SOURCE_PLAYER,
+    location: x.locationName,
+    item: x.itemText,
+    receiver: x.receiverPlayer
+  })));
+
+  if (DRY_RUN) {
+    console.warn("DRY_RUN is true. Nothing was sent. Set DRY_RUN = false after checking the table.");
+    return;
+  }
+
+  for (let i = 0; i < matches.length; i++) {
+    const loc = matches[i].locationName;
+    const command = `/send_location ${SOURCE_PLAYER} ${loc}`;
+
+    console.log(`[${i + 1}/${matches.length}] ${command}`);
+    sendConsoleCommand(command);
+    await sleep(DELAY_MS);
+  }
+
+  console.log("Done.");
+})();
