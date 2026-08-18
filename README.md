@@ -1,6 +1,6 @@
 # Sekiro Archipelago Client
 
-Sekiro Archipelago Client is a Windows client and runtime mod for playing
+Sekiro Archipelago Client is a Windows/Linux client and runtime mod for playing
 *Sekiro: Shadows Die Twice* as an Archipelago multiworld game.
 
 The latest release of the apworld can be found at: 
