@@ -607,7 +607,7 @@ namespace RandomizerCommon
         private static void AddEnglishFallbackText(GameData game)
         {
             int[] goodsFallbackIds = { 9406, 9407, 9408, 9409, 9410 };
-            int[] eventFallbackIds = { 12000003, 12000004, 12000005, 12000006, 12000008, 10010154, 10010155, 10010156, 10010157, 10010186, 10010187, 10010188, 10010189 };
+            int[] eventFallbackIds = { 12000003, 12000004, 12000005, 12000006, 12000007, 12000008, 10010154, 10010155, 10010156, 10010157, 10010186, 10010187, 10010188, 10010189 };
 
             foreach (Dictionary<string, FMG> langFmgs in game.OtherItemFMGs.Values)
             {

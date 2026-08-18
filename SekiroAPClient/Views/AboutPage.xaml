@@ -22,59 +22,77 @@
                         AlignmentX="Left"
                         AlignmentY="Top" />
         </Grid.Background>
-        <TextBlock Style="{StaticResource FlatTextBlockStyle}" HorizontalAlignment="Right" Margin="0,34,40,0">
-            <Run Text="AppVersion:"/>
-            <Run x:Name="runVersion" Text="" FontWeight="Bold"/>
-        </TextBlock>
-        <StackPanel x:Name="content" Margin="20,20,20,0" >
-            <TextBlock Style="{StaticResource HeaderTextBlockBlockStyle}" FontSize="20" TextWrapping="Wrap" LineHeight="40"  MaxWidth="800">
-                <Run Text="About" FontSize="30"/>
-                <LineBreak/>
-                <LineBreak/>
-                This Sekiro: Shadows Die Twice Archipelago Client was created by 
-                <Hyperlink Click="Hyperlink_Click" Foreground="White">                    
-                    <Run Text=" DirefulLemur0 " Background="{StaticResource BlueAlpha80}"/> 
-                </Hyperlink>
-                for all players and fans of Sekiro who enjoy new challenges, randomizers, and shared multiworld experiences.
-                <LineBreak/>
-                This project is built on top of the original Sekiro Randomizer created by <Run Text=" thefifthmatt " Background="{StaticResource BlueAlpha80}"/> — huge thanks for laying the foundation that made this possible.
-                <LineBreak/>
-                <Run Text=" Special thanks " Background="{StaticResource BlueAlpha80}"/> go to every member of the <Run Text=" Archipelago community " Background="{StaticResource BlueAlpha80}"/> who contributed ideas, feedback, tools, and inspiration. 
-                This client exists thanks to the <Run Text=" collective effort " Background="{StaticResource BlueAlpha80}"/>, passion, and creativity of the community.                
-                <LineBreak/>
-                <Run Text=" Special appreciation " Background="{StaticResource BlueAlpha80}"/> goes to <Run Text=" Yenix " Background="{StaticResource BlueAlpha80}"/> for creating the Sekiro <Run Text=" apworld "
-                                                                                                                                                         Background="{StaticResource BlueAlpha80}" />.
-                <LineBreak />
-                Special thanks to 
-                <Run Text=" Ben Barnes "
-                     Background="{StaticResource BlueAlpha80}" />, 
-                <Run Text=" MisterMetroid (Snozzer) "
-                     Background="{StaticResource BlueAlpha80}" /> and 
-                <Run Text=" Jasmine &#x0022;JazzyKins&#x0022; Rice "
-                     Background="{StaticResource BlueAlpha80}" />                 
-                for providing the icons and logos used in this project. 
-                <LineBreak />                
-                Additional thanks to our testers —                 
-                <Run Text=" Neverbality "
-                     Background="{StaticResource BlueAlpha80}" />,
-                <Run Text=" ndkrmsh "
-                     Background="{StaticResource BlueAlpha80}" /> and
-                <Run Text=" Okkim "
-                     Background="{StaticResource BlueAlpha80}" />
-                — for taking the time to test the project and help make the final product more polished and reliable.
-                <LineBreak />
-                Your 
-                <Run Text=" contributions "
-                     Background="{StaticResource BlueAlpha80}" />
-                and support are 
-                <Run Text=" greatly appreciated! "
-                     Background="{StaticResource BlueAlpha80}" />
-                <LineBreak />   
-                <Run Text=" Thank you "
-                     Background="{StaticResource BlueAlpha80}" />
-                for playing, experimenting, and pushing Sekiro beyond its original boundaries.
+        <Grid.RowDefinitions>
+            <RowDefinition Height="80" />
+            <RowDefinition Height="1*" />
+        </Grid.RowDefinitions>
+        <Grid>
+            <TextBlock Style="{StaticResource HeaderTextBlockBlockStyle}"
+                       FontSize="30"
+                       HorizontalAlignment="Left"
+                       VerticalAlignment="Top"
+                       Margin="20,20,20,10"
+                       MaxWidth="800"
+                       Text="About" />
+            <TextBlock Style="{StaticResource FlatTextBlockStyle}" HorizontalAlignment="Right" Margin="0,34,40,0">
+                <Run Text="AppVersion:"/>
+                <Run x:Name="runVersion" Text="" FontWeight="Bold"/>
             </TextBlock>
+        </Grid>
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto"
+                      Margin="20,20,20,10"
+                      Grid.Row="1">
+            <StackPanel x:Name="content"  >
+                <TextBlock Style="{StaticResource HeaderTextBlockBlockStyle}" FontSize="20" TextWrapping="Wrap" LineHeight="40"  MaxWidth="800">        
+                    This Sekiro: Shadows Die Twice Archipelago Client was created by 
+                    <Hyperlink Click="Hyperlink_Click" Foreground="White">                    
+                        <Run Text=" DirefulLemur0 " Background="{StaticResource BlueAlpha80}"/> 
+                    </Hyperlink>
+                    for all players and fans of Sekiro who enjoy new challenges, randomizers, and shared multiworld experiences.
+                    <LineBreak/>
+                    This project is built on top of the original Sekiro Randomizer created by <Run Text=" thefifthmatt " Background="{StaticResource BlueAlpha80}"/> — huge thanks for laying the foundation that made this possible.
+                    <LineBreak/>
+                    <Run Text=" Special thanks " Background="{StaticResource BlueAlpha80}"/> go to every member of the <Run Text=" Archipelago community " Background="{StaticResource BlueAlpha80}"/> who contributed ideas, feedback, tools, and inspiration. 
+                    This client exists thanks to the <Run Text=" collective effort " Background="{StaticResource BlueAlpha80}"/>, passion, and creativity of the community.                
+                    <LineBreak/>
+                    <Run Text=" Special appreciation " Background="{StaticResource BlueAlpha80}"/> goes to <Run Text=" Yenix " Background="{StaticResource BlueAlpha80}"/> for creating the Sekiro <Run Text=" apworld "
+                                                                                                                                                             Background="{StaticResource BlueAlpha80}" />.
+                    <LineBreak />
+                    Special thanks to 
+                    <Run Text=" Ben Barnes "
+                         Background="{StaticResource BlueAlpha80}" />, 
+                    <Run Text=" MisterMetroid (Snozzer) "
+                         Background="{StaticResource BlueAlpha80}" />,
+                    <Run Text=" Evil_Stasy "
+                         Background="{StaticResource BlueAlpha80}" />
+                    and 
+                    <Run Text=" Jasmine &#x0022;JazzyKins&#x0022; Rice "
+                         Background="{StaticResource BlueAlpha80}" />                 
+                    for providing the icons and logos used in this project. 
+                    <LineBreak />                
+                    Additional thanks to our testers —                 
+                    <Run Text=" Neverbality "
+                         Background="{StaticResource BlueAlpha80}" />,
+                    <Run Text=" ndkrmsh "
+                         Background="{StaticResource BlueAlpha80}" /> and
+                    <Run Text=" Okkim "
+                         Background="{StaticResource BlueAlpha80}" />
+                    — for taking the time to test the project and help make the final product more polished and reliable.
+                    <LineBreak />
+                    Your 
+                    <Run Text=" contributions "
+                         Background="{StaticResource BlueAlpha80}" />
+                    and support are 
+                    <Run Text=" greatly appreciated! "
+                         Background="{StaticResource BlueAlpha80}" />
+                    <LineBreak />   
+                    <Run Text=" Thank you "
+                         Background="{StaticResource BlueAlpha80}" />
+                    for playing, experimenting, and pushing Sekiro beyond its original boundaries.
+                </TextBlock>
 
-        </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </Page>

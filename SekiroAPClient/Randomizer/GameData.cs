@@ -680,6 +680,8 @@ namespace RandomizerCommon
         {
             EMEVD emevd = RequireEmevd("m11_02_00_00");
             AddInitializeEventIfMissing(RequireEvent(emevd, 0), 11120999);
+            EMEVD.Event init = RequireEvent(emevd, 0);
+            AddInstructionIfMissing(init, events.ParseAdd("Initialize Common Event (20005610, 1100030, 1102980, 12000005, 12000007)"));
             AddEventIfMissing(emevd, events, 11120999, EMEVD.Event.RestBehaviorType.Restart, BuildDoorLockEvent(
                 objectId: 1121798,
                 objActParamId: 999900,

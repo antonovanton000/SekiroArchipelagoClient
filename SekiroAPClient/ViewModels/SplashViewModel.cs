@@ -8,7 +8,7 @@ namespace SekiroAPClient.ViewModels;
 
 public partial class SplashViewModel : MyBaseViewModel
 {
-    private static readonly System.Version RequiredSekiroInjectorDllVersion = new(1, 2, 11, 0);
+    private static readonly System.Version RequiredSekiroInjectorDllVersion = new(1, 0, 0, 0);
 
     #region Properties
 
