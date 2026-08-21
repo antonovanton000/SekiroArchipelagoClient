@@ -15,8 +15,8 @@
         Closing="Window_Closing"
         Background="Transparent"
         Title="Sekiro Archipelago Client"
-        Height="660"
-        Width="800"
+        Height="760"
+        Width="950"
         MinHeight="480"
         MinWidth="800">
     <Window.Resources>

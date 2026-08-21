@@ -82,6 +82,9 @@ public partial class RoomViewModel : MyBaseViewModel
     bool hasErrors;
 
     [ObservableProperty]
+    bool hasVersionError;
+
+    [ObservableProperty]
     bool isConnectedToGame;
 
     [ObservableProperty]
@@ -418,6 +421,27 @@ public partial class RoomViewModel : MyBaseViewModel
         }
     }
 
+    [RelayCommand]
+    void ShowApWorldRelease()
+    {
+        Process.Start(
+        new ProcessStartInfo
+        {
+            FileName = "https://github.com/yenix4/ArchipelagoSekiro/releases",
+            UseShellExecute = true
+        });
+    }
+
+    [RelayCommand]
+    void ShowClientRelease()
+    {
+        Process.Start(
+        new ProcessStartInfo
+        {
+            FileName = "https://github.com/antonovanton000/SekiroArchipelagoClient/releases",
+            UseShellExecute = true
+        });
+    }    
     #endregion
 
     #region Hint Autocomplete
@@ -854,6 +878,7 @@ public partial class RoomViewModel : MyBaseViewModel
     {
         IsRandomizing = true;
         HasErrors = false;
+        HasVersionError = false;
         DeleteKeyItemTrackerStateForNewRoom();
         State = await RandomizerHelper.RandomizeArchipelago(CurrentSession);
         if (State != null)
@@ -870,6 +895,7 @@ public partial class RoomViewModel : MyBaseViewModel
         else
         {
             HasErrors = true;
+            HasVersionError = RandomizerHelper.HasVersionMismatch;
         }
     }
 
@@ -1121,7 +1147,7 @@ public partial class RoomViewModel : MyBaseViewModel
                 var item = helper.DequeueItem();
                 if (item.Player.Name == CurrentSession.Players.ActivePlayer.Name && CurrentSession.Locations.AllLocationsChecked.Any(i => i == item.LocationId)) continue;
 
-                var isCheatConsole = item.LocationName == "Cheat Console";
+                var isCheatConsole = item.LocationName == "Cheat Console" || item.LocationName == "Server";
                 int? cheatConsoleReceivedIndex = null;
                 if (isCheatConsole)
                 {

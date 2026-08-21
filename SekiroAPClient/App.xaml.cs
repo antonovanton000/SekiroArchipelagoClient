@@ -17,7 +17,7 @@ namespace SekiroAPClient
     public partial class App : Application
     {
         public static string AppVersion { get; private set; }
-        public static SemanticVersioning.Version CompatibleApWorldVersion = new SemanticVersioning.Version("3.0.0");
+        public static SemanticVersioning.Version CompatibleApWorldVersion = new SemanticVersioning.Version("1.0.0");
         public static Logger Logger = default!;
         public static PipeServer PipeServer = default!;
         public static bool IsDeveloperMode { get; private set; }

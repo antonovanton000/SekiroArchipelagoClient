@@ -46,6 +46,10 @@ public partial class RandomizerHelper : ObservableObject
 
     [ObservableProperty]
     bool isSuccess;
+
+    [ObservableProperty]
+    bool hasVersionMismatch = false;
+
     public ApRandomizationState? State { get; private set; }
 
     private const int ItemNameLimit = 32;
@@ -113,7 +117,17 @@ public partial class RandomizerHelper : ObservableObject
 
         var json = slotData["options"].ToString();
 
-        //CheckVersionRange(slotData);
+        try
+        {
+            CheckVersionRange(slotData);
+        }
+        catch(Exception ex)
+        {
+            SetError(ex.Message);
+            HasVersionMismatch = true;
+            return null;
+        }
+
         var options = ((JObject)slotData["options"]).ToObject<Dictionary<string, int>>();
 
         Options = ConvertRandomizerOptions(options);
@@ -871,8 +885,8 @@ public partial class RandomizerHelper : ObservableObject
     new ItemKey(ItemType.GOOD, 3610), // Mibu Balloon of Spirit
     new ItemKey(ItemType.GOOD, 3620), // Mibu Balloon of Soul
     new ItemKey(ItemType.GOOD, 3630), // Mibu Balloon of Possession
-    new ItemKey(ItemType.GOOD, 3720), // Bundled Jizo Statue
-    new ItemKey(ItemType.GOOD, 5600), // Dragon's Blood Droplet
+    //new ItemKey(ItemType.GOOD, 3720), // Bundled Jizo Statue
+    //new ItemKey(ItemType.GOOD, 5600), // Dragon's Blood Droplet
     // -----------------------
     // Materials
     // -----------------------
@@ -1045,11 +1059,7 @@ public partial class RandomizerHelper : ObservableObject
         }
         var range = new SemanticVersioning.Range((string)slotData["versions"]);
 
-        // This should only be the case during development.
         if (Version == null) return;
-
-        // Until we actually make server-side changes for v4, declare ourselves compatible with
-        // the 3.x.x branch.
 
         if (range.IsSatisfied(Version, includePrerelease: true) ||
             range.IsSatisfied(App.CompatibleApWorldVersion, includePrerelease: true))
@@ -1059,20 +1069,20 @@ public partial class RandomizerHelper : ObservableObject
 
 
         throw new Exception(
-            $"The server's version of the Sekiro apworld supports Sekiro AP versions {range}, " +
-            $"but this randomizer is version {Version}."
+            $"The server's version of the Sekiro apworld supports client versions {range}, " +
+            $"but this client version is {Version}."
         );
     }
 
     private RandomizerOptions ConvertRandomizerOptions(Dictionary<string, int> archiOptions)
     {
         var opt = new RandomizerOptions();
-        if (archiOptions["randomize_enemies"] == 1)
-        {
+        if (archiOptions["enemy_randomizer"] == 1)
+        {            
             opt["enemy"] = true;
-            opt["bosses"] = true;
-            opt["minibosses"] = true;
-            opt["enemies"] = true;
+            opt["bosses"] = archiOptions.ContainsKey("randomize_bosses") ? archiOptions["randomize_bosses"] == 1 : true;
+            opt["minibosses"] = archiOptions.ContainsKey("randomize_minibosses") ? archiOptions["randomize_minibosses"] == 1 : true;
+            opt["enemies"] = archiOptions.ContainsKey("randomize_regular_enemies") ? archiOptions["randomize_regular_enemies"] == 1 : true;
             opt["headlessmove"] = archiOptions["randomize_headless"] == 1;
         }
         opt["phases"] = archiOptions["similar_boss_phases"] == 1;

@@ -115,9 +115,9 @@ public partial class ConnectViewModel : MyBaseViewModel
                     return;
                 }
                 NotificationStatus = $"Try to login as {ConnectModel.PlayerName}";
-                var loginResult = await _currentSession.LoginAsync(ConnectModel.GameName, ConnectModel.PlayerName, ItemsHandlingFlags.IncludeOwnItems, password: ConnectModel.Password);
+                var loginResult = await _currentSession.LoginAsync(ConnectModel.GameName, ConnectModel.PlayerName, ItemsHandlingFlags.IncludeOwnItems | ItemsHandlingFlags.IncludeStartingInventory, password: ConnectModel.Password);
                 if (!loginResult.Successful)
-                {
+                {                    
                     MainWindow.ShowToast(new ToastInfo() { ToastType = ToastType.Error, Title = "Error", Detail = "Player Name or Password invalid!" });
                     return;
                 }

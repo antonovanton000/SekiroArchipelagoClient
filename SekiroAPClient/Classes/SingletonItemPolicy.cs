@@ -60,7 +60,7 @@ public static class SingletonItemPolicy
     public static bool ShouldClampToOne(int goodId)
     {
         return ForceQuantityOneGoodIds.Contains(goodId)
-            || PermanentGoodToFlagCollection.GetPermanentFlagForItem(goodId) > 0
-            || goodId is >= 5200 and <= 5213;
+            || PermanentGoodToFlagCollection.GetPermanentFlagForItem(goodId) > 0;
+          //|| goodId is >= 5200 and <= 5213; Exclude memories from this policy, as they are not really "singleton" items, and can be obtained multiple times in a single playthrough.
     }
 }
